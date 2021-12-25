@@ -2,26 +2,48 @@
 #![crate_type = "staticlib"]
 #![no_std]
 
+pub mod phys;
+pub mod drivers;
 
 // Import assembly macro
 use core::arch::asm;
 
-static IMXRT_IOMUXC: u32 = 0x401F8000;
-static IMXRT_IOMUXC_GPR: u32 = 0x400AC000;
-static IMXRT_GPIO7: u32 = 0x4200_4000;
+use phys::gpio::{ 
+    gpio_speed,
+    gpio_direction,
+    gpio_set,
+    gpio_clear,
+    MuxSpeed,
+    Pin,
+};
 
 #[no_mangle]
 pub fn main() {
-    unsafe {
-        *((IMXRT_IOMUXC_GPR + 0x40) as *mut u32) = 0x0000_0007;
-        *((IMXRT_IOMUXC_GPR + 0x6c) as *mut u32) = 0xFFFF_FFFF;
-        *((IMXRT_GPIO7 + 0x4) as *mut u32) = 0x1 << 3;
-    }
+    gpio_speed(Pin::Gpio7, MuxSpeed::Fast);
+    gpio_direction(Pin::Gpio7, phys::Dir::Output);
 
     loop { 
-        unsafe {    
-            *((IMXRT_GPIO7 + 0x84) as *mut u32) = 0x1 << 3;
-            asm!("nop");
+        gpio_set(Pin::Gpio7, 0x1 << 3);
+
+        let mut i = 0;
+        while i < 20000000 {
+            i = i + 1;
+            unsafe {
+                asm!("nop");
+            }
+    
+        }
+
+        i = 0;
+
+        gpio_clear(Pin::Gpio7, 0x1 << 3);
+        
+        while i < 20000000 {
+            i = i + 1;
+            unsafe {
+                asm!("nop");
+            }
+    
         }
 
     }

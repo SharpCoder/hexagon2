@@ -1,4 +1,6 @@
 #!/bin/sh
+mkdir -p out/
+
 rm -rf out/*.asm
 rm -rf out/*.map
 rm -rf out/*.lst
@@ -27,7 +29,7 @@ arm-none-eabi-ld \
 arm-none-eabi-objdump -S out/kernel.elf > out/kern.asm
 arm-none-eabi-objdump -d -S -C out/kernel.elf > out/kern.lst
 
-# Final hex ooutput
+# Final hex output
 arm-none-eabi-objcopy -O ihex -R .eeprom out/kernel.elf out/kern.hex
 
 # Cleanup
