@@ -14,6 +14,11 @@ use drivers::ws2812::{
 
 use phys::{
     assign,
+    irq::{
+        attach_irq,
+        enable_irq,
+        Irq,
+    }
 };
 
 use phys::gpio::{ 
@@ -27,6 +32,10 @@ use phys::gpio::{
 
 #[no_mangle]
 pub fn main() {
+
+    attach_irq(Irq::GPT1, interrupt_handler);
+    enable_irq(Irq::GPT1);
+
     gpio_speed(Pin::Gpio7, MuxSpeed::Fast);
     gpio_direction(Pin::Gpio7, phys::Dir::Output);
 

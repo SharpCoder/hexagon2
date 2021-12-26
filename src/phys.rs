@@ -1,5 +1,6 @@
 pub mod addrs;
 pub mod gpio;
+pub mod irq;
 
 pub enum Dir {
     Input,

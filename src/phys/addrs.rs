@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+pub const NVIC_IRQ_ENABLE_REG: u32 = 0xE000E100;
 /** Fast Ram (512kb) */
 pub const OCRAM: u32 = 0x2028_0000;
 /** Slow Ram (512kb) */
