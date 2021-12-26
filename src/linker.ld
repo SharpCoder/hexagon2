@@ -16,7 +16,6 @@ SECTIONS
         . = ORIGIN(FLASH) + 0x1000;
         KEEP(*(.ivt))
         KEEP(*(.bootdata))
-        KEEP(*(.vectors))
         KEEP(*(.startup))
         *(.progmem*)
                 . = ALIGN(4);
@@ -40,6 +39,7 @@ SECTIONS
     .data : {
         *(.rodata*)
         *(.data*)
+        KEEP(*(.vectors))
         . = ALIGN(16);
     } > DTCM  AT> FLASH
 

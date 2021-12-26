@@ -1,6 +1,12 @@
 #define mmio32(x)   (*(volatile unsigned long *)(x))
+#define __disable_irq() __asm__ volatile("CPSID i":::"memory");
+#define __enable_irq()	__asm__ volatile("CPSIE i":::"memory");
+
 
 typedef long unsigned int uint32_t;
+
+extern void interrupt_handler(void);
+extern void main(void);
 
 extern unsigned long _stextload;
 extern unsigned long _stext;
@@ -14,15 +20,35 @@ extern unsigned long _flexram_bank_config;
 extern unsigned long _estack;
 extern unsigned long _flashimagelen;
 
+void startup(void);
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end);
 static void memory_clear(uint32_t *dest, uint32_t *dest_end);
 
+__attribute__((optimize("O0"), optimize("no-tree-loop-distribute-patterns"), naked, used))
+void noop_fn() {
+    __asm__ volatile("nop");
+    for(;;) {} 
+}
+
+__attribute__((optimize("O0"), optimize("no-tree-loop-distribute-patterns"), naked, used))
+void handle_interrupt() {
+    __asm__ volatile("isb");
+    __asm__ volatile("bl interrupt_handler");
+}
+
+__attribute__(( used, section(".vectors")))
+uint32_t vtab[96] = {
+    0x20010000, // 64K DTCM for boot, ResetHandler configures stack after ITCM/DTCM setup
+    (uint32_t)startup,
+};
+
+
 __attribute__((section(".startup"), optimize("no-tree-loop-distribute-patterns"), naked))
 void startup() {
-
     // FlexRAM Bank configuration
     mmio32(0x400AC000 + 0x44) = (uint32_t)&_flexram_bank_config;
     mmio32(0x400AC000 + 0x40) = 0x00000007;
+    mmio32(0x400AC000 + 0x38) = 0x00AA0000;
 
     // Move stack pointer
     __asm__ volatile("mov sp, %0" : : "r" ((uint32_t)&_estack) : );
@@ -33,14 +59,38 @@ void startup() {
     memory_copy(&_sdata, &_sdataload, &_edata);
     memory_clear(&_sbss, &_ebss);
 
+
+    // Attach all the interrupts
+    for (int i = 2; i < 96; i++) {
+        vtab[i] = (uint32_t)handle_interrupt;
+        __asm__ volatile("nop");
+    }
+    
+    // Update VTOR
+    mmio32(0xE000ED08) = (uint32_t)&vtab;
+
+    // __enable_irq();
+    __disable_irq();
+    
+    // Enable registers
+    // mmio32(0xE000E100) = 0xFFFFFFFF;
+    // mmio32(0xE000E104) = 0xFFFFFFFF;
+    // mmio32(0xE000E108) = 0xFFFFFFFF;
+    mmio32(0xE000E10C) = 0xFFFFFFFF;
+    // mmio32(0xE000E110) = 0xFFFFFFFF;
+    // mmio32(0xE000E114) = 0xFFFFFFFF;
+    // mmio32(0xE000E118) = 0xFFFFFFFF;
+    // mmio32(0xE000E11C) = 0xFFFFFFFF;
+
+    __enable_irq();
+    // trigger_pendsv();
+
+    
     // Branch to main
+    // Setup interrupt
     __asm__ volatile("bl main");
 }
 
-__attribute__((section(".vectors"), used))
-const uint32_t vector_table[2] = {
-    0x20010000, // 64K DTCM for boot, ResetHandler configures stack after ITCM/DTCM setup
-    (uint32_t)&startup};
 
 __attribute__((section(".bootdata"), used))
 const uint32_t BootData[3] = {
@@ -51,7 +101,7 @@ const uint32_t BootData[3] = {
 __attribute__((section(".ivt"), used))
 const uint32_t ImageVectorTable[8] = {
     0x402000D1,                 // header
-    (uint32_t)vector_table,     // docs are wrong, needs to be vec table, not start addr
+    (uint32_t)startup,          // docs are wrong, needs to be vec table, not start addr
     0,                          // reserved
     0,                          // dcd
     (uint32_t)BootData,         // abs address of boot data
