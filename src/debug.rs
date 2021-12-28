@@ -4,7 +4,7 @@ use crate::phys::gpio::*;
 #[derive(Copy, Clone)]
 pub enum Speed {
     Slow = 100000000,
-    Fast = 5000000,
+    Fast = 10000000,
     Normal = 90000000,
 }
 

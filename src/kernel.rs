@@ -44,19 +44,20 @@ pub fn main() {
 
     loop { 
         unsafe {
+
             // gpio_set(Pin::Gpio7, 0x1 << 3);
             // drivers::ws2812::ws2812_loop();
-            // gpio_set(Pin::Gpio7, 0x1 << 3);
-            // wait_ns(100000000); // 100000000
-            // gpio_clear(Pin::Gpio7, 0x1 << 3);
-            // wait_ns(100000000); // 100000000
+            gpio_set(Pin::Gpio7, 0x1 << 3);
+            wait_ns(100000000); // 100000000
+            gpio_clear(Pin::Gpio7, 0x1 << 3);
+            wait_ns(100000000); // 100000000
             // if clock::nanos() > 0 {
             //     gpio_set(Pin::Gpio7, 0x1 << 3);
             // } else {
             //     gpio_clear(Pin::Gpio7, 0x1 << 3);
             // }
-            serio_write_byte(b'a');
-            debug::blink(1, debug::Speed::Normal);
+            // serio_write_byte(b'a');
+            // debug::blink(1, debug::Speed::Normal);
             asm!("nop");
         }
         
