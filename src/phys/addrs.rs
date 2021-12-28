@@ -37,6 +37,8 @@ pub const IOMUXC_GPR_GPR28: u32 = 0x400A_C070; // GPIO3 and GPIO8 mux settings
 pub const IOMUXC_GPR_GPR29: u32 = 0x400A_C074; // GPIO4 and GPIO9 mux settings
 /** GPIO Mux Pads */
 pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_B0_03: u32 = 0x401F_8148; // Gpio2 and Gpio7 - Pin 13
+pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_12: u32 = 0x401F_80EC; // UART1
+pub const IOMUXC_SW_PAD_CTL_PAD_GPIO_AD_B0_12: u32 = 0x401F_82DC;
 /** Misc */
 pub const CCM_CSCMR1: u32 = 0x400F_C01C; // CCM Serial Clock Multiplexer Register 1
 pub const CCM_CCGR1: u32 = 0x400F_C06C; // Clock Gating Register 1

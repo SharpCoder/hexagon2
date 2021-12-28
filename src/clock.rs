@@ -22,8 +22,7 @@ pub fn clock_init() {
 
     // Attach the interrupts
     attach_irq(Irq::PIT, handle_pit_irq);
-    // fill_irq(handle_pit_irq);
-
+    
     // Set CTRL 0
     pit_configure(&PeriodicTimerSource::Timer0, PITConfig {
         chained: false,
@@ -67,7 +66,6 @@ fn handle_pit_irq() {
     }
 
     pit_clear_interrupts(&PeriodicTimerSource::Timer0);
-    crate::dsb();
 }
 
 pub fn nanos() -> u64 {

@@ -1,14 +1,15 @@
-#![feature(lang_items)]
+#![feature(lang_items, generators)]
 #![crate_type = "staticlib"]
 #![no_std]
 pub mod phys;
 pub mod drivers;
 pub mod clock;
 pub mod serio;
+pub mod debug;
 
-// Import assembly macro
 use core::arch::asm;
 use phys::irq::*;
+use phys::uart::Baud;
 use serio::*;
 use phys::gpio::{ 
     gpio_speed,
@@ -24,9 +25,11 @@ use phys::gpio::{
 pub fn main() {
     // Initialize irq system, (disables all interrupts)
     irq_init();
+    disable_interrupts();
+
     // Initialize serial communication
     serio_init();
-    enable_interrupts();
+    serio_baud(Baud::Rate9600);
 
     // Setup GPIO pin 13 (the LED on teensy)
     gpio_speed(Pin::Gpio7, MuxSpeed::Fast);
@@ -36,20 +39,24 @@ pub fn main() {
     // which is also used for the wait implementation.
     clock::clock_init();
 
+    // Enable interrupts across the system
+    enable_interrupts();
+
     loop { 
         unsafe {
             // gpio_set(Pin::Gpio7, 0x1 << 3);
             // drivers::ws2812::ws2812_loop();
-            gpio_set(Pin::Gpio7, 0x1 << 3);
-            wait_ns(100000000); // 100000000
-            gpio_clear(Pin::Gpio7, 0x1 << 3);
-            wait_ns(100000000); // 100000000
+            // gpio_set(Pin::Gpio7, 0x1 << 3);
+            // wait_ns(100000000); // 100000000
+            // gpio_clear(Pin::Gpio7, 0x1 << 3);
+            // wait_ns(100000000); // 100000000
             // if clock::nanos() > 0 {
             //     gpio_set(Pin::Gpio7, 0x1 << 3);
             // } else {
             //     gpio_clear(Pin::Gpio7, 0x1 << 3);
             // }
-            // debug_blink(2);
+            serio_write_byte(b'a');
+            debug::blink(1, debug::Speed::Normal);
             asm!("nop");
         }
         
@@ -82,17 +89,6 @@ pub fn pendsv() {
 pub fn dsb() {
     unsafe {
         asm!("dsb");
-    }
-}
-
-pub fn debug_blink(count: u32) {
-    let mut i = 0;
-    while i < count {
-        gpio_set(Pin::Gpio7, 0x1 << 3);
-        wait_wow(1);
-        gpio_clear(Pin::Gpio7, 0x1 << 3);
-        wait_wow(1);
-        i += 1;
     }
 }
 

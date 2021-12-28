@@ -10,6 +10,12 @@ pub enum Dir {
     Output,
 }
 
+pub fn write_byte(address: u32, value: u8) {
+    unsafe {
+        *(address as *mut u8) = value;
+    }
+}
+
 pub fn assign(address: u32, value: u32) {
     unsafe {
         *(address as *mut u32) = value;

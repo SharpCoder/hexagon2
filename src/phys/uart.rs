@@ -1,6 +1,10 @@
 use crate::phys::addrs;
 use crate::phys::*;
 
+pub enum Baud {
+    Rate9600,
+}
+
 pub enum ParityType {
     Even,
     Odd,
@@ -9,6 +13,18 @@ pub enum ParityType {
 pub enum BitMode {
     NineBits,
     EightBits,
+}
+
+#[derive(Clone, Copy)]
+pub enum BufferDepth {
+    Data1Word = 0x0,
+    Data4Words = 0x1,
+    Data8Words = 0x2,
+    Data16Words = 0x3,
+    Data32Words = 0x4,
+    Data64Words = 0x5,
+    Data128Words = 0x6,
+    Data256Words = 0x7,
 }
 
 #[derive(Clone, Copy)]
@@ -32,6 +48,40 @@ pub enum Device {
     Uart6,
     Uart7,
     Uart8,
+}
+
+pub struct FifoConfig {
+    pub tx_fifo_underflow_flag: bool,
+    pub rx_fifo_underflow_flag: bool,
+    pub tx_flush: bool,
+    pub rx_flush: bool,
+    // Receiver idle empty not supported currently
+    pub tx_fifo_overflow_irq_en: bool,
+    pub rx_fifo_underflow_irq_en: bool,
+    pub tx_fifo_en: bool,
+    pub tx_fifo_depth: BufferDepth,
+    pub rx_fifo_en: bool,
+    pub rx_fifo_depth: BufferDepth,
+}
+
+
+fn fifo_config_to_u32(config: &FifoConfig, baseline: u32) -> u32 {
+    let mut result: u32 = baseline;   
+    // Clear The rx_fifo_depth
+    result = result & !0x7;
+    result = result & (config.rx_fifo_depth as u32);
+    result = set_bit_from_bool(result, 3, config.rx_fifo_en);
+    // Clear the tx_fifo_depth
+    result = result & !(0x7 << 4);
+    result = result & (config.tx_fifo_depth as u32) << 4;
+    result = set_bit_from_bool(result, 7, config.tx_fifo_en);
+    result = set_bit_from_bool(result, 8, config.rx_fifo_underflow_irq_en);
+    result = set_bit_from_bool(result, 9, config.tx_fifo_overflow_irq_en);
+    result = set_bit_from_bool(result, 14, config.rx_flush);
+    result = set_bit_from_bool(result, 15, config.tx_flush);
+    result = set_bit_from_bool(result, 16, config.rx_fifo_underflow_flag);
+    result = set_bit_from_bool(result, 17, config.tx_fifo_underflow_flag);
+    return result;
 }
 
 pub struct UartConfig {
@@ -139,12 +189,17 @@ pub fn uart_sw_reset(device: &Device, sw_reset: bool) {
         false => 0x0,
     };
 
-    assign(get_addr(device), value);
+    assign(get_addr(device) + 0x8, value);
 }
 
 pub fn uart_configure(device: &Device, configuration: UartConfig) {
     let addr = get_addr(device) + 0x18;
     assign(addr, config_to_u32(&configuration, 0x0));
+}
+
+pub fn uart_configure_fifo(device: &Device, configuration: FifoConfig) {
+    let addr = get_addr(device) + 0x28;
+    assign(addr, fifo_config_to_u32(&configuration, 0x0));
 }
 
 pub fn uart_disable(device: &Device) {
@@ -157,4 +212,34 @@ pub fn uart_enable(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
     assign(addr, baseline & (0x1 << 18) & (0x1 << 19));
+}
+
+pub fn uart_write_fifo(device: &Device, byte: u8) {
+    let addr = get_addr(device) + 0x1C;
+    assign(addr, byte as u32);
+}
+
+pub fn uart_baud_rate(device: &Device, _rate: Baud) {
+    uart_disable(&device);
+    // Configure baud rate
+    let addr = get_addr(device) + 0x10;
+    assign(addr, 0x75); // 4000. NOTE: This ignores the actual var
+    uart_enable(&device);
+}
+
+pub fn uart_flush(device: &Device) {
+    let addr = get_addr(device) + 0x1C;
+    let original = read_word(addr);
+    assign(addr, original & (0x1<<15));
+}
+
+pub fn uart_sbk(device: &Device) {
+    let addr = get_addr(device) + 0x18;
+    let original = read_word(addr);
+    assign(addr, original & (0x1<<16));
+}
+
+pub fn uart_watermark(device: &Device) {
+    let addr = get_addr(device) + 0x2C;
+    assign(addr, 0x1);
 }

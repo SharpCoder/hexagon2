@@ -18,6 +18,24 @@ pub const IRQ_0_OFFSET: usize = 16;
 
 /** Interrupts */
 pub enum Irq {
+    EDMA0 = 0,
+    EDMA1 = 1,
+    EDMA2 = 2, // FIFO UART 1
+    EDMA3 = 3,
+    EDMA4 = 4,
+    EDMA5 = 5,
+    EDMA6 = 6,
+    EDMA7 = 7,
+    EDMA8 = 8,
+    EDMA9 = 9,
+    UART1 = 20,
+    UART2 = 21,
+    UART3 = 22,
+    UART4 = 23,
+    UART5 = 25,
+    UART6 = 26,
+    UART7 = 27,
+    UART8 = 29,
     GPT1 = 100,
     GPT2 = 101,
     PIT = 122,
