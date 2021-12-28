@@ -45,7 +45,7 @@ pub fn clock_init() {
     });
     
 
-    enable_irq(Irq::PIT);
+    irq_enable(Irq::PIT);
 
     // Secret sauce which makes it all work otherwise you are bound
     // to a default timeout that takes like a minute.

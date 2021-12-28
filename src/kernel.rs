@@ -4,11 +4,12 @@
 pub mod phys;
 pub mod drivers;
 pub mod clock;
+pub mod serio;
 
 // Import assembly macro
 use core::arch::asm;
 use phys::irq::*;
-
+use serio::*;
 use phys::gpio::{ 
     gpio_speed,
     gpio_direction,
@@ -21,13 +22,18 @@ use phys::gpio::{
 
 #[no_mangle]
 pub fn main() {
-    // Initialize irq syste, (disables all interrupts)
+    // Initialize irq system, (disables all interrupts)
     irq_init();
+    // Initialize serial communication
+    serio_init();
     enable_interrupts();
 
+    // Setup GPIO pin 13 (the LED on teensy)
     gpio_speed(Pin::Gpio7, MuxSpeed::Fast);
     gpio_direction(Pin::Gpio7, phys::Dir::Output);
 
+    // Ignite system clock for keeping track of millis()
+    // which is also used for the wait implementation.
     clock::clock_init();
 
     loop { 

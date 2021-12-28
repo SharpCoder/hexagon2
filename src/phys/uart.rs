@@ -145,5 +145,16 @@ pub fn uart_sw_reset(device: &Device, sw_reset: bool) {
 pub fn uart_configure(device: &Device, configuration: UartConfig) {
     let addr = get_addr(device) + 0x18;
     assign(addr, config_to_u32(&configuration, 0x0));
+}
 
+pub fn uart_disable(device: &Device) {
+    let addr = get_addr(device) + 0x18;
+    let baseline = read_word(addr);
+    assign(addr, baseline & !(0x1 << 18) & !(0x1 << 19));
+}
+
+pub fn uart_enable(device: &Device) {
+    let addr = get_addr(device) + 0x18;
+    let baseline = read_word(addr);
+    assign(addr, baseline & (0x1 << 18) & (0x1 << 19));
 }

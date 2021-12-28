@@ -48,7 +48,7 @@ pub fn irq_init() {
     irq_clear_pending();
 }
 
-pub fn enable_irq(irq_number: Irq) {
+pub fn irq_enable(irq_number: Irq) {
     let num = irq_number as u8;
     let bank = num / 32;
     let bit = num - bank * 32;
@@ -58,7 +58,7 @@ pub fn enable_irq(irq_number: Irq) {
     assign(addr, next_value);
 }
 
-pub fn disable_irq(irq_number: Irq) {
+pub fn irq_disable(irq_number: Irq) {
     let num = irq_number as u8;
     let bank = num / 32;
     let bit = num - bank * 32;
