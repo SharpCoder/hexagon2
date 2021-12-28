@@ -2,6 +2,7 @@
  * On the Teensy 4.0, it has 3 periodic timers. The source clock is 100MHz (maybe)
 **/
 use core::arch::asm;
+
 use crate::phys::addrs;
 use crate::phys::{
     assign,
@@ -33,11 +34,11 @@ fn pit_config_addr(source: &PeriodicTimerSource) -> u32 {
 pub fn pit_configure(source: &PeriodicTimerSource, config: PITConfig) {
     let mut value: u32 = 0x00;
     if config.chained {
-        value |= (0x1 << 2);
+        value |= 0x1 << 2;
     } 
 
     if config.irq_en {
-        value |= (0x1 << 1);
+        value |= 0x1 << 1;
     }
 
     if config.en {

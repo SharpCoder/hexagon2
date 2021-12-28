@@ -5,12 +5,6 @@ use crate::phys::{
     clear_bit,
 };
 
-use crate::phys::irq::{
-    Irq,
-    disable_irq,
-    enable_irq,
-};
-
 use crate::phys::addrs::{
     GPT1,
     GPT2,
@@ -34,13 +28,6 @@ fn get_addr(timer: &TimerSource) -> u32 {
     return match timer {
         TimerSource::GPT1 => GPT1,
         TimerSource::GPT2 => GPT2,
-    };
-}
-
-fn get_irq(timer: &TimerSource) -> Irq {
-    return match timer {
-        TimerSource::GPT1 => Irq::GPT1,
-        TimerSource::GPT2 => Irq::GPT2,
     };
 }
 

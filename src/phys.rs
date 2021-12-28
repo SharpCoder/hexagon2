@@ -3,6 +3,7 @@ pub mod gpio;
 pub mod irq;
 pub mod timer;
 pub mod periodic_timers;
+pub mod uart;
 
 pub enum Dir {
     Input,

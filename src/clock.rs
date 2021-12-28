@@ -2,27 +2,16 @@
  *  This is a system device which keeps track of time by using the periodic timer 
  **/
 
-use core::arch::asm;
 use crate::phys::{
     addrs,
     assign,
     read_word,
 };
-use crate::phys::timer;
-use crate::phys::timer::{
-    TimerClock,
-    TimerSource,
-};
 use crate::phys::periodic_timers::*;
-use crate::phys::gpio::{
-    Pin,
-    gpio_set,
-    gpio_clear,
-};
 use crate::phys::irq::*;
 
-static mut clock_counter: u64 = 0;
-static mut clock_decimal_counter: u64 = 0;
+static mut CLOCK_COUNTER: u64 = 0;
+static mut CLOCK_TENS_COUNTER: u64 = 0;
 
 pub fn clock_init() {
     // // Undo clock gating
@@ -68,12 +57,12 @@ fn handle_pit_irq() {
     // The neopixel timing has proven this is not the actual clock speed.
     // But it's pretty close.
     unsafe {
-        clock_counter += 31;
-        clock_decimal_counter += 1;
+        CLOCK_COUNTER += 31;
+        CLOCK_TENS_COUNTER += 1;
 
-        if clock_decimal_counter > 10 {
-            clock_counter += 5;
-            clock_decimal_counter = 0;
+        if CLOCK_TENS_COUNTER > 10 {
+            CLOCK_COUNTER += 5;
+            CLOCK_TENS_COUNTER = 0;
         }
     }
 
@@ -83,6 +72,6 @@ fn handle_pit_irq() {
 
 pub fn nanos() -> u64 {
     unsafe {
-        return clock_counter;
+        return CLOCK_COUNTER;
     }
 }

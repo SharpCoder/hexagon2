@@ -1,27 +1,13 @@
 #![feature(lang_items)]
 #![crate_type = "staticlib"]
 #![no_std]
-
 pub mod phys;
 pub mod drivers;
 pub mod clock;
 
 // Import assembly macro
 use core::arch::asm;
-use drivers::ws2812::{
-    ws2812_init,
-    ws2812_loop,
-};
-
-use phys::timer;
-use phys::{
-    assign,
-    timer::{
-        TimerSource,
-        TimerClock,
-    },
-    irq::*,
-};
+use phys::irq::*;
 
 use phys::gpio::{ 
     gpio_speed,
@@ -47,7 +33,7 @@ pub fn main() {
     loop { 
         unsafe {
             // gpio_set(Pin::Gpio7, 0x1 << 3);
-            // ws2812_loop();
+            // drivers::ws2812::ws2812_loop();
             gpio_set(Pin::Gpio7, 0x1 << 3);
             wait_ns(100000000); // 100000000
             gpio_clear(Pin::Gpio7, 0x1 << 3);
@@ -64,7 +50,7 @@ pub fn main() {
     }
 }
 
-pub fn wait_wow(nano: u64) {
+pub fn wait_wow(_nano: u64) {
     let mut r = 0;
     while r < 50000000 {
         r = r + 1;

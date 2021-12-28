@@ -7,7 +7,6 @@ use crate::phys::{
     assign,
     read_word,
     set_bit,
-    clear_bit,
  };
 
 #[no_mangle]
@@ -62,7 +61,7 @@ pub fn enable_irq(irq_number: Irq) {
 pub fn disable_irq(irq_number: Irq) {
     let num = irq_number as u8;
     let bank = num / 32;
-    let bit = (num - bank * 32);
+    let bit = num - bank * 32;
     let addr = addrs::NVIC_IRQ_CLEAR_REG + (bank as u32 * 4);
     let original_value = read_word(addr);
     let next_value = set_bit(original_value, bit);

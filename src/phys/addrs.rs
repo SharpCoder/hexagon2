@@ -2,6 +2,15 @@
 pub const NVIC_IRQ_ENABLE_REG: u32 = 0xE000E100;
 pub const NVIC_IRQ_CLEAR_REG: u32 = 0xE000E180;
 pub const NVIC_IRQ_CLEAR_PENDING_REG: u32 = 0xE000E280;
+/** UART */
+pub const UART1: u32 = 0x4018_4000;
+pub const UART2: u32 = 0x4018_8000;
+pub const UART3: u32 = 0x4018_C000;
+pub const UART4: u32 = 0x4019_0000;
+pub const UART5: u32 = 0x4019_4000;
+pub const UART6: u32 = 0x4019_8000;
+pub const UART7: u32 = 0x4019_C000;
+pub const UART8: u32 = 0x401A_0000;
 /** Fast Ram (512kb) */
 pub const OCRAM: u32 = 0x2028_0000;
 /** Slow Ram (512kb) */
