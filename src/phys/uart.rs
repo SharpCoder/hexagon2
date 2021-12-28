@@ -68,12 +68,18 @@ pub struct FifoConfig {
 fn fifo_config_to_u32(config: &FifoConfig, baseline: u32) -> u32 {
     let mut result: u32 = baseline;   
     // Clear The rx_fifo_depth
-    result = result & !0x7;
-    result = result & (config.rx_fifo_depth as u32);
+    
+    // Read Only
+    // result = result & !0x7;
+    // result = result & (config.rx_fifo_depth as u32);
+
     result = set_bit_from_bool(result, 3, config.rx_fifo_en);
+
     // Clear the tx_fifo_depth
-    result = result & !(0x7 << 4);
-    result = result & (config.tx_fifo_depth as u32) << 4;
+    // Read Only
+    // result = result & !(0x7 << 4);
+    // result = result & (config.tx_fifo_depth as u32) << 4;
+
     result = set_bit_from_bool(result, 7, config.tx_fifo_en);
     result = set_bit_from_bool(result, 8, config.rx_fifo_underflow_irq_en);
     result = set_bit_from_bool(result, 9, config.tx_fifo_overflow_irq_en);
@@ -150,7 +156,7 @@ fn config_to_u32(config: &UartConfig, baseline: u32) -> u32 {
 
     // Clear idle config from original result
     result = result & !(0x7 << 8);
-    result = result & (config.idle_config as u32) << 8;
+    result = result | (config.idle_config as u32) << 8;
 
     result = set_bit_from_bool(result, 14, config.match2_irq_en);
     result = set_bit_from_bool(result, 15, config.match1_irq_en);
@@ -199,7 +205,7 @@ pub fn uart_configure(device: &Device, configuration: UartConfig) {
 
 pub fn uart_configure_fifo(device: &Device, configuration: FifoConfig) {
     let addr = get_addr(device) + 0x28;
-    assign(addr, fifo_config_to_u32(&configuration, 0x0));
+    assign(addr, fifo_config_to_u32(&configuration, read_word(addr)));
 }
 
 pub fn uart_disable(device: &Device) {
@@ -208,10 +214,14 @@ pub fn uart_disable(device: &Device) {
     assign(addr, baseline & !(0x1 << 18) & !(0x1 << 19));
 }
 
+pub fn uart_set_pin_config(device: &Device, config: u32) {
+    assign(get_addr(device) + 0xC, config);
+}
+
 pub fn uart_enable(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
-    assign(addr, baseline & (0x1 << 18) & (0x1 << 19));
+    assign(addr, baseline | (0x1 << 18) | (0x1 << 19));
 }
 
 pub fn uart_write_fifo(device: &Device, byte: u8) {
@@ -227,19 +237,39 @@ pub fn uart_baud_rate(device: &Device, _rate: Baud) {
     uart_enable(&device);
 }
 
+pub fn uart_enable_dma(device: &Device) {
+    let addr = get_addr(device) + 0x10;
+    assign(addr, read_word(addr) | (0x1 << 21) | (0x1 << 23));
+}
+
+pub fn uart_disable_dma(device: &Device) {
+    let addr = get_addr(device) + 0x10;
+    assign(addr, read_word(addr) & !(0x1 << 21) & !(0x1 << 23));
+}
+
 pub fn uart_flush(device: &Device) {
     let addr = get_addr(device) + 0x1C;
     let original = read_word(addr);
-    assign(addr, original & (0x1<<15));
+    assign(addr, original | (0x1<<15));
 }
 
 pub fn uart_sbk(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let original = read_word(addr);
-    assign(addr, original & (0x1<<16));
+    assign(addr, original | (0x1<<16));
 }
 
 pub fn uart_watermark(device: &Device) {
     let addr = get_addr(device) + 0x2C;
     assign(addr, 0x1);
+}
+
+pub fn uart_enable_fifo(device: &Device) {
+    let addr = get_addr(device) + 0x28;
+    assign(addr, read_word(addr) | (0x1 << 7));
+}
+
+pub fn uart_disable_fifo(device: &Device) {
+    let addr = get_addr(device) + 0x28;
+    assign(addr, read_word(addr) & !(0x1 << 7));
 }

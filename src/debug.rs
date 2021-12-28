@@ -3,9 +3,9 @@ use crate::phys::gpio::*;
 
 #[derive(Copy, Clone)]
 pub enum Speed {
-    Slow = 100000000,
-    Fast = 10000000,
-    Normal = 90000000,
+    Slow = 259900000,
+    Fast = 20000000,
+    Normal = 159900000,
 }
 
 fn wait(speed: &Speed) {
