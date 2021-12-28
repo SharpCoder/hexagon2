@@ -1,8 +1,9 @@
 pub mod addrs;
+pub mod dma;
 pub mod gpio;
 pub mod irq;
-pub mod timer;
 pub mod periodic_timers;
+pub mod timer;
 pub mod uart;
 
 pub enum Dir {

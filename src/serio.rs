@@ -30,7 +30,7 @@ pub fn serio_init() {
     uart_disable(&SERIO_DEV);
 
     uart_configure(&SERIO_DEV, UartConfig {
-        invert_transmission_polarity: true,
+        invert_transmission_polarity: false,
         overrun_irq_en: false,
         noise_error_irq_en: false,
         framing_error_irq_en: false,
@@ -65,7 +65,7 @@ pub fn serio_init() {
 
     uart_set_pin_config(&SERIO_DEV, 0x0);
     // uart_disable_fifo(&SERIO_DEV);
-    uart_enable_fifo(&SERIO_DEV);
+    // uart_enable_fifo(&SERIO_DEV);
 
     attach_irq(Irq::UART1, serio_irq_handler);
     irq_enable(Irq::UART1);
@@ -102,8 +102,6 @@ pub fn serio_write(string: &[u8]) {
 
 pub fn serio_write_byte(byte: u8) {
     uart_write_fifo(&SERIO_DEV, byte);
-    gpio_set(Pin::Gpio7, 0xFFFF_FFFF);
-    uart_flush(&SERIO_DEV);
 }
 
 #[no_mangle]

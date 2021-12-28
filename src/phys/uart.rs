@@ -226,7 +226,7 @@ pub fn uart_enable(device: &Device) {
 
 pub fn uart_write_fifo(device: &Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
-    assign(addr, byte as u32);
+    write_byte(addr, byte);
 }
 
 pub fn uart_baud_rate(device: &Device, _rate: Baud) {

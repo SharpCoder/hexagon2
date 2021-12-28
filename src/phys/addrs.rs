@@ -41,6 +41,9 @@ pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_B0_03: u32 = 0x401F_8148; // Gpio2 and Gpio
 pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_12: u32 = 0x401F_80EC; // UART1
 pub const IOMUXC_SW_PAD_CTL_PAD_GPIO_AD_B0_12: u32 = 0x401F_82DC;
 pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_14: u32 = 0x401F_80F4;
+/** DMA */
+pub const DMA: u32 = 0x400E_8000;
+pub const DMAMUX: u32 = 0x400E_C000;
 /** Misc */
 pub const CCM_CSCMR1: u32 = 0x400F_C01C; // CCM Serial Clock Multiplexer Register 1
 pub const CCM_CCGR1: u32 = 0x400F_C06C; // Clock Gating Register 1
