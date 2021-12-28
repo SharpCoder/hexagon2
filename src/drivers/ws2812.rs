@@ -14,20 +14,20 @@ use crate::phys::gpio::{
 
 const GpioSpeed: MuxSpeed = MuxSpeed::Fast;
 const GpioPin: Pin = Pin::Gpio7;
-const GpioBit: u32 = 0xFFFF_FFFF;
+const GpioBit: u32 = (0x1 << 3);
 
 fn on() {
     gpio_set(GpioPin, GpioBit);
-    wait_ns(800);
+    wait_ns(700);
     gpio_clear(GpioPin, GpioBit);
-    wait_ns(450);
+    wait_ns(600);
 }
 
 fn off() {
     gpio_set(GpioPin, GpioBit);
-    wait_ns(400);
+    wait_ns(350);
     gpio_clear(GpioPin, GpioBit);
-    wait_ns(850);
+    wait_ns(800);
 
 }
 
@@ -36,23 +36,18 @@ pub fn ws2812_init() {
     gpio_direction(GpioPin, Dir::Output);
 }
 
-static mut c: u64 = 500;
-
 #[no_mangle]
 pub fn ws2812_loop() {
     
+    
     let mut r = 0;
-    while r < 100 {
-        off();off();off();off();off();off();off();off();
+    while r < 1 {
         on();off();off();on();off();on();on();off();
         off();off();off();off();off();off();off();off();
-        r = r + 1;
+        off();off();off();off();off();off();off();off();
     }
     
     
     gpio_clear(GpioPin, GpioBit);
-    unsafe {
-        wait_ns(50000);
-        // c = c + 1;
-    }
+    wait_ns(55_000);
 }

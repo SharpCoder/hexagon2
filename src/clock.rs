@@ -27,12 +27,13 @@ static mut clock_decimal_counter: u64 = 0;
 pub fn clock_init() {
     // // Undo clock gating
     assign(addrs::CCM_CCGR1, read_word(addrs::CCM_CCGR1) | (0x3 << 12));
+    
     // Select 150MHz clock
     assign(addrs::CCM_CSCMR1, read_word(addrs::CCM_CSCMR1) & !(0x1 << 6));
 
     // Attach the interrupts
-    // attach_irq(Irq::PIT, handle_pit_irq);
-    fill_irq(handle_pit_irq);
+    attach_irq(Irq::PIT, handle_pit_irq);
+    // fill_irq(handle_pit_irq);
 
     // Set CTRL 0
     pit_configure(&PeriodicTimerSource::Timer0, PITConfig {
@@ -56,38 +57,22 @@ pub fn clock_init() {
     
 
     enable_irq(Irq::PIT);
+
+    // Secret sauce which makes it all work otherwise you are bound
+    // to a default timeout that takes like a minute.
     pit_restart(&PeriodicTimerSource::Timer0);
-
-
-
-
-
-
-    // let clk_source = TimerSource::GPT1;
-
-    // // Enable Oscillator
-    // timer::timer_disable(&clk_source);
-    // timer::timer_disable_irq(&clk_source);
-    // timer::timer_clear_status(&clk_source);
-    // timer::timer_assert_reset(&clk_source);
-    // timer::timer_set_clock(&clk_source, TimerClock::Peripheral);
-    // timer::timer_set_compare_value(&clk_source, 0x0000_0001);
-    // timer::timer_enable(&clk_source);
-
-    // attach_irq(Irq::GPT1, handle_clock_irq);  
-    // enable_irq(Irq::GPT1);
-
-    // timer::timer_enable_irq(&clk_source);
 }
 
 fn handle_pit_irq() {
     
+    // The neopixel timing has proven this is not the actual clock speed.
+    // But it's pretty close.
     unsafe {
         clock_counter += 31;
         clock_decimal_counter += 1;
 
-        if clock_decimal_counter > 100 {
-            clock_counter += 50;
+        if clock_decimal_counter > 10 {
+            clock_counter += 5;
             clock_decimal_counter = 0;
         }
     }
@@ -95,28 +80,6 @@ fn handle_pit_irq() {
     pit_clear_interrupts(&PeriodicTimerSource::Timer0);
     crate::dsb();
 }
-
-// fn handle_clock_irq() {
-
-//     // crate::debug_blink(10);
-
-//     unsafe {
-//         clock_counter += 20;
-//         clock_decimal_counter += 1;
-
-//         if clock_decimal_counter >= 1000 {
-//             clock_decimal_counter = 0;
-//             clock_counter += 0;
-//         }
-//     }
-
-
-//     timer::timer_clear_status(&TimerSource::GPT1);
-//     crate::dsb();
-
-//     // irq_clear_pending();
-//     // pit_clear_interrupts(&PeriodicTimerSource::Timer1);
-// }
 
 pub fn nanos() -> u64 {
     unsafe {

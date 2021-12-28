@@ -44,13 +44,7 @@ pub fn irq_init() {
     assign(addrs::NVIC_IRQ_CLEAR_REG + 0x8, 0xFFFF_FFFF);
     assign(addrs::NVIC_IRQ_CLEAR_REG + 0xC, 0xFFFF_FFFF);
     // Reset all interrupt vector handlers
-    let mut handler_idx = 0;
-    while handler_idx < (180 - IRQ_0_OFFSET) {
-        unsafe {
-            VEC_TABLE[IRQ_0_OFFSET + handler_idx] = noop;
-        }
-        handler_idx += 1;
-    }
+    fill_irq(noop);
     // Reset the interrupt pointers
     irq_clear_pending();
 }
@@ -97,7 +91,7 @@ pub fn attach_irq(irq_number: Irq, ptr: Ptr) {
     unsafe {
         let irq = irq_number as usize;
         VEC_TABLE[IRQ_0_OFFSET + irq as usize] = ptr;
-        VEC_TABLE[IRQ_0_OFFSET - 4 + irq as usize] = ptr;
+        // VEC_TABLE[IRQ_0_OFFSET - 4 + irq as usize] = ptr;
 
         // let mut r: usize = 0;
         // while r < 10 {
