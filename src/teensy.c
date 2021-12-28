@@ -32,11 +32,15 @@ void startup() {
     mmio32(0x400AC000 + 0x40) = 0x00000007;
     mmio32(0x400AC000 + 0x38) = 0x00AA0000;
 
+    // Enable FPU
+    mmio32(0xE000ED88) = mmio32(0xE000ED88) | (0xFF<<20);
+    __asm__ volatile("isb");
+    __asm__ volatile("dsb");
+
     // Move stack pointer
     __asm__ volatile("mov sp, %0" : : "r" ((uint32_t)&_estack) : );
 
     // Initialize memory
-    // TODO: Find out why this is required
     memory_copy(&_stext, &_stextload, &_etext);
     memory_copy(&_sdata, &_sdataload, &_edata);
     memory_clear(&_sbss, &_ebss);
@@ -44,22 +48,7 @@ void startup() {
     // Update VTOR
     mmio32(0xE000ED08) = (uint32_t)&VEC_TABLE;
 
-    __disable_irq();
-    
-    // Enable registers
-    // mmio32(0xE000E100) = 0xFFFFFFFF;
-    // mmio32(0xE000E104) = 0xFFFFFFFF;
-    // mmio32(0xE000E108) = 0xFFFFFFFF;
-    // mmio32(0xE000E10C) = 0x10;
-    // mmio32(0xE000E110) = 0xFFFFFFFF;
-    // mmio32(0xE000E114) = 0xFFFFFFFF;
-    // mmio32(0xE000E118) = 0xFFFFFFFF;
-    // mmio32(0xE000E11C) = 0xFFFFFFFF;
-
-    __enable_irq();
-
     // Branch to main
-    // Setup interrupt
     __asm__ volatile("bl main");
 }
 

@@ -1,6 +1,8 @@
 pub mod addrs;
 pub mod gpio;
 pub mod irq;
+pub mod timer;
+pub mod periodic_timers;
 
 pub enum Dir {
     Input,

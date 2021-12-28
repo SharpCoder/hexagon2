@@ -1,5 +1,6 @@
 use core::arch::asm;
 
+use crate::wait_ns;
 use crate::phys::{ Dir };
 use crate::phys::gpio::{
     Pin,
@@ -11,46 +12,23 @@ use crate::phys::gpio::{
 
 };
 
-const WaitMod: u32 = 4;
 const GpioSpeed: MuxSpeed = MuxSpeed::Fast;
 const GpioPin: Pin = Pin::Gpio7;
-const GpioBit: u32 = 0x1 << 3;
-
-// Note: GRB is the sequence
-struct LightNode {
-    green: u8,
-    red: u8,
-    blue: u8,
-}
-
-struct WS2812 <'a> {
-    nodes: &'a [LightNode],
-}
+const GpioBit: u32 = 0xFFFF_FFFF;
 
 fn on() {
     gpio_set(GpioPin, GpioBit);
-    wait(WaitMod, 40);
+    wait_ns(800);
     gpio_clear(GpioPin, GpioBit);
-    wait(WaitMod, 22);
+    wait_ns(450);
 }
 
 fn off() {
     gpio_set(GpioPin, GpioBit);
-    wait(WaitMod, 20);
+    wait_ns(400);
     gpio_clear(GpioPin, GpioBit);
-    wait(WaitMod, 42);
+    wait_ns(850);
 
-}
-
-fn wait(ms: u32, modifier: u32) {
-    let mut r = 0;
-    let target = ms * modifier;
-    while r < target {
-        r = r + 1;
-        unsafe {
-            asm!("nop");
-        }
-    }
 }
 
 pub fn ws2812_init() {
@@ -58,27 +36,23 @@ pub fn ws2812_init() {
     gpio_direction(GpioPin, Dir::Output);
 }
 
+static mut c: u64 = 500;
+
+#[no_mangle]
 pub fn ws2812_loop() {
-    let node = LightNode {
-        green: 0xFF,
-        red: 0x00,
-        blue: 0x00,
-    };
     
-
-    on();
-    off();
-    off();
-    on();
-    off();
-    on();
-    on();
-    off();
-    off();off();off();off();off();off();off();off();
-    off();off();off();off();off();off();off();off();
-
-    off();
-    wait(200000, 1);
-        
-
+    let mut r = 0;
+    while r < 100 {
+        off();off();off();off();off();off();off();off();
+        on();off();off();on();off();on();on();off();
+        off();off();off();off();off();off();off();off();
+        r = r + 1;
+    }
+    
+    
+    gpio_clear(GpioPin, GpioBit);
+    unsafe {
+        wait_ns(50000);
+        // c = c + 1;
+    }
 }

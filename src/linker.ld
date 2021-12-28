@@ -39,6 +39,7 @@ SECTIONS
     .data : {
         *(.rodata*)
         *(.data*)
+        KEEP(*(.counter))
         KEEP(*(.vectors))
         . = ALIGN(16);
     } > DTCM  AT> FLASH

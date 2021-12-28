@@ -4,6 +4,7 @@
 
 pub mod phys;
 pub mod drivers;
+pub mod clock;
 
 // Import assembly macro
 use core::arch::asm;
@@ -12,13 +13,14 @@ use drivers::ws2812::{
     ws2812_loop,
 };
 
+use phys::timer;
 use phys::{
     assign,
-    irq::{
-        attach_irq,
-        enable_irq,
-        Irq,
-    }
+    timer::{
+        TimerSource,
+        TimerClock,
+    },
+    irq::*,
 };
 
 use phys::gpio::{ 
@@ -30,60 +32,52 @@ use phys::gpio::{
     Pin,
 };
 
+
 #[no_mangle]
 pub fn main() {
-
-    attach_irq(Irq::GPT1, interrupt_handler);
-    enable_irq(Irq::GPT1);
+    // Initialize irq syste, (disables all interrupts)
+    irq_init();
+    enable_interrupts();
 
     gpio_speed(Pin::Gpio7, MuxSpeed::Fast);
     gpio_direction(Pin::Gpio7, phys::Dir::Output);
 
-    // Enable timers
-    // assign(0x4008_4000, 0x0);
-    // assign(0x4008_4000 + 0x100, 0x500);
+    clock::clock_init();
 
-    // ws2812_init();
-    let mut set = false;
     loop { 
-        let mut r = 0;
-        gpio_set(Pin::Gpio7, 0x1 << 3);
-        while r < 20000000 {
-            r = r + 1;
-            unsafe { asm!("nop"); }
-        }
-        r = 0;
-        gpio_clear(Pin::Gpio7, 0x1 << 3);
-        while r < 20000000 {
-            r = r + 1;
-            unsafe { asm!("nop"); }
-        }
-        // ws2812_loop();
         unsafe {
+            // gpio_set(Pin::Gpio7, 0x1 << 3);
+            // ws2812_loop();
+            gpio_set(Pin::Gpio7, 0x1 << 3);
+            wait_ns(100000000); // 100000000
+            gpio_clear(Pin::Gpio7, 0x1 << 3);
+            wait_ns(100000000); // 100000000
+            // if clock::nanos() > 0 {
+            //     gpio_set(Pin::Gpio7, 0x1 << 3);
+            // } else {
+            //     gpio_clear(Pin::Gpio7, 0x1 << 3);
+            // }
+            // debug_blink(2);
             asm!("nop");
-            if set == false {
-                enable_timer();
-                set = true;
-            }
         }
+        
     }
 }
 
-pub fn enable_timer() {
-    unsafe {
-        // Disable GPT
-        assign(0x401E_C000, 0x0);
-        // Clear the IR
-        assign(0x401E_C000 + 0xC, 0x0);
-        // Clear Status Registers
-        assign(0x401E_C000 + 0x8, 0x1F);
-        // Enable interrupts
-        assign(0x401E_C000 + 0xC, 0x11);
-        // Select clock source & enable
-        assign(0x401E_C000, 0x41);
-        // Set compare value
-        assign(0x401E_C000 + 0x10, 0x04FF_1000);
+pub fn wait_wow(nano: u64) {
+    let mut r = 0;
+    while r < 50000000 {
+        r = r + 1;
+        unsafe { asm!( "nop"); }
+    }
+}
 
+pub fn wait_ns(nano: u64) {
+    unsafe {
+        let origin = clock::nanos();
+        while (origin + nano) > clock::nanos() {
+            asm!("nop");
+        }
     }
 }
 
@@ -93,26 +87,20 @@ pub fn pendsv() {
     }
 }
 
-#[no_mangle]
-pub fn interrupt_handler() {
-    loop {
-        // Assign GPIO7 to pin 13 high
-        let mut r = 0;
-        gpio_set(Pin::Gpio7, 0x1 << 3);
-        while r < 100000000 {
-            r = r + 1;
-            unsafe { asm!("nop"); }
-        }
-        r = 0;
-        gpio_clear(Pin::Gpio7, 0x1 << 3);
-        while r < 100000000 {
-            r = r + 1;
-            unsafe { asm!("nop"); }
-        }
+pub fn dsb() {
+    unsafe {
+        asm!("dsb");
+    }
+}
 
-        unsafe {
-            asm!("nop");
-        }
+pub fn debug_blink(count: u32) {
+    let mut i = 0;
+    while i < count {
+        gpio_set(Pin::Gpio7, 0x1 << 3);
+        wait_wow(1);
+        gpio_clear(Pin::Gpio7, 0x1 << 3);
+        wait_wow(1);
+        i += 1;
     }
 }
 
