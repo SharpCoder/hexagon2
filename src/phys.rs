@@ -11,9 +11,22 @@ pub enum Dir {
     Output,
 }
 
+// Enable all physical clocks that we need
+pub fn phys_clocks_en() {
+    uart::uart_start_clock();
+    dma::dma_start_clock();
+}
+
 pub fn write_byte(address: u32, value: u8) {
     unsafe {
         *(address as *mut u8) = value;
+    }
+}
+
+
+pub fn assign_16(address: u32, value: u16) {
+    unsafe {
+        *(address as *mut u16) = value;
     }
 }
 

@@ -8,9 +8,11 @@ pub mod serio;
 pub mod debug;
 
 use core::arch::asm;
+use core::arch::global_asm;
 use phys::irq::*;
 use phys::uart::Baud;
 use serio::*;
+use phys::*;
 use phys::gpio::{ 
     gpio_speed,
     gpio_direction,
@@ -22,10 +24,28 @@ use phys::gpio::{
 
 
 #[no_mangle]
+#[link_section = "testdata"]
+static test_data: [u32; 8] = [
+    125,
+    325,
+    525,
+    625,
+    725,
+    825,
+    925,
+    1125,
+];
+
+static test_data_2: u32 = 1052;
+
+#[no_mangle]
 pub fn main() {
     // Initialize irq system, (disables all interrupts)
     irq_init();
     disable_interrupts();
+
+    // Initialize clocks
+    phys_clocks_en();
 
     // Initialize serial communication
     serio_init();
@@ -56,8 +76,9 @@ pub fn main() {
             // } else {
             //     gpio_clear(Pin::Gpio7, 0x1 << 3);
             // }
-            serio_write_byte(b'a');
+
             debug::blink(1, debug::Speed::Normal);
+            serio_write_byte(b'a');
             asm!("nop");
         }
         
@@ -101,3 +122,19 @@ pub extern fn eh_personality() {}#[panic_handler]
 pub extern fn my_panic(_info: &core::panic::PanicInfo) -> ! {
     loop { }
 }
+
+extern "C" {
+    pub fn ptr_to_addr_word(ptr: *const u32) -> u32;
+    pub fn ptr_to_addr_byte(ptr: *const u8) -> u32;
+} 
+
+// Yeah how tf do you do this in rust? Idk
+// These functions take a pointer and return the absolute address
+// to that pointer as a word. Somehow.
+global_asm!("
+    ptr_to_addr_byte:
+        add r0, sp, #4
+
+    ptr_to_addr_word:
+        add r0, sp, #4
+");

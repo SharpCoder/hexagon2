@@ -5,18 +5,16 @@
 */
 use core::arch::asm;
 use crate::phys::addrs;
-use crate::phys::gpio::*;
 use crate::phys::uart::*;
 use crate::phys::irq::*;
+use crate::phys::dma::*;
 use crate::phys::*;
 
 // The device serial communication is hardcoded tos
 pub const SERIO_DEV: Device = Device::Uart1;
+pub const DMA_CHANNEL: u32 = 0;
 
 pub fn serio_init() {
-    // Turn on clock for UART
-    assign(0x400FC07C, read_word(0x400FC07C) | (0x3 << 24));
-
     // Do some muxing
     // TX
     assign(addrs::IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_12, 0x2);
@@ -64,8 +62,7 @@ pub fn serio_init() {
     });
 
     uart_set_pin_config(&SERIO_DEV, 0x0);
-    // uart_disable_fifo(&SERIO_DEV);
-    // uart_enable_fifo(&SERIO_DEV);
+    uart_disable_fifo(&SERIO_DEV);
 
     attach_irq(Irq::UART1, serio_irq_handler);
     irq_enable(Irq::UART1);
@@ -86,6 +83,12 @@ pub fn serio_init() {
     uart_enable_dma(&SERIO_DEV);
     uart_watermark(&SERIO_DEV);
     uart_enable(&SERIO_DEV);
+
+
+    // Configure DMA
+    dma_configure_source(DMA_CHANNEL, DMASource::Uart1Tx);
+    dma_destination(DMA_CHANNEL, 0x4018_4000 + 0x1C);
+    dma_enable(DMA_CHANNEL);
 }
 
 pub fn serio_baud(rate: Baud) {
@@ -101,7 +104,12 @@ pub fn serio_write(string: &[u8]) {
 }
 
 pub fn serio_write_byte(byte: u8) {
-    uart_write_fifo(&SERIO_DEV, byte);
+    let buffer: [u8; 1] = [byte];
+    let addr = unsafe {
+        crate::ptr_to_addr_byte(buffer.as_ptr())
+    };
+
+    dma_source_buffer(DMA_CHANNEL, addr, 1);
 }
 
 #[no_mangle]

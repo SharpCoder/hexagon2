@@ -1,5 +1,19 @@
+#![allow(dead_code)]
+
 use crate::phys::*;
 use crate::phys::addrs;
+
+const TCR_CSR: u32 = 0x101C;
+const TCD_SADDR: u32 = 0x1000;
+const TCD_SOFF: u32 = 0x1004;
+const TCD_SATTR: u32 = 0x1006;
+const TCD_NBYTES: u32 = 0x1008;
+const TCD_SLAST: u32 = 0x100C;
+const TCD_CITER: u32 = 0x1016;
+const TCD_BITER: u32 = 0x101E;
+const TCD_DADDR: u32 = 0x1010;
+const TCD_DLASTSGA: u32 = 0x1018;
+const TCD_DOFF: u32 = 0x1014;
 
 pub enum DMASource {
     Uart1Tx = 2,
@@ -26,9 +40,17 @@ fn get_addr(channel: DMAChannel) -> u32 {
     return addrs::DMAMUX + (channel * 4);
 }
 
+pub fn dma_start_clock() {
+    assign(0x400F_C07C, read_word(0x400F_C07C) | (0x3 << 6));
+}
+
 pub fn dma_enable(channel: DMAChannel) {
+    // Enable DMA
     let addr = get_addr(channel);
     assign(addr, read_word(addr) | (0x1 << 31));
+
+    // Enable EDMA
+
 }
 
 pub fn dma_disable(channel: DMAChannel) {
@@ -51,7 +73,28 @@ pub fn dma_configure_source(channel: DMAChannel, source: DMASource) {
     assign(addr, read_word(addr) & !(0x3F) | (source as u32));
 }
 
+pub fn dma_source_buffer(channel: DMAChannel, buffer: u32, length: u16) {
+    assign(addrs::DMA + TCD_SADDR + (channel * 0x20), buffer);
+    assign_16(addrs::DMA + TCD_SOFF + (channel * 0x20), 0x01);
+    assign_16(addrs::DMA + TCD_SATTR + (channel * 0x20), 0x00);
+    assign(addrs::DMA + TCD_NBYTES + (channel * 0x20), 0x04);
+
+    // Is this right?
+    assign(addrs::DMA + TCD_SLAST + (channel * 0x20), 0xFFFF_FFFF - length as u32);
+    
+    assign_16(addrs::DMA + TCD_CITER + (channel * 0x20), length);
+    assign_16(addrs::DMA + TCD_BITER + (channel * 0x20), length);
+}
+
 pub fn dma_destination(channel: DMAChannel, destination: u32) {
-    let addr = addrs::DMA + 0x1010 + (channel * 0x20);
-    assign(addr, destination);
+    assign(addrs::DMA + TCD_DADDR + (channel * 0x20), destination);
+    assign_16(addrs::DMA + TCD_DOFF + (channel * 0x20), 0x00); // Signed offset 
+    assign(addrs::DMA + TCD_DLASTSGA + (channel * 0x20), 0x00); // TCD Last Destination Address Adjustment/Scatter Gather Address
+
+    let n_bytes = read_word(addrs::DMA + TCD_NBYTES);
+    if destination < 0x40000000 || n_bytes == 0 {
+        assign(addrs::DMA + TCD_NBYTES, 0x1);
+    }
+
+    assign(addrs::DMA + TCR_CSR + (channel * 0x20), 0x03);
 }

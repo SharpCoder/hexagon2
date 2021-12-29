@@ -23,9 +23,11 @@ arm-none-eabi-gcc \
 arm-none-eabi-ld \
     -Map=out/kernel.map \
     -T src/linker.ld \
-    out/kernel.o out/teensy.o -o out/kernel.elf
+    out/teensy.o out/kernel.o -o out/kernel.elf
 
 # Dump a bunch of debug stuff
+arm-none-eabi-objdump -S out/teensy.o > out/teensy.asm
+arm-none-eabi-objdump -S out/kernel.o > out/kernel.asm
 arm-none-eabi-objdump -S out/kernel.elf > out/kern.asm
 arm-none-eabi-objdump -d -S -C out/kernel.elf > out/kern.lst
 
@@ -33,5 +35,5 @@ arm-none-eabi-objdump -d -S -C out/kernel.elf > out/kern.lst
 arm-none-eabi-objcopy -O ihex -R .eeprom out/kernel.elf out/kern.hex
 
 # Cleanup
-rm -rf out/*.elf
-rm -rf out/*.o
+# rm -rf out/*.elf
+# rm -rf out/*.o

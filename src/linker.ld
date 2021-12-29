@@ -41,6 +41,7 @@ SECTIONS
         *(.data*)
         KEEP(*(.counter))
         KEEP(*(.vectors))
+        KEEP(*(.testdata))
         . = ALIGN(16);
     } > DTCM  AT> FLASH
 

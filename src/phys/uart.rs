@@ -175,6 +175,10 @@ fn config_to_u32(config: &UartConfig, baseline: u32) -> u32 {
     return result;
 }
 
+pub fn uart_start_clock() {
+    assign(0x400FC07C, read_word(0x400FC07C) | (0x3 << 24));
+}
+
 pub fn get_addr(device: &Device) -> u32 {
     return match device {
         Device::Uart1 => addrs::UART1,
