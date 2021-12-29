@@ -23,6 +23,11 @@ pub fn write_byte(address: u32, value: u8) {
     }
 }
 
+pub fn assign_8(address: u32, value: u8) {
+    unsafe {
+        *(address as *mut u8) = value;
+    }
+}
 
 pub fn assign_16(address: u32, value: u16) {
     unsafe {

@@ -77,8 +77,9 @@ pub fn main() {
             //     gpio_clear(Pin::Gpio7, 0x1 << 3);
             // }
 
-            debug::blink(1, debug::Speed::Normal);
+            // debug::blink(1, debug::Speed::Normal);
             serio_write_byte(b'a');
+            wait_wow(1);
             asm!("nop");
         }
         

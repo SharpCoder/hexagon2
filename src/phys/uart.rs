@@ -277,3 +277,11 @@ pub fn uart_disable_fifo(device: &Device) {
     let addr = get_addr(device) + 0x28;
     assign(addr, read_word(addr) & !(0x1 << 7));
 }
+
+pub fn uart_get_irq_statuses(device: &Device) -> u32 {
+    return read_word(get_addr(device) + 0x14);
+}
+
+pub fn uart_clear_irq(device: &Device) {
+    assign(get_addr(device) + 0x14, 0x7EFF_C000);
+}

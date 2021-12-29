@@ -33,7 +33,7 @@ pub fn serio_init() {
         noise_error_irq_en: false,
         framing_error_irq_en: false,
         parity_error_irq_en: false,
-        tx_irq_en: true,
+        tx_irq_en: false,
         rx_irq_en: false,
         tx_complete_irq_en: false,
         idle_line_irq_en: false,
@@ -67,27 +67,21 @@ pub fn serio_init() {
     attach_irq(Irq::UART1, serio_irq_handler);
     irq_enable(Irq::UART1);
 
-    // attach_irq(Irq::EDMA1, serio_irq_handler);
-    // irq_enable(Irq::EDMA1);
-    // attach_irq(Irq::EDMA2, serio_irq_handler);
-    // irq_enable(Irq::EDMA2);
-    // attach_irq(Irq::EDMA3, serio_irq_handler);
-    // irq_enable(Irq::EDMA3);
-    // attach_irq(Irq::EDMA4, serio_irq_handler);
-    // irq_enable(Irq::EDMA4);
-    // attach_irq(Irq::EDMA5, serio_irq_handler);
-    // irq_enable(Irq::EDMA5);
+    attach_irq(Irq::EDMA0, serio_irq_handler);
+    irq_enable(Irq::EDMA0);
 
     // fill_irq(serio_irq_handler);
 
     uart_enable_dma(&SERIO_DEV);
     uart_watermark(&SERIO_DEV);
-    uart_enable(&SERIO_DEV);
+    // uart_enable(&SERIO_DEV);
 
 
     // Configure DMA
     dma_configure_source(DMA_CHANNEL, DMASource::Uart1Tx);
     dma_destination(DMA_CHANNEL, 0x4018_4000 + 0x1C);
+    dma_enable_irq(DMA_CHANNEL);
+    dma_interrupt_at_completion(DMA_CHANNEL);
     dma_enable(DMA_CHANNEL);
 }
 
@@ -114,7 +108,15 @@ pub fn serio_write_byte(byte: u8) {
 
 #[no_mangle]
 pub fn serio_irq_handler() {
-    crate::debug::blink(4, crate::debug::Speed::Fast);
+
+    // Read the interrupts
+    if dma_is_irq(DMA_CHANNEL) {
+        crate::debug::blink(1, crate::debug::Speed::Slow);
+    }
+
+    // uart_clear_irq(&SERIO_DEV);
+    dma_clear_irq(DMA_CHANNEL);
+    // dma_clear_done_status(DMA_CHANNEL);
     unsafe {
         asm!("nop");
     }

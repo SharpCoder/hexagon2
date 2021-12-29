@@ -48,9 +48,41 @@ pub fn dma_enable(channel: DMAChannel) {
     // Enable DMA
     let addr = get_addr(channel);
     assign(addr, read_word(addr) | (0x1 << 31));
+}
 
-    // Enable EDMA
+pub fn dma_get_errors() -> u32 {
+    return read_word(addrs::DMA + 0x4);
+}
 
+pub fn dma_is_irq(channel: DMAChannel) -> bool {
+    return read_word(addrs::DMA + 0x24) & (0x1 << channel) > 0;
+}
+
+pub fn dma_enable_irq(channel: DMAChannel) {
+    let origin = read_word(addrs::DMA + 0x24);
+    assign(addrs::DMA + 0x24, origin | (0x1 << channel));
+}
+
+pub fn dma_enable_request(channel: DMAChannel) {
+    assign_8(addrs::DMA + 0x1B, (channel + 1) as u8);
+}
+
+pub fn dma_clear_irq(channel: DMAChannel) {
+    assign_8(addrs::DMA + 0x1F, (channel + 1) as u8);
+}
+
+pub fn dma_interrupt_at_completion(channel: DMAChannel) {
+    let addr = addrs::DMA + TCR_CSR + (channel * 0x20);
+    let csr = read_word(addr);
+    assign(addr, csr | 0x2);
+}
+
+pub fn dma_disable_request(channel: DMAChannel) {
+    assign_8(addrs::DMA + 0x1A, (channel + 1) as u8);
+}
+
+pub fn dma_clear_done_status(channel: DMAChannel) {
+    assign_8(addrs::DMA + 0x1C, (channel + 1) as u8);
 }
 
 pub fn dma_disable(channel: DMAChannel) {
@@ -75,15 +107,16 @@ pub fn dma_configure_source(channel: DMAChannel, source: DMASource) {
 
 pub fn dma_source_buffer(channel: DMAChannel, buffer: u32, length: u16) {
     assign(addrs::DMA + TCD_SADDR + (channel * 0x20), buffer);
-    assign_16(addrs::DMA + TCD_SOFF + (channel * 0x20), 0x01);
+    assign_16(addrs::DMA + TCD_SOFF + (channel * 0x20), 0x1);
     assign_16(addrs::DMA + TCD_SATTR + (channel * 0x20), 0x00);
-    assign(addrs::DMA + TCD_NBYTES + (channel * 0x20), 0x04);
+    assign(addrs::DMA + TCD_NBYTES + (channel * 0x20), 0x01);
 
     // Is this right?
     assign(addrs::DMA + TCD_SLAST + (channel * 0x20), 0xFFFF_FFFF - length as u32);
     
     assign_16(addrs::DMA + TCD_CITER + (channel * 0x20), length);
     assign_16(addrs::DMA + TCD_BITER + (channel * 0x20), length);
+    dma_enable_request(channel);
 }
 
 pub fn dma_destination(channel: DMAChannel, destination: u32) {
@@ -96,5 +129,7 @@ pub fn dma_destination(channel: DMAChannel, destination: u32) {
         assign(addrs::DMA + TCD_NBYTES, 0x1);
     }
 
-    assign(addrs::DMA + TCR_CSR + (channel * 0x20), 0x03);
+    // Read csr
+    let csr = read_word(addrs::DMA + TCR_CSR + (channel * 0x20));
+    assign(addrs::DMA + TCR_CSR + (channel * 0x20), csr | 0x03);
 }

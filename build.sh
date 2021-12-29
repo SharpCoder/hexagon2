@@ -35,5 +35,5 @@ arm-none-eabi-objdump -d -S -C out/kernel.elf > out/kern.lst
 arm-none-eabi-objcopy -O ihex -R .eeprom out/kernel.elf out/kern.hex
 
 # Cleanup
-# rm -rf out/*.elf
-# rm -rf out/*.o
+rm -rf out/*.elf
+rm -rf out/*.o
