@@ -3,8 +3,15 @@ pub mod dma;
 pub mod gpio;
 pub mod irq;
 pub mod periodic_timers;
+pub mod pins;
 pub mod timer;
 pub mod uart;
+
+pub enum Bitwise {
+    Or, // Or with the existing value
+    And, // And with the existing value
+    Eq, // Assign absolute vlaue
+}
 
 pub enum Dir {
     Input,
@@ -54,3 +61,12 @@ pub fn clear_bit(number: u32, bit: u8) -> u32 {
 pub fn set_bit(number: u32, bit: u8) -> u32 {
     return number | (0x01 << bit);
 }
+
+// A structure defining a register
+// used in peripherals
+pub struct Reg {
+    base: u32,
+    mask: u32,
+}
+
+

@@ -12,31 +12,8 @@ use core::arch::global_asm;
 use phys::irq::*;
 use phys::uart::Baud;
 use serio::*;
+use phys::pins::*;
 use phys::*;
-use phys::gpio::{ 
-    gpio_speed,
-    gpio_direction,
-    gpio_set,
-    gpio_clear,
-    MuxSpeed,
-    Pin,
-};
-
-
-#[no_mangle]
-#[link_section = "testdata"]
-static test_data: [u32; 8] = [
-    125,
-    325,
-    525,
-    625,
-    725,
-    825,
-    925,
-    1125,
-];
-
-static test_data_2: u32 = 1052;
 
 #[no_mangle]
 pub fn main() {
@@ -52,8 +29,7 @@ pub fn main() {
     serio_baud(Baud::Rate9600);
 
     // Setup GPIO pin 13 (the LED on teensy)
-    gpio_speed(Pin::Gpio7, MuxSpeed::Fast);
-    gpio_direction(Pin::Gpio7, phys::Dir::Output);
+    pin_mode(13, Mode::Output);
 
     // Ignite system clock for keeping track of millis()
     // which is also used for the wait implementation.
@@ -64,12 +40,11 @@ pub fn main() {
 
     loop { 
         unsafe {
-
-            // gpio_set(Pin::Gpio7, 0x1 << 3);
+            
             // drivers::ws2812::ws2812_loop();
-            // gpio_set(Pin::Gpio7, 0x1 << 3);
+            // pin_out(13, Power::High);
             // wait_ns(100000000); // 100000000
-            // gpio_clear(Pin::Gpio7, 0x1 << 3);
+            // pin_out(13, Power::Low);
             // wait_ns(100000000); // 100000000
             // if clock::nanos() > 0 {
             //     gpio_set(Pin::Gpio7, 0x1 << 3);
@@ -79,7 +54,7 @@ pub fn main() {
 
             // debug::blink(1, debug::Speed::Normal);
             serio_write_byte(b'a');
-            wait_wow(1);
+            // wait_wow(1);
             asm!("nop");
         }
         
@@ -128,6 +103,7 @@ extern "C" {
     pub fn ptr_to_addr_word(ptr: *const u32) -> u32;
     pub fn ptr_to_addr_byte(ptr: *const u8) -> u32;
 } 
+
 
 // Yeah how tf do you do this in rust? Idk
 // These functions take a pointer and return the absolute address

@@ -10,18 +10,18 @@ pub enum MuxSpeed {
 }
 
 pub enum Pin {
-    Gpio1,
-    Gpio2,
-    Gpio3,
-    Gpio4,
-    Gpio5,
-    Gpio6,
-    Gpio7,
-    Gpio8,
-    Gpio9,
+    Gpio1 = 1,
+    Gpio2 = 2,
+    Gpio3 = 3,
+    Gpio4 = 4,
+    Gpio5 = 5,
+    Gpio6 = 6,
+    Gpio7 = 7,
+    Gpio8 = 8,
+    Gpio9 = 9,
 }
 
-fn get_addr(pin: Pin) -> u32 {
+fn get_addr(pin: &Pin) -> u32 {
     return match pin {
         Pin::Gpio1 => addrs::GPIO1,
         Pin::Gpio2 => addrs::GPIO2,
@@ -35,7 +35,7 @@ fn get_addr(pin: Pin) -> u32 {
     }
 }
 
-pub fn gpio_speed(pin: Pin, speed: MuxSpeed) {
+pub fn gpio_speed(pin: &Pin, speed: MuxSpeed) {
 
     // Gpio5 cannot be muxed.
     if match pin {
@@ -69,7 +69,7 @@ pub fn gpio_speed(pin: Pin, speed: MuxSpeed) {
     }
 }
 
-pub fn gpio_direction(pin: Pin, direction: Dir) {
+pub fn gpio_direction(pin: &Pin, direction: Dir) {
     let value = match direction {
         Dir::Input => 0x00,
         Dir::Output => 0x1b,
@@ -78,10 +78,10 @@ pub fn gpio_direction(pin: Pin, direction: Dir) {
     assign(get_addr(pin) + 0x4, value);
 }
 
-pub fn gpio_set(pin: Pin, value: u32) {
+pub fn gpio_set(pin: &Pin, value: u32) {
     assign(get_addr(pin) + 0x84, value);
 }
 
-pub fn gpio_clear(pin: Pin, value: u32) {
+pub fn gpio_clear(pin: &Pin, value: u32) {
     assign(get_addr(pin) + 0x88, value);
 }

@@ -67,6 +67,13 @@ pub fn dma_enable_request(channel: DMAChannel) {
     assign_8(addrs::DMA + 0x1B, (channel + 1) as u8);
 }
 
+pub fn dma_disable_on_completion(channel: DMAChannel) {
+    let addr = addrs::DMA + TCR_CSR + (channel * 0x20);
+    let csr = read_word(addr);
+    assign(addr, csr | (0x1 << 3));
+
+}
+
 pub fn dma_clear_irq(channel: DMAChannel) {
     assign_8(addrs::DMA + 0x1F, (channel + 1) as u8);
 }
@@ -105,21 +112,47 @@ pub fn dma_configure_source(channel: DMAChannel, source: DMASource) {
     assign(addr, read_word(addr) & !(0x3F) | (source as u32));
 }
 
+// Meant to be used with [u8] buffer
 pub fn dma_source_buffer(channel: DMAChannel, buffer: u32, length: u16) {
     assign(addrs::DMA + TCD_SADDR + (channel * 0x20), buffer);
     assign_16(addrs::DMA + TCD_SOFF + (channel * 0x20), 0x1);
-    assign_16(addrs::DMA + TCD_SATTR + (channel * 0x20), 0x00);
+    assign_16(addrs::DMA + TCD_SATTR + (channel * 0x20), read_word(addrs::DMA + TCD_SATTR + (channel * 0x20)) as u16 & !(0x3 << 8));
     assign(addrs::DMA + TCD_NBYTES + (channel * 0x20), 0x01);
-
     // Is this right?
     assign(addrs::DMA + TCD_SLAST + (channel * 0x20), 0xFFFF_FFFF - length as u32);
-    
     assign_16(addrs::DMA + TCD_CITER + (channel * 0x20), length);
     assign_16(addrs::DMA + TCD_BITER + (channel * 0x20), length);
     dma_enable_request(channel);
 }
 
-pub fn dma_destination(channel: DMAChannel, destination: u32) {
+// Meant to be used with [u8] buffer
+pub fn dma_dest_buffer(channel: DMAChannel, buffer: u32, length: u16) {
+    assign(addrs::DMA + TCD_DADDR + (channel * 0x20), buffer);
+    assign_16(addrs::DMA + TCD_DOFF + (channel * 0x20), 0x1);
+    assign_16(addrs::DMA + TCD_SATTR + (channel * 0x20),read_word(addrs::DMA + TCD_SATTR + (channel * 0x20)) as u16 & !0x3);
+    assign(addrs::DMA + TCD_NBYTES + (channel * 0x20), 0x01);
+
+    // Is this right?
+    assign(addrs::DMA + TCD_DLASTSGA + (channel * 0x20), 0xFFFF_FFFF - length as u32);
+    assign_16(addrs::DMA + TCD_CITER + (channel * 0x20), length);
+    assign_16(addrs::DMA + TCD_BITER + (channel * 0x20), length);
+    dma_enable_request(channel);
+}
+
+pub fn dma_source_addr(channel: DMAChannel, source: u32) {
+    assign(addrs::DMA + TCD_SADDR + (channel * 0x20), source);
+    assign(addrs::DMA + TCD_SOFF + (channel * 0x20), 0x0);
+    assign_16(addrs::DMA + TCD_SATTR + (channel * 0x20), 0x2);
+
+    let n_bytes = read_word(addrs::DMA + TCD_NBYTES);
+    if source < 0x40000000 || n_bytes == 0 {
+        assign(addrs::DMA + TCD_NBYTES, 0x4);
+    }
+
+    assign(addrs::DMA + TCD_SLAST + (channel * 0x20), 0x0);
+}
+
+pub fn dma_dest_addr(channel: DMAChannel, destination: u32) {
     assign(addrs::DMA + TCD_DADDR + (channel * 0x20), destination);
     assign_16(addrs::DMA + TCD_DOFF + (channel * 0x20), 0x00); // Signed offset 
     assign(addrs::DMA + TCD_DLASTSGA + (channel * 0x20), 0x00); // TCD Last Destination Address Adjustment/Scatter Gather Address

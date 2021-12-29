@@ -1,5 +1,5 @@
 use core::arch::asm;
-use crate::phys::gpio::*;
+use crate::phys::pins::*;
 
 #[derive(Copy, Clone)]
 pub enum Speed {
@@ -21,9 +21,9 @@ fn wait(speed: &Speed) {
 pub fn blink(count: u32, speed: Speed) {
     let mut i = 0;
     while i < count {
-        gpio_set(Pin::Gpio7, 0x1 << 3);
+        pin_out(13, Power::High);
         wait(&speed);
-        gpio_clear(Pin::Gpio7, 0x1 << 3);
+        pin_out(13, Power::Low);
         wait(&speed);
         i += 1;
     }

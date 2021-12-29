@@ -1,8 +1,56 @@
+#![allow(dead_code)]
+
 use crate::phys::addrs;
 use crate::phys::*;
 
+const CTRL_BASE_REG: u32 = 0x18;
+const DATA_BASE_REG: u32 = 0x1C;
+const FIFO_BASE_REG: u32 = 0x28;
+const WATERMARK_BASE_REG: u32 = 0x2C;
+
+// Parity Type
+pub const CTRL_PT: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1 };
+// Parity Enable
+pub const CTRL_PE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<1 };
+// Idle Line Type Select
+pub const CTRL_ILT: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<2 };
+// 9-Bit or 8-Bit Mode Select
+pub const CTRL_M: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<4 };
+// Receiver Source Select 
+pub const CTRL_RSRC: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<5 };
+// Doze Enable
+pub const CTRL_DOZEEN: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<6 };
+// Loop Mode Select 
+pub const CTRL_LOOPS: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<7 };
+// Idle Configuration 
+pub const CTRL_IDLECFG: Reg = Reg { base: CTRL_BASE_REG, mask: 0x7<<8 };
+// 7-Bit Mode Select
+pub const CTRL_M7: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<11 };
+// Send Break 
+pub const CTRL_SBK: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<16 };
+// Receiver Enabled 
+pub const CTRL_RE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<18 };
+// Transmitter Enabled 
+pub const CTRL_TE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<19 };
+// Idle Line Interrupt Enabled
+pub const CTRL_ILIE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<20 };
+// Receiver Interrupt Enabled 
+pub const CTRL_RIE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<21 };
+// Transmission Complete Interrupt Enabled
+pub const CTRL_TCIE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<22 };
+// Transmit Interrupt Enabled
+pub const CTRL_TIE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<23 };
+// Receive FIFO Enable
+pub const FIFO_RXFE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<3 };
+// Transmit FIFO Enable
+pub const FIFO_TXFE: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<7 };
+// Receive FIFO Flush
+pub const FIFO_RXFLUSH: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<14 };
+// Transmit FIFO Flush
+pub const FIFO_TXFLUSH: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<15 };
+
 pub enum Baud {
-    Rate9600,
+    Rate9600 = 9600,
 }
 
 pub enum ParityType {
@@ -64,6 +112,29 @@ pub struct FifoConfig {
     pub rx_fifo_depth: BufferDepth,
 }
 
+pub fn uart_or_reg(device: &Device, register: &Reg, value: u32) {
+    let addr = get_addr(device) + register.base;
+    let val = read_word(addr) | value;
+    assign(addr, val);
+}
+
+pub fn uart_and_reg(device: &Device, register: &Reg, value: u32) {
+    let addr = get_addr(device) + register.base;
+    let val = read_word(addr) & value;
+    assign(addr, val);
+}
+
+pub fn uart_set_reg(device: &Device, register: &Reg) {
+    let addr = get_addr(device) + register.base;
+    let val = read_word(addr) | register.mask;
+    assign(addr, val);
+}
+
+pub fn uart_clear_reg(device: &Device, register: &Reg) {
+    let addr = get_addr(device) + register.base;
+    let val = read_word(addr) & !register.mask;
+    assign(addr, val);
+}
 
 fn fifo_config_to_u32(config: &FifoConfig, baseline: u32) -> u32 {
     let mut result: u32 = baseline;   
@@ -94,6 +165,7 @@ pub struct UartConfig {
     // R8T9 not supported
     // R9T8 not supported
     // TXDIR not supported currently
+    pub r9t8: bool,
     pub invert_transmission_polarity: bool,
     pub overrun_irq_en: bool,
     pub noise_error_irq_en: bool,
@@ -171,12 +243,17 @@ fn config_to_u32(config: &UartConfig, baseline: u32) -> u32 {
     result = set_bit_from_bool(result, 26, config.noise_error_irq_en);
     result = set_bit_from_bool(result, 27, config.overrun_irq_en);
     result = set_bit_from_bool(result, 28, config.invert_transmission_polarity);
+    result = set_bit_from_bool(result, 30, config.r9t8);
 
     return result;
 }
 
 pub fn uart_start_clock() {
     assign(0x400FC07C, read_word(0x400FC07C) | (0x3 << 24));
+    assign(0x400F_C074, read_word(0x400F_C074) | (0x3 << 2) | (0x3 << 6));
+    assign(0x400F_C06C, read_word(0x400F_C06C) | (0x3 << 24));
+    assign(0x400F_C068, read_word(0x400F_C068) | (0x3 << 12) | (0x3 << 28));
+    assign(0x400F_C07C, read_word(0x400F_C07C) | (0x3 << 26));
 }
 
 pub fn get_addr(device: &Device) -> u32 {
@@ -233,11 +310,40 @@ pub fn uart_write_fifo(device: &Device, byte: u8) {
     write_byte(addr, byte);
 }
 
-pub fn uart_baud_rate(device: &Device, _rate: Baud) {
+pub fn uart_baud_rate(device: &Device, rate: Baud) {
+    let base = 24000000.0 / ((rate as u32) as f32);
+    let mut besterr = 1e20;
+    let mut bestdiv: u32 = 1;
+    let mut bestosr = 4.0;
+    let mut osr = 4.0;
+
+    while osr <= 32.0 {
+        let div = base / osr;
+        let mut divint = div as u32;
+        if divint < 1 {
+            divint = 1;
+        } else if divint > 8191 {
+            divint = 8191;
+        }
+
+        let mut err = (divint as f32 - div) / div;
+        if err < 0.0 {
+            err = -err;
+        }
+
+        if err < besterr {
+            besterr = err;
+            bestdiv = divint;
+            bestosr = osr;
+        }
+
+        osr += 1.0;
+    }
+
     uart_disable(&device);
     // Configure baud rate
     let addr = get_addr(device) + 0x10;
-    assign(addr, 0x75); // 4000. NOTE: This ignores the actual var
+    assign(addr, bestdiv | (bestosr as u32 & 0x1F) << 24); // 4000. NOTE: This ignores the actual var
     uart_enable(&device);
 }
 
@@ -283,5 +389,6 @@ pub fn uart_get_irq_statuses(device: &Device) -> u32 {
 }
 
 pub fn uart_clear_irq(device: &Device) {
-    assign(get_addr(device) + 0x14, 0x7EFF_C000);
+    let addr = get_addr(device) + 0x14;
+    assign(addr, read_word(addr) | 0xC80FC000);
 }

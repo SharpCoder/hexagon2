@@ -34,6 +34,7 @@ void startup() {
 
     // Enable FPU
     mmio32(0xE000ED88) = mmio32(0xE000ED88) | (0xFF<<20);
+    
     __asm__ volatile("isb");
     __asm__ volatile("dsb");
 
