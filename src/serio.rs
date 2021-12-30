@@ -4,6 +4,7 @@
  * coupled to a specific uart device.
 */
 use core::arch::asm;
+use crate::debug;
 use crate::phys::addrs;
 use crate::phys::uart::*;
 use crate::phys::irq::*;
@@ -21,29 +22,28 @@ pub const CTSB_PIN: usize = 2;
 pub const TX_PIN: usize = 1;
 pub const RX_PIN: usize = 0;
 
-static mut char_send_idx: u8 = 0;
-static mut char_idx: u8 = 0;
 static mut transmitting: bool = false;
+static mut t: bool = false;
 
-fn is_transmitting() -> bool {
-    unsafe {
-        return transmitting;
-    }
-}
+static mut offset: u32 = 0x0;
 
-pub fn set_transmitting(val: bool) {
-    unsafe {
-        transmitting = val;
-    }
-}
+static mut buff_idx: usize = 0;
+static mut buff: [u8; 6] = [
+    b'h',
+    b'e',
+    b'l',
+    b'l',
+    b'o',
+    b'\n',
+];
 
 pub fn serio_init() {
     // Do some muxing
     // TX
     pin_mux_config(TX_PIN, Alt::Alt2); // LPUART6 alternative
     pin_pad_config(TX_PIN, PadConfig {
-        hysterisis: false,
-        resistance: PullUpDown::PullUp100k,
+        hysterisis: true,
+        resistance: PullUpDown::PullDown100k,
         pull_keep: PullKeep::Keeper,
         pull_keep_en: false,
         open_drain: false,
@@ -72,7 +72,7 @@ pub fn serio_init() {
 
     uart_configure(&SERIO_DEV, UartConfig {
         r9t8: false,
-        invert_transmission_polarity: true,
+        invert_transmission_polarity: false,
         overrun_irq_en: false,
         noise_error_irq_en: false,
         framing_error_irq_en: false,
@@ -89,7 +89,7 @@ pub fn serio_init() {
         doze_en: false,
         bit_mode: BitMode::EightBits,
         parity_en: false,
-        parity_type: ParityType::Odd,
+        parity_type: ParityType::Even,
     });
 
     uart_configure_fifo(&SERIO_DEV, FifoConfig {
@@ -100,7 +100,7 @@ pub fn serio_init() {
         tx_fifo_overflow_irq_en: false,
         rx_fifo_underflow_irq_en: false,
         tx_fifo_en: true,
-        tx_fifo_depth: BufferDepth::Data4Words,
+        tx_fifo_depth: BufferDepth::Data128Words,
         rx_fifo_en: false,
         rx_fifo_depth: BufferDepth::Data1Word,
     });
@@ -177,19 +177,25 @@ pub fn serio_baud(rate: f32) {
 }
 
 pub fn serio_write_byte(byte: u8) {
-    pin_out(TX_PIN, Power::High);
 
-    if !is_transmitting() {
+    unsafe {
+        if transmitting == false {
+            debug::blink(4, debug::Speed::Fast);
+            pin_out(TX_PIN, Power::High);
+            // uart_write_fifo(&SERIO_DEV, b'H');
+            uart_set_tie(&SERIO_DEV, true);
+            transmitting = true;
+        }
     }
-
-    let cidx = unsafe { char_send_idx };
-    if cidx < 6 {
-        uart_write_fifo(&SERIO_DEV, byte);
-        unsafe { char_send_idx += 1; }
-        // uart_set_tie(&SERIO_DEV, true);
-    } else {
-        uart_flush(&SERIO_DEV);
-    }
+    
+    // let cidx = unsafe { char_send_idx };
+    // if cidx < 6 {
+    //     uart_write_fifo(&SERIO_DEV, byte);
+    //     unsafe { char_send_idx += 1; }
+    //     uart_set_tie(&SERIO_DEV, true);
+    // } else {
+    //     uart_flush(&SERIO_DEV);
+    // }
 
     // disable_interrupts();
     // let buffer: [u8; 1] = [byte];
@@ -202,28 +208,69 @@ pub fn serio_write_byte(byte: u8) {
 }
 
 pub fn uart_irq_handler() {
-    if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 22) > 0 {
+    // pin_out(13, Power::Low);
+    // debug::blink(4, debug::Speed::Fast);
+    // if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 22) > 0 {
+        // uart_disable(&SERIO_DEV);
+        // uart_enable(&SERIO_DEV);
+        // uart_sbk(&SERIO_DEV);
+        // pin_out(TX_PIN, Power::Low);
+    // }    
     
-    }    
-    
-    let cidx = unsafe { char_idx };    
-    if cidx == 6 {
-        disable_interrupts();
-        // crate::debug::blink(1, crate::debug::Speed::Fast);
+    // disable_interrupts();
+    // uart_set_tie(&SERIO_DEV, false);
+
+    // Tx empty, I think
+    if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 23) > 0 {
+        // debug::blink(1, debug::Speed::Normal);
+        
+        let idx = unsafe {
+            buff_idx
+        };
+
+        let boo = unsafe {
+            t
+        };
+
+        let byte: u8 = match boo {
+            true => b'j',
+            false => b'k',
+        };
+
+        let mut adj = unsafe { 
+            // 0xFFF - 1 - byte as u32
+            byte
+        };
+
+        // while adj > 255 {
+        //     adj -= 255;
+        // }
         uart_disable(&SERIO_DEV);
         uart_enable(&SERIO_DEV);
         uart_sbk(&SERIO_DEV);
-        set_transmitting(false);
-        unsafe { char_idx = 0; 
-        char_send_idx = 0;}
-        // uart_set_tie(&SERIO_DEV, false);
-        enable_interrupts();
-    } else {
-        unsafe { char_idx += 1; }
+        pin_out(TX_PIN, Power::Low);
+        crate::wait_wow(1);
+        pin_out(TX_PIN, Power::High);
+        uart_write_fifo(&SERIO_DEV, adj as u8);
+        // uart_disable(&SERIO_DEV);
+        // uart_enable(&SERIO_DEV);
+        // uart_sbk(&SERIO_DEV);
+
+
+        unsafe {
+            t = !t;
+            offset += 1;
+        }
+        // unsafe {
+            
+        //     buff_idx = (idx + 1) % 5;
+        // }
+        // }
     }
     
+    // uart_set_tie(&SERIO_DEV, true);
     uart_clear_irq(&SERIO_DEV);
-    pin_out(TX_PIN, Power::Low);
+    // enable_interrupts();
 }
 
 #[no_mangle]

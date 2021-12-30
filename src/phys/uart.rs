@@ -352,18 +352,19 @@ pub fn uart_write_fifo(device: &Device, byte: u8) {
     let original = read_word(addr);
 
     assign(addr, (original & !0xFFF) | byte as u32);
+    // assign_8(addr, byte);
     // assign(addr, 0xFFF);
 }
 
 pub fn uart_baud_rate(device: &Device, rate: f32) {
     // TODO: Explain why this works (if it works)
-    let baud_clock = 24000000.0; // MHz
+    // let baud_clock = 24000000.0; // MHz
+    let baud_clock = 24000000.0 * (132000000.0 / 396000000.0);
     let sbr = (baud_clock / (rate * 16.0)) as u32;
-
     uart_disable(&device);
 
     let addr = get_addr(device) + 0x10;
-    let value = (read_word(addr) & !(0x1 << 13) & !(0xFFF)) | sbr;
+    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | sbr;
     assign(addr, value);
 
     uart_enable(&device);

@@ -6,7 +6,12 @@ rm -rf out/*.map
 rm -rf out/*.lst
 
 # Compile rust
-rustc --target thumbv7em-none-eabihf -o out/kernel.o -O --emit=obj src/kernel.rs
+rustc --target thumbv7em-none-eabihf \
+    -C panic=abort \
+    -o out/kernel.o \
+    --crate-type staticlib \
+    -O --emit=obj \
+    src/kernel.rs
 
 
 # Compile assembly
