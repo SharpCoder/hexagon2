@@ -59,6 +59,8 @@ pub enum InputTrigger {
 }
 
 pub enum Baud {
+    Rate300 = 300,
+    Rate2400 = 2400,
     Rate9600 = 9600,
 }
 
@@ -296,6 +298,18 @@ pub fn uart_configure(device: &Device, configuration: UartConfig) {
     assign(addr, config_to_u32(&configuration, 0x0));
 }
 
+pub fn uart_set_tie(device: &Device, en: bool) {
+    let addr = get_addr(device) + 0x18;
+    let origin = read_word(addr);
+
+    let val = match en {
+        true => origin | CTRL_TIE.mask,
+        false => origin & !CTRL_TIE.mask,
+    };
+
+    assign(addr, val);
+}
+
 pub fn uart_configure_fifo(device: &Device, configuration: FifoConfig) {
     let addr = get_addr(device) + 0x28;
     assign(addr, fifo_config_to_u32(&configuration, read_word(addr)));
@@ -323,53 +337,35 @@ pub fn uart_enable(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
     assign(addr, baseline | (0x1 << 19));
+    unsafe { asm!("nop"); }
 }
 
 pub fn uart_disable(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
     assign(addr, baseline & !(0x1 << 19));
+    unsafe { asm!("nop"); }
 }
 
 pub fn uart_write_fifo(device: &Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
-    assign_8(addr, byte);
+    let original = read_word(addr);
+
+    assign(addr, (original & !0xFFF) | byte as u32);
+    // assign(addr, 0xFFF);
 }
 
 pub fn uart_baud_rate(device: &Device, rate: f32) {
-    let base = 25000000.0 / ((rate as u32) as f32);
-    let mut besterr = 1e20;
-    let mut bestdiv: u32 = 1;
-    let mut bestosr = 4.0;
-    let mut osr = 4.0;
-
-    while osr <= 32.0 {
-        let div = base / osr;
-        let mut divint = div as u32;
-        if divint < 1 {
-            divint = 1;
-        } else if divint > 8191 {
-            divint = 8191;
-        }
-
-        let mut err = (divint as f32 - div) / div;
-        if err < 0.0 {
-            err = -err;
-        }
-
-        if err < besterr {
-            besterr = err;
-            bestdiv = divint;
-            bestosr = osr;
-        }
-
-        osr += 1.0;
-    }
+    // TODO: Explain why this works (if it works)
+    let baud_clock = 24000000.0; // MHz
+    let sbr = (baud_clock / (rate * 16.0)) as u32;
 
     uart_disable(&device);
-    // Configure baud rate
+
     let addr = get_addr(device) + 0x10;
-    assign(addr, (bestdiv as u32) | (bestosr as u32 & 0x1F) << 24); // 4000. NOTE: This ignores the actual var
+    let value = (read_word(addr) & !(0x1 << 13) & !(0xFFF)) | sbr;
+    assign(addr, value);
+
     uart_enable(&device);
 }
 
@@ -398,7 +394,7 @@ pub fn uart_sbk(device: &Device) {
 
 pub fn uart_watermark(device: &Device) {
     let addr = get_addr(device) + 0x2C;
-    assign(addr, 0x3);
+    assign(addr, 0x01);
 }
 
 pub fn uart_enable_fifo(device: &Device) {

@@ -21,6 +21,8 @@ pub const CTSB_PIN: usize = 2;
 pub const TX_PIN: usize = 1;
 pub const RX_PIN: usize = 0;
 
+static mut char_send_idx: u8 = 0;
+static mut char_idx: u8 = 0;
 static mut transmitting: bool = false;
 
 fn is_transmitting() -> bool {
@@ -52,13 +54,25 @@ pub fn serio_init() {
 
     // RX
     // pin_mux_config(RX_PIN, Alt::Alt2); // LPUART6 Rx Alternative
+    // pin_pad_config(RX_PIN, PadConfig {
+    //     hysterisis: false,
+    //     resistance: PullUpDown::PullUp100k,
+    //     pull_keep: PullKeep::Keeper,
+    //     pull_keep_en: false,
+    //     open_drain: false,
+    //     speed: PinSpeed::Max200MHz,
+    //     drive_strength: DriveStrength::MaxDiv3,
+    //     fast_slew_rate: true,
+    // });
+
+
     uart_disable(&SERIO_DEV);
     uart_sw_reset(&SERIO_DEV, true);
     uart_sw_reset(&SERIO_DEV, false);
 
     uart_configure(&SERIO_DEV, UartConfig {
         r9t8: false,
-        invert_transmission_polarity: false,
+        invert_transmission_polarity: true,
         overrun_irq_en: false,
         noise_error_irq_en: false,
         framing_error_irq_en: false,
@@ -71,7 +85,7 @@ pub fn serio_init() {
         rx_en: false,
         match1_irq_en: false,
         match2_irq_en: false,
-        idle_config: IdleConfiguration::Idle4Char,
+        idle_config: IdleConfiguration::Idle16Char,
         doze_en: false,
         bit_mode: BitMode::EightBits,
         parity_en: false,
@@ -86,7 +100,7 @@ pub fn serio_init() {
         tx_fifo_overflow_irq_en: false,
         rx_fifo_underflow_irq_en: false,
         tx_fifo_en: true,
-        tx_fifo_depth: BufferDepth::Data16Words,
+        tx_fifo_depth: BufferDepth::Data4Words,
         rx_fifo_en: false,
         rx_fifo_depth: BufferDepth::Data1Word,
     });
@@ -162,23 +176,20 @@ pub fn serio_baud(rate: f32) {
     uart_baud_rate(&SERIO_DEV, rate);
 }
 
-pub fn serio_write(string: &[u8]) {
-    // if !is_transmitting() {
-    let mut idx = 0;
-    while idx < string.len() {
-        serio_write_byte(string[idx]);
-        idx += 1;
-    }
-    set_transmitting(true);
-    uart_flush(&SERIO_DEV);
-    // }
-}
-
 pub fn serio_write_byte(byte: u8) {
+    pin_out(TX_PIN, Power::High);
+
     if !is_transmitting() {
     }
-    pin_out(TX_PIN, Power::High);
-    uart_write_fifo(&SERIO_DEV, byte);
+
+    let cidx = unsafe { char_send_idx };
+    if cidx < 6 {
+        uart_write_fifo(&SERIO_DEV, byte);
+        unsafe { char_send_idx += 1; }
+        // uart_set_tie(&SERIO_DEV, true);
+    } else {
+        uart_flush(&SERIO_DEV);
+    }
 
     // disable_interrupts();
     // let buffer: [u8; 1] = [byte];
@@ -192,16 +203,23 @@ pub fn serio_write_byte(byte: u8) {
 
 pub fn uart_irq_handler() {
     if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 22) > 0 {
-        // crate::debug::blink(2, crate::debug::Speed::Fast);
-
-        if is_transmitting() {
-            disable_interrupts();
-            uart_disable(&SERIO_DEV);
-            uart_enable(&SERIO_DEV);
-            uart_sbk(&SERIO_DEV);
-            set_transmitting(false);
-            enable_interrupts();
-        }
+    
+    }    
+    
+    let cidx = unsafe { char_idx };    
+    if cidx == 6 {
+        disable_interrupts();
+        // crate::debug::blink(1, crate::debug::Speed::Fast);
+        uart_disable(&SERIO_DEV);
+        uart_enable(&SERIO_DEV);
+        uart_sbk(&SERIO_DEV);
+        set_transmitting(false);
+        unsafe { char_idx = 0; 
+        char_send_idx = 0;}
+        // uart_set_tie(&SERIO_DEV, false);
+        enable_interrupts();
+    } else {
+        unsafe { char_idx += 1; }
     }
     
     uart_clear_irq(&SERIO_DEV);
