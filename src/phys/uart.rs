@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use core::arch::asm;
 use crate::phys::addrs;
 use crate::phys::*;
 
@@ -285,6 +286,9 @@ pub fn uart_sw_reset(device: &Device, sw_reset: bool) {
     };
 
     assign(get_addr(device) + 0x8, value);
+
+    // Solves what I believe is a timing issue.
+    unsafe { asm!("nop"); }
 }
 
 pub fn uart_configure(device: &Device, configuration: UartConfig) {
@@ -329,12 +333,11 @@ pub fn uart_disable(device: &Device) {
 
 pub fn uart_write_fifo(device: &Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
-    let original_value = read_word(addr);
-    assign(addr, original_value & !0x3FF | (byte as u32));
+    assign_8(addr, byte);
 }
 
-pub fn uart_baud_rate(device: &Device, rate: Baud) {
-    let base = 24000000.0 / ((rate as u32) as f32);
+pub fn uart_baud_rate(device: &Device, rate: f32) {
+    let base = 25000000.0 / ((rate as u32) as f32);
     let mut besterr = 1e20;
     let mut bestdiv: u32 = 1;
     let mut bestosr = 4.0;
@@ -395,7 +398,7 @@ pub fn uart_sbk(device: &Device) {
 
 pub fn uart_watermark(device: &Device) {
     let addr = get_addr(device) + 0x2C;
-    assign(addr, 0x1);
+    assign(addr, 0x3);
 }
 
 pub fn uart_enable_fifo(device: &Device) {

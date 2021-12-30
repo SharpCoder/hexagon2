@@ -135,14 +135,13 @@ pub fn pin_pad_config(pin: usize, config: PadConfig) {
 /** This method will mux the pin */
 pub fn pin_mode(pin: usize, mode: Mode) {
     gpio_speed(&PIN_TO_GPIO_PIN[pin], MuxSpeed::Fast);
-    gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Output);
 
     match mode {
         Mode::Output => {
-            assign(PIN_MUX[pin], read_word(PIN_MUX[pin]) & !(0x1 << 4));
+            gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Output);
         },
         Mode::Input => {
-            assign(PIN_MUX[pin], read_word(PIN_MUX[pin]) | (0x1 << 4));
+            gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Input);
         }
     }
 }

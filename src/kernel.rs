@@ -29,12 +29,10 @@ pub fn main() {
     phys_clocks_en();
 
     // Initialize serial communication
-    // serio_init();
-    // serio_baud(Baud::Rate9600);
+    serio_init();
 
     // Setup GPIO pin 13 (the LED on teensy)
     pin_mode(13, Mode::Output);
-    pin_mode(1, Mode::Output);
 
     // pin_mode(TX_PIN, Mode::Output);
     // pin_mode(RX_PIN, Mode::Output);
@@ -48,10 +46,24 @@ pub fn main() {
 
     // Enable interrupts across the system
     enable_interrupts();
+    let mut i = 300;
+    let mut r = 0;
 
     loop { 
         unsafe {
+            if r > 200 {
+                if i > 115200 {
+                    i = 300;
+                }
+    
+                i += 1;
+                r = 0;
+            } else {
+                r += 1;
+            }
             
+
+            serio_baud(i as f32);
             // drivers::ws2812::ws2812_loop();
             // pin_out(13, Power::High);
             // wait_ns(100000000); // 100000000
@@ -67,21 +79,21 @@ pub fn main() {
             // wait_ns(500000);
             // pin_out(TX_PIN, Power::Low);
             // wait_ns(500000);
-            // debug::blink(1, debug::Speed::Normal);
-            // serio_write_byte(b'a');
+            // debug::blink(1, debug::Speed::Fast);
+            serio_write(b"Hello\n");
 
-            let mut i = 0;
-            while i < 31 {
-                pin_mode(i, Mode::Output);
-                pin_out(i, Power::High);
-                wait_wow(1);
-                pin_out(i, Power::Low);
-                gpio_clear(&Pin::Gpio1, 0xFFFF_FFFF);
-                wait_wow(1);
-                i += 1;
-            }
+            // let mut i = 0;
+            // while i < 31 {
+            //     pin_mode(i, Mode::Output);
+            //     pin_out(i, Power::High);
+            //     wait_wow(1);
+            //     pin_out(i, Power::Low);
+            //     gpio_clear(&Pin::Gpio1, 0xFFFF_FFFF);
+            //     wait_wow(1);
+            //     i += 1;
+            // }
 
-            // wait_wow(1);
+            wait_wow(1);
             asm!("nop");
         }
         
@@ -90,7 +102,7 @@ pub fn main() {
 
 pub fn wait_wow(_nano: u64) {
     let mut r = 0;
-    while r < 5000000 {
+    while r < 40000 {
         r = r + 1;
         unsafe { asm!( "nop"); }
     }

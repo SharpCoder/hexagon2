@@ -50,13 +50,11 @@ pub fn serio_init() {
         fast_slew_rate: true,
     });
 
-    // pin_pad_config(TX_PIN, Bitwise::Eq, PCR_SRE | (0x3 << 3) | (0x3 << 6));
-    assign(0x401F8400 + 0x154, 0x1);
     // RX
-    pin_mux_config(RX_PIN, Alt::Alt2); // LPUART6 Rx Alternative
-
-    uart_sw_reset(&SERIO_DEV, true);
+    // pin_mux_config(RX_PIN, Alt::Alt2); // LPUART6 Rx Alternative
     uart_disable(&SERIO_DEV);
+    uart_sw_reset(&SERIO_DEV, true);
+    uart_sw_reset(&SERIO_DEV, false);
 
     uart_configure(&SERIO_DEV, UartConfig {
         r9t8: false,
@@ -65,15 +63,15 @@ pub fn serio_init() {
         noise_error_irq_en: false,
         framing_error_irq_en: false,
         parity_error_irq_en: false,
-        tx_irq_en: true,
+        tx_irq_en: false,
         rx_irq_en: false,
-        tx_complete_irq_en: false,
+        tx_complete_irq_en: true,
         idle_line_irq_en: false,
         tx_en: false,
         rx_en: false,
         match1_irq_en: false,
         match2_irq_en: false,
-        idle_config: IdleConfiguration::Idle1Char,
+        idle_config: IdleConfiguration::Idle4Char,
         doze_en: false,
         bit_mode: BitMode::EightBits,
         parity_en: false,
@@ -88,7 +86,7 @@ pub fn serio_init() {
         tx_fifo_overflow_irq_en: false,
         rx_fifo_underflow_irq_en: false,
         tx_fifo_en: true,
-        tx_fifo_depth: BufferDepth::Data1Word,
+        tx_fifo_depth: BufferDepth::Data16Words,
         rx_fifo_en: false,
         rx_fifo_depth: BufferDepth::Data1Word,
     });
@@ -114,10 +112,10 @@ pub fn serio_init() {
     uart_enable(&SERIO_DEV);
 
     // Enable the transmitter
-    pin_mode(TX_PIN, Mode::Output);
+    // pin_mode(TX_PIN, Mode::Output);
 
     // Configure CTS
-    serio_attach_cts();
+    // serio_attach_cts();
     serio_transmit_enable();
 
     // // Configure rx DMA
@@ -134,6 +132,8 @@ pub fn serio_init() {
     // dma_interrupt_at_completion(DMA_TX_CHANNEL);
     // dma_disable_on_completion(DMA_TX_CHANNEL);
     // dma_enable(DMA_TX_CHANNEL);
+
+
 }
 
 fn serio_attach_cts() {
@@ -158,23 +158,27 @@ fn serio_transmit_enable() {
     pin_out(TX_PIN, Power::Low);
 }
 
-pub fn serio_baud(rate: Baud) {
+pub fn serio_baud(rate: f32) {
     uart_baud_rate(&SERIO_DEV, rate);
 }
 
 pub fn serio_write(string: &[u8]) {
+    // if !is_transmitting() {
     let mut idx = 0;
     while idx < string.len() {
         serio_write_byte(string[idx]);
         idx += 1;
     }
+    set_transmitting(true);
+    uart_flush(&SERIO_DEV);
+    // }
 }
 
 pub fn serio_write_byte(byte: u8) {
     if !is_transmitting() {
-        pin_out(TX_PIN, Power::High);
-        uart_write_fifo(&SERIO_DEV, 0x61);
     }
+    pin_out(TX_PIN, Power::High);
+    uart_write_fifo(&SERIO_DEV, byte);
 
     // disable_interrupts();
     // let buffer: [u8; 1] = [byte];
@@ -184,20 +188,24 @@ pub fn serio_write_byte(byte: u8) {
 
     // dma_source_buffer(DMA_TX_CHANNEL, addr, 1);
     // dma_enable_request(DMA_TX_CHANNEL);
-    set_transmitting(true);
 }
 
 pub fn uart_irq_handler() {
     if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 22) > 0 {
-        // crate::debug::blink(3, crate::debug::Speed::Fast);
-        uart_disable(&SERIO_DEV);
-        uart_enable(&SERIO_DEV);
-        uart_sbk(&SERIO_DEV);
-        set_transmitting(false);
+        // crate::debug::blink(2, crate::debug::Speed::Fast);
+
+        if is_transmitting() {
+            disable_interrupts();
+            uart_disable(&SERIO_DEV);
+            uart_enable(&SERIO_DEV);
+            uart_sbk(&SERIO_DEV);
+            set_transmitting(false);
+            enable_interrupts();
+        }
     }
     
     uart_clear_irq(&SERIO_DEV);
-    pin_out(CTSB_PIN, Power::High);
+    pin_out(TX_PIN, Power::Low);
 }
 
 #[no_mangle]
