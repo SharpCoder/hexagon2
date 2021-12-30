@@ -9,11 +9,15 @@ pub mod debug;
 
 use core::arch::asm;
 use core::arch::global_asm;
+use phys::gpio::*;
 use phys::irq::*;
 use phys::uart::Baud;
 use serio::*;
 use phys::pins::*;
 use phys::*;
+
+const TX_PIN: usize = 1;
+const RX_PIN: usize = 0;
 
 #[no_mangle]
 pub fn main() {
@@ -25,12 +29,19 @@ pub fn main() {
     phys_clocks_en();
 
     // Initialize serial communication
-    serio_init();
-    serio_baud(Baud::Rate9600);
+    // serio_init();
+    // serio_baud(Baud::Rate9600);
 
     // Setup GPIO pin 13 (the LED on teensy)
     pin_mode(13, Mode::Output);
+    pin_mode(1, Mode::Output);
 
+    // pin_mode(TX_PIN, Mode::Output);
+    // pin_mode(RX_PIN, Mode::Output);
+
+    // pin_mux_config(TX_PIN, Alt::Alt5);
+    // pin_mux_config(RX_PIN, Alt::Alt5);
+    
     // Ignite system clock for keeping track of millis()
     // which is also used for the wait implementation.
     clock::clock_init();
@@ -52,8 +63,24 @@ pub fn main() {
             //     gpio_clear(Pin::Gpio7, 0x1 << 3);
             // }
 
+            // pin_out(TX_PIN, Power::High);
+            // wait_ns(500000);
+            // pin_out(TX_PIN, Power::Low);
+            // wait_ns(500000);
             // debug::blink(1, debug::Speed::Normal);
-            serio_write_byte(b'a');
+            // serio_write_byte(b'a');
+
+            let mut i = 0;
+            while i < 31 {
+                pin_mode(i, Mode::Output);
+                pin_out(i, Power::High);
+                wait_wow(1);
+                pin_out(i, Power::Low);
+                gpio_clear(&Pin::Gpio1, 0xFFFF_FFFF);
+                wait_wow(1);
+                i += 1;
+            }
+
             // wait_wow(1);
             asm!("nop");
         }
@@ -63,7 +90,7 @@ pub fn main() {
 
 pub fn wait_wow(_nano: u64) {
     let mut r = 0;
-    while r < 50000000 {
+    while r < 5000000 {
         r = r + 1;
         unsafe { asm!( "nop"); }
     }
@@ -72,7 +99,8 @@ pub fn wait_wow(_nano: u64) {
 pub fn wait_ns(nano: u64) {
     unsafe {
         let origin = clock::nanos();
-        while (origin + nano) > clock::nanos() {
+        let target = nano / 10;
+        while (origin + target) > clock::nanos() {
             asm!("nop");
         }
     }

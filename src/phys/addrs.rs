@@ -37,6 +37,8 @@ pub const IOMUXC_GPR_GPR28: u32 = 0x400A_C070; // GPIO3 and GPIO8 mux settings
 pub const IOMUXC_GPR_GPR29: u32 = 0x400A_C074; // GPIO4 and GPIO9 mux settings
 
 /** GPIO Mux Pads */
+pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_01: u32 = 0x401F_80C0;
+pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_00: u32 = 0x401F_80BC;
 pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_03: u32 = 0x401F_80C8;
 pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_02: u32 = 0x401F_80C4;
 pub const IOMUXC_SW_MUX_CTL_PAD_GPIO_EMC_04: u32 = 0x401F_8024;
@@ -86,6 +88,15 @@ pub const IOMUXC_SW_PAD_CTL_PAD_GPIO_AD_B0_03: u32 = 0x401F_82B8;
 /** DMA */
 pub const DMA: u32 = 0x400E_8000;
 pub const DMAMUX: u32 = 0x400E_C000;
+/** XBAR */
+pub const IMXRT_XBARA1: u32 = 0x403B_C000;
+pub const IMXRT_XBARB2: u32 = 0x403C_0000;
+pub const IMXRT_XBARB3: u32 = 0x403C4000;
 /** Misc */
 pub const CCM_CSCMR1: u32 = 0x400F_C01C; // CCM Serial Clock Multiplexer Register 1
+pub const CCM_CCGR0: u32 = 0x400F_C068; // Clock Gating Register 1
 pub const CCM_CCGR1: u32 = 0x400F_C06C; // Clock Gating Register 1
+pub const CCM_CCGR2: u32 = 0x400F_C070;
+pub const CCM_CCGR3: u32 = 0x400F_C074;
+pub const CCM_CCGR4: u32 = 0x400F_C078;
+pub const CCM_CCGR5: u32 = 0x400F_C07C;

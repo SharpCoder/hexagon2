@@ -31,7 +31,7 @@ fn off() {
 
 pub fn ws2812_init() {
     gpio_speed(&GPIO_PIN, GPIO_SPEED);
-    gpio_direction(&GPIO_PIN, Dir::Output);
+    gpio_direction(&GPIO_PIN, GPIO_BIT, Dir::Output);
 }
 
 #[no_mangle]

@@ -49,6 +49,14 @@ pub const FIFO_RXFLUSH: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<14 };
 // Transmit FIFO Flush
 pub const FIFO_TXFLUSH: Reg = Reg { base: CTRL_BASE_REG, mask: 0x1<<15 };
 
+// Input trigger mode (Controlled by XBAR, usually)
+pub enum InputTrigger {
+    Disabled,
+    Rxd, // Input trigger modulates RXD
+    CtsB, // Input trigger controls Clear-To-Send
+    Txd, // Input trigger modulates TXD
+}
+
 pub enum Baud {
     Rate9600 = 9600,
 }
@@ -289,25 +297,40 @@ pub fn uart_configure_fifo(device: &Device, configuration: FifoConfig) {
     assign(addr, fifo_config_to_u32(&configuration, read_word(addr)));
 }
 
-pub fn uart_disable(device: &Device) {
-    let addr = get_addr(device) + 0x18;
-    let baseline = read_word(addr);
-    assign(addr, baseline & !(0x1 << 18) & !(0x1 << 19));
-}
-
-pub fn uart_set_pin_config(device: &Device, config: u32) {
-    assign(get_addr(device) + 0xC, config);
+pub fn uart_set_pin_config(device: &Device, mode: InputTrigger) {
+    let addr = get_addr(device) + 0xC;
+    match mode {
+        InputTrigger::Disabled => { 
+            assign(addr, 0x00);
+        },
+        InputTrigger::Rxd => { 
+            assign(addr, 0x01);
+        },
+        InputTrigger::Txd => { 
+            assign(addr, 0x03);
+        },
+        InputTrigger::CtsB => { 
+            assign(addr, 0x02);
+        },
+    }
 }
 
 pub fn uart_enable(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
-    assign(addr, baseline | (0x1 << 18) | (0x1 << 19));
+    assign(addr, baseline | (0x1 << 19));
+}
+
+pub fn uart_disable(device: &Device) {
+    let addr = get_addr(device) + 0x18;
+    let baseline = read_word(addr);
+    assign(addr, baseline & !(0x1 << 19));
 }
 
 pub fn uart_write_fifo(device: &Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
-    write_byte(addr, byte);
+    let original_value = read_word(addr);
+    assign(addr, original_value & !0x3FF | (byte as u32));
 }
 
 pub fn uart_baud_rate(device: &Device, rate: Baud) {
@@ -343,7 +366,7 @@ pub fn uart_baud_rate(device: &Device, rate: Baud) {
     uart_disable(&device);
     // Configure baud rate
     let addr = get_addr(device) + 0x10;
-    assign(addr, bestdiv | (bestosr as u32 & 0x1F) << 24); // 4000. NOTE: This ignores the actual var
+    assign(addr, (bestdiv as u32) | (bestosr as u32 & 0x1F) << 24); // 4000. NOTE: This ignores the actual var
     uart_enable(&device);
 }
 
@@ -367,6 +390,7 @@ pub fn uart_sbk(device: &Device) {
     let addr = get_addr(device) + 0x18;
     let original = read_word(addr);
     assign(addr, original | (0x1<<16));
+    assign(addr, original & !(0x1<<16));
 }
 
 pub fn uart_watermark(device: &Device) {

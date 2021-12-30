@@ -6,6 +6,7 @@ pub mod periodic_timers;
 pub mod pins;
 pub mod timer;
 pub mod uart;
+pub mod xbar;
 
 pub enum Bitwise {
     Or, // Or with the existing value
@@ -20,8 +21,10 @@ pub enum Dir {
 
 // Enable all physical clocks that we need
 pub fn phys_clocks_en() {
+    gpio::gpio_start_clock();
     uart::uart_start_clock();
     dma::dma_start_clock();
+    xbar::xbar_start_clock();
 }
 
 pub fn write_byte(address: u32, value: u8) {
@@ -48,9 +51,32 @@ pub fn assign(address: u32, value: u32) {
     }
 }
 
+pub fn assign_bit(address: u32, op: Bitwise, value: u32) {
+    unsafe {
+        let original_value = *(address as *mut u32);
+        match op {
+            Bitwise::Or => {
+                assign(address, original_value | value);
+            },
+            Bitwise::And => {
+                assign(address, original_value & value);
+            },
+            Bitwise::Eq => {
+                assign(address, value);
+            }
+        }
+    }
+}
+
 pub fn read_word(address: u32) -> u32 {
     unsafe {
         return *(address as *mut u32);
+    }
+}
+
+pub fn read_16(address: u32) -> u16 {
+    unsafe {
+        return *(address as *mut u16);
     }
 }
 

@@ -25,19 +25,54 @@ pub enum Alt {
     Alt5 = 0x5,
 }
 
-pub const PCR_DSE: u32 = 0x40; // Drive Strength Enable
-pub const PCR_ODE: u32 = 0x20; // Open Drain Enable
-pub const PCR_PFE: u32 = 0x10; // Passive Filter Enable
-pub const PCR_SRE: u32 = 0x04; // Slew Rate Enable
-pub const PCR_PE: u32 = 0x02; // Pull Enable
-pub const PCR_PS: u32 = 0x01; // Pull Select
+pub enum PullUpDown {
+    PullDown100k = 0x00,
+    PullUp47k = 0x01,
+    PullUp100k = 0x02,
+    PullUp22k = 0x03,
+}
+
+pub enum PinSpeed {
+    Low50MHz = 0x00,
+    Medium100MHz = 0x01,
+    Fast150MHz = 0x02,
+    Max200MHz = 0x03,
+}
+
+pub enum PullKeep {
+    Keeper = 0x00,
+    Pull = 0x01,
+}
+
+pub enum DriveStrength {
+    Disabled = 0x00,
+    Max = 0x01,
+    MaxDiv2 = 0x02,
+    MaxDiv3 = 0x03,
+    MaxDiv4 = 0x04,
+    MaxDiv5 = 0x05,
+    MaxDiv6 = 0x06,
+    MaxDiv7 = 0x07,
+}
+
+pub struct PadConfig {
+    pub hysterisis: bool,               // HYS
+    pub resistance: PullUpDown,         // PUS
+    pub pull_keep: PullKeep,            // PUE
+    pub pull_keep_en: bool,             // PKE
+    pub open_drain: bool,               // ODE
+    pub speed: PinSpeed,                // SPEED
+    pub drive_strength: DriveStrength,  // DSE
+    pub fast_slew_rate: bool,           // SRE
+}
 
 /** The index is an arduino pin, the output is the teensy 4.0 bit */
 const PIN_BITS: [u8; 40] = [
-    3, 2, 4, 5, 6, 8, 10, 17, 16, 11, 0,
-    2, 1, 3, 18, 19, 23, 22, 17, 16, 26, 27,
-    24, 25, 12, 13, 30, 31, 18, 31, 23, 22, 12,
-    7, 15, 14, 13, 12, 17, 16,
+    3, 2, 4, 5, 6, 8, 10, 17, 
+    16, 11, 0, 2, 1, 3, 18, 19, 
+    23, 22, 17, 16, 26, 27, 24, 25, 
+    12, 13, 30, 31, 18, 31, 23, 
+    22, 12, 7, 15, 14, 13, 12, 17, 16,
 ];
 
 /** The index is an arduino pin, the output is the gpio pin that controls it */
@@ -79,34 +114,35 @@ pub fn pin_mux_config(pin: usize, alt: Alt) {
     assign(addr, alt as u32);
 }
 
-pub fn pin_pad_config(pin: usize, op: Bitwise, value: u32) {
+pub fn pin_pad_config(pin: usize, config: PadConfig) {
     // -0x1F0 appears to universally be the difference
     // between the MUX_CTRL_PAD and the PAD_CTRL_PAD
     let addr = PIN_MUX[pin] - 0x1F0;
-    let original = read_word(addr);
-    match op {
-        Bitwise::And => {
-            assign(addr, original & value);
-        },
-        Bitwise::Or => {
-            assign(addr, original | value);
-        },
-        Bitwise::Eq => {
-            assign(addr, value);
-        }
-    }
-}
+    let mut value = 0x0;
 
+    value = value | ((0x1 & config.fast_slew_rate as u32) << 0);
+    value = value | ((config.drive_strength as u32) << 3);
+    value = value | ((config.speed as u32) << 6);
+    value = value | ((0x1 & config.open_drain as u32) << 11);
+    value = value | ((config.pull_keep_en as u32) << 12);
+    value = value | ((config.pull_keep as u32) << 13);
+    value = value | ((config.resistance as u32) << 14);
+    value = value | ((0x1 & config.hysterisis as u32) << 16);
+
+    assign(addr, value);
+}
 
 /** This method will mux the pin */
 pub fn pin_mode(pin: usize, mode: Mode) {
     gpio_speed(&PIN_TO_GPIO_PIN[pin], MuxSpeed::Fast);
+    gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Output);
+
     match mode {
         Mode::Output => {
-            gpio_direction(&PIN_TO_GPIO_PIN[pin], Dir::Output);
+            assign(PIN_MUX[pin], read_word(PIN_MUX[pin]) & !(0x1 << 4));
         },
         Mode::Input => {
-            gpio_direction(&PIN_TO_GPIO_PIN[pin], Dir::Input);
+            assign(PIN_MUX[pin], read_word(PIN_MUX[pin]) | (0x1 << 4));
         }
     }
 }
@@ -119,7 +155,6 @@ pub fn pin_out(pin: usize, power: Power) {
             gpio_set(&PIN_TO_GPIO_PIN[pin], mask);
         },
         Power::Low => {
-            // assign(reg + 34, 0x1 << PIN_BITS[pin]);
             gpio_clear(&PIN_TO_GPIO_PIN[pin], mask);
         }
     }

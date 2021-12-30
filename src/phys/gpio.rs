@@ -1,8 +1,5 @@
-use crate::phys::{
-    addrs,
-    assign,
-    Dir
-};
+use crate::phys::addrs;
+use crate::phys::*;
 
 pub enum MuxSpeed {
     Slow,
@@ -19,6 +16,13 @@ pub enum Pin {
     Gpio7 = 7,
     Gpio8 = 8,
     Gpio9 = 9,
+}
+
+pub fn gpio_start_clock() {
+    assign_bit(addrs::CCM_CCGR0, Bitwise::Or, 0x3 << 30);
+    assign_bit(addrs::CCM_CCGR1, Bitwise::Or, (0x3 << 30) | (0x3 << 26));
+    assign_bit(addrs::CCM_CCGR2, Bitwise::Or, 0x3 << 26);
+    assign_bit(addrs::CCM_CCGR3, Bitwise::Or, 0x3 << 12);
 }
 
 fn get_addr(pin: &Pin) -> u32 {
@@ -69,19 +73,26 @@ pub fn gpio_speed(pin: &Pin, speed: MuxSpeed) {
     }
 }
 
-pub fn gpio_direction(pin: &Pin, direction: Dir) {
+pub fn gpio_direction(pin: &Pin, pad: u32, direction: Dir) {
+    let addr = get_addr(pin) + 0x4;
+    let original_value = read_word(addr);
+    
     let value = match direction {
-        Dir::Input => 0x00,
-        Dir::Output => 0x1b,
+        Dir::Input => {
+            assign(addr, original_value & !(0x1 << pad));
+        },
+        Dir::Output => {
+            assign(addr, original_value | (0x1 << pad));
+        },
     };
-
-    assign(get_addr(pin) + 0x4, value);
 }
 
 pub fn gpio_set(pin: &Pin, value: u32) {
-    assign(get_addr(pin) + 0x84, value);
+    let addr = get_addr(pin) + 0x84;
+    assign(addr, value);
 }
 
 pub fn gpio_clear(pin: &Pin, value: u32) {
-    assign(get_addr(pin) + 0x88, value);
+    let addr = get_addr(pin) + 0x88;
+    assign(addr, value);
 }
