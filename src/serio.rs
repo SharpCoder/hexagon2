@@ -15,27 +15,21 @@ use crate::phys::*;
 
 // The device serial communication is hardcoded tos
 pub const SERIO_DEV: Device = Device::Uart6;
+pub const SERIO_IRQ: Irq = Irq::UART6;
 pub const DMA_TX_CHANNEL: u32 = 0;
 pub const DMA_RX_CHANNEL: u32 = 1;
-
-pub const CTSB_PIN: usize = 2;
 pub const TX_PIN: usize = 1;
 pub const RX_PIN: usize = 0;
 
-static mut transmitting: bool = false;
-static mut t: bool = false;
+struct SerialBuffer {
+    index: u8,
+    buffer: [u8; 1024],
+}
 
-pub static mut offset: u32 = 0x0;
-
-static mut buff_idx: u32 = 0;
-static mut buff: [u8; 6] = [
-    b'h',
-    b'e',
-    b'l',
-    b'l',
-    b'o',
-    b'\n',
-];
+static mut BUFFER: SerialBuffer = SerialBuffer {
+    index: 0,
+    buffer: [0; 1024],
+};
 
 pub fn serio_init() {
     // Do some muxing
@@ -108,8 +102,8 @@ pub fn serio_init() {
     uart_set_pin_config(&SERIO_DEV, InputTrigger::Disabled);
     uart_disable_fifo(&SERIO_DEV);
 
-    attach_irq(Irq::UART6, uart_irq_handler);
-    irq_enable(Irq::UART6);
+    attach_irq(SERIO_IRQ, uart_irq_handler);
+    irq_enable(SERIO_IRQ);
 
     // TX
     // attach_irq(Irq::EDMA0, serio_irq_handler);
@@ -146,28 +140,6 @@ pub fn serio_init() {
     // dma_interrupt_at_completion(DMA_TX_CHANNEL);
     // dma_disable_on_completion(DMA_TX_CHANNEL);
     // dma_enable(DMA_TX_CHANNEL);
-    let r: u32 = 0;
-    unsafe {
-        offset = crate::ptr_to_addr_word(&buff_idx);
-    }
-
-}
-
-fn serio_attach_cts() {
-    let pin = CTSB_PIN;
-    let xbar_in_index = 6;
-    let xbar_out_index = 124;
-
-    xbar_connect(xbar_in_index, xbar_out_index);
-
-    // Pin configure, trigger select
-    uart_set_pin_config(&SERIO_DEV, InputTrigger::CtsB);
-
-    // Configure something else
-    pin_mode(pin, Mode::Output);
-    assign(0x401F_861C, 0x0);
-    // pin_mux_config(pin, Alt::Alt1);
-    // pin_pad_config(pin, Bitwise::Eq, (0x7 << 3) | (0x1 << 12) | (0x1 << 13) | (0x0 << 14) | (0x1 << 16));
 }
 
 fn serio_transmit_enable() {
@@ -181,14 +153,14 @@ pub fn serio_baud(rate: f32) {
 
 pub fn serio_write_byte(byte: u8) {
 
-    unsafe {
-        if transmitting == false {
-            pin_out(TX_PIN, Power::High);
-            // uart_write_fifo(&SERIO_DEV, b'H');
-            uart_set_tie(&SERIO_DEV, true);
-            transmitting = true;
-        }
-    }
+    // unsafe {
+    //     if transmitting == false {
+    //         pin_out(TX_PIN, Power::High);
+    //         // uart_write_fifo(&SERIO_DEV, b'H');
+    //         uart_set_tie(&SERIO_DEV, true);
+    //         transmitting = true;
+    //     }
+    // }
     
     // let cidx = unsafe { char_send_idx };
     // if cidx < 6 {
@@ -210,48 +182,34 @@ pub fn serio_write_byte(byte: u8) {
 }
 
 pub fn uart_irq_handler() {
-
-    // pin_out(13, Power::Low);
-    // debug::blink(4, debug::Speed::Fast);
-    // if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 22) > 0 {
-        // uart_disable(&SERIO_DEV);
-        // uart_enable(&SERIO_DEV);
-        // uart_sbk(&SERIO_DEV);
-        // pin_out(TX_PIN, Power::Low);
-    // }    
-    
-    // disable_interrupts();
-    // uart_set_tie(&SERIO_DEV, false);
+    // Don't handle any irq's while we're in critical code
+    irq_disable(SERIO_IRQ);
 
     // Tx empty, I think
     if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 23) > 0 {
-        // debug::blink(1, debug::Speed::Normal);
         
+        unsafe {
+            BUFFER.index += 1;
+            if BUFFER.index >= 6 {
+                BUFFER.index = 0;
+            }
+        }
 
-        let mut byte: u8 = b'a';
+        let byte = unsafe { BUFFER.buffer[BUFFER.index as usize] };
         
-
-        // while adj > 255 {
-        //     adj -= 255;
-        // }
+        crate::debug::blink(2, crate::debug::Speed::Fast);
+        // Clear TSC
         uart_disable(&SERIO_DEV);
         uart_enable(&SERIO_DEV);
         uart_sbk(&SERIO_DEV);
-        uart_write_fifo(&SERIO_DEV, byte);
-        // uart_disable(&SERIO_DEV);
-        // uart_enable(&SERIO_DEV);
-        // uart_sbk(&SERIO_DEV);
 
-        // unsafe {
-            
-        //     buff_idx = (idx + 1) % 5;
-        // }
-        // }
+        // Get the next byte to write and beam it
+        uart_write_fifo(&SERIO_DEV, byte);
     }
     
-    // uart_set_tie(&SERIO_DEV, true);
+    // Resume handling irqs
+    irq_enable(SERIO_IRQ);
     uart_clear_irq(&SERIO_DEV);
-    // enable_interrupts();
 }
 
 #[no_mangle]

@@ -6,6 +6,7 @@ pub mod drivers;
 pub mod clock;
 pub mod serio;
 pub mod debug;
+pub mod mem;
 
 use core::arch::asm;
 use core::arch::global_asm;
@@ -43,7 +44,7 @@ pub fn main() {
     enable_interrupts();
 
     debug::blink(3, debug::Speed::Fast);
-    
+
     loop { 
         unsafe {
             // drivers::ws2812::ws2812_loop();
