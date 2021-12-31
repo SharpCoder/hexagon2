@@ -7,9 +7,9 @@ use crate::phys::{
     assign,
     read_word,
 };
+
 use crate::phys::periodic_timers::*;
 
-// This basically ma
 pub fn clock_init() {
     // // Undo clock gating
     assign(addrs::CCM_CCGR1, read_word(addrs::CCM_CCGR1) | (0x3 << 12));
@@ -40,7 +40,6 @@ pub fn clock_init() {
     // to a default timeout that takes like a minute.
     pit_restart(&PeriodicTimerSource::Timer1);
     pit_restart(&PeriodicTimerSource::Timer0);
-    
 }
 
 pub fn nanos() -> u64 {

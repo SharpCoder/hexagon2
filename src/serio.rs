@@ -25,9 +25,9 @@ pub const RX_PIN: usize = 0;
 static mut transmitting: bool = false;
 static mut t: bool = false;
 
-static mut offset: u32 = 0x0;
+pub static mut offset: u32 = 0x0;
 
-static mut buff_idx: usize = 0;
+static mut buff_idx: u32 = 0;
 static mut buff: [u8; 6] = [
     b'h',
     b'e',
@@ -146,7 +146,10 @@ pub fn serio_init() {
     // dma_interrupt_at_completion(DMA_TX_CHANNEL);
     // dma_disable_on_completion(DMA_TX_CHANNEL);
     // dma_enable(DMA_TX_CHANNEL);
-
+    let r: u32 = 0;
+    unsafe {
+        offset = crate::ptr_to_addr_word(&buff_idx);
+    }
 
 }
 
@@ -180,7 +183,6 @@ pub fn serio_write_byte(byte: u8) {
 
     unsafe {
         if transmitting == false {
-            debug::blink(4, debug::Speed::Fast);
             pin_out(TX_PIN, Power::High);
             // uart_write_fifo(&SERIO_DEV, b'H');
             uart_set_tie(&SERIO_DEV, true);
@@ -208,6 +210,7 @@ pub fn serio_write_byte(byte: u8) {
 }
 
 pub fn uart_irq_handler() {
+
     // pin_out(13, Power::Low);
     // debug::blink(4, debug::Speed::Fast);
     // if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 22) > 0 {
@@ -224,23 +227,9 @@ pub fn uart_irq_handler() {
     if uart_get_irq_statuses(&SERIO_DEV) & (0x1 << 23) > 0 {
         // debug::blink(1, debug::Speed::Normal);
         
-        let idx = unsafe {
-            buff_idx
-        };
 
-        let boo = unsafe {
-            t
-        };
-
-        let byte: u8 = match boo {
-            true => b'j',
-            false => b'k',
-        };
-
-        let mut adj = unsafe { 
-            // 0xFFF - 1 - byte as u32
-            byte
-        };
+        let mut byte: u8 = b'a';
+        
 
         // while adj > 255 {
         //     adj -= 255;
@@ -248,19 +237,11 @@ pub fn uart_irq_handler() {
         uart_disable(&SERIO_DEV);
         uart_enable(&SERIO_DEV);
         uart_sbk(&SERIO_DEV);
-        pin_out(TX_PIN, Power::Low);
-        crate::wait_wow(1);
-        pin_out(TX_PIN, Power::High);
-        uart_write_fifo(&SERIO_DEV, adj as u8);
+        uart_write_fifo(&SERIO_DEV, byte);
         // uart_disable(&SERIO_DEV);
         // uart_enable(&SERIO_DEV);
         // uart_sbk(&SERIO_DEV);
 
-
-        unsafe {
-            t = !t;
-            offset += 1;
-        }
         // unsafe {
             
         //     buff_idx = (idx + 1) % 5;

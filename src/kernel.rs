@@ -42,6 +42,8 @@ pub fn main() {
     // Enable interrupts across the system
     enable_interrupts();
 
+    debug::blink(3, debug::Speed::Fast);
+    
     loop { 
         unsafe {
             // drivers::ws2812::ws2812_loop();

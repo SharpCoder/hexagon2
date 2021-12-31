@@ -260,6 +260,10 @@ fn config_to_u32(config: &UartConfig, baseline: u32) -> u32 {
 }
 
 pub fn uart_start_clock() {
+
+    // First, select the oscillator clock so all the math works
+    assign(0x400F_C024, (read_word(0x400F_C024) & !0x1F) | 0x1 << 6);
+
     assign(0x400FC07C, read_word(0x400FC07C) | (0x3 << 24));
     assign(0x400F_C074, read_word(0x400F_C074) | (0x3 << 2) | (0x3 << 6));
     assign(0x400F_C06C, read_word(0x400F_C06C) | (0x3 << 24));
@@ -358,8 +362,7 @@ pub fn uart_write_fifo(device: &Device, byte: u8) {
 
 pub fn uart_baud_rate(device: &Device, rate: f32) {
     // TODO: Explain why this works (if it works)
-    // let baud_clock = 24000000.0; // MHz
-    let baud_clock = 24000000.0 * (132000000.0 / 396000000.0);
+    let baud_clock = 24000000.0; // MHz
     let sbr = (baud_clock / (rate * 16.0)) as u32;
     uart_disable(&device);
 
