@@ -141,7 +141,7 @@ pub fn pin_mode(pin: usize, mode: Mode) {
             gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Output);
         },
         Mode::Input => {
-            gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Input);
+            gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Output);
         }
     }
 }

@@ -17,6 +17,7 @@ static mut VEC_TABLE: [Ptr; 180] = [noop; 180];
 pub const IRQ_0_OFFSET: usize = 16;
 
 /** Interrupts */
+#[derive(Copy, Clone)]
 pub enum Irq {
     EDMA0 = 0,
     EDMA1 = 1,
@@ -66,8 +67,8 @@ pub fn irq_init() {
     irq_clear_pending();
 }
 
-pub fn irq_enable(irq_number: Irq) {
-    let num = irq_number as u8;
+pub fn irq_enable(irq_number: &Irq) {
+    let num = (*irq_number) as u8;
     let bank = num / 32;
     let bit = num - bank * 32;
     let addr = addrs::NVIC_IRQ_ENABLE_REG + (bank as u32 * 4);
@@ -76,8 +77,8 @@ pub fn irq_enable(irq_number: Irq) {
     assign(addr, next_value);
 }
 
-pub fn irq_disable(irq_number: Irq) {
-    let num = irq_number as u8;
+pub fn irq_disable(irq_number: &Irq) {
+    let num = (*irq_number) as u8;
     let bank = num / 32;
     let bit = num - bank * 32;
     let addr = addrs::NVIC_IRQ_CLEAR_REG + (bank as u32 * 4);
@@ -104,10 +105,9 @@ pub fn fill_irq(ptr: Ptr) {
     }
 }
 
-pub fn attach_irq(irq_number: Irq, ptr: Ptr) {
+pub fn attach_irq(irq_number: &Irq, ptr: Ptr) {
     unsafe {
-        let irq = irq_number as usize;
-        VEC_TABLE[IRQ_0_OFFSET + irq as usize] = ptr;
+        VEC_TABLE[IRQ_0_OFFSET + (*irq_number) as usize] = ptr;
         // VEC_TABLE[IRQ_0_OFFSET - 4 + irq as usize] = ptr;
 
         // let mut r: usize = 0;

@@ -8,6 +8,7 @@ pub mod serio;
 pub mod debug;
 pub mod mem;
 
+use core::panic::PanicInfo;
 use core::arch::asm;
 use core::arch::global_asm;
 use phys::gpio::*;
@@ -28,10 +29,6 @@ pub fn main() {
 
     // Initialize clocks
     phys_clocks_en();
-
-    // Initialize serial communication
-    serio_init();
-    serio_baud(9600.0);
 
     // Setup GPIO pin 13 (the LED on teensy)
     pin_mode(13, Mode::Output);
@@ -54,12 +51,7 @@ pub fn main() {
             // pin_out(TX_PIN, Power::Low);
             // wait_ns(500000);
             // debug::blink(1, debug::Speed::Fast);
-            serio_write_byte(b'w');
-            serio_write_byte(b'o');
-            serio_write_byte(b'r');
-            serio_write_byte(b'l');
-            serio_write_byte(b'd');
-            serio_write_byte(b'\n');
+            serio_write(b"Hello");
 
             wait_wow(1);
             asm!("nop");
