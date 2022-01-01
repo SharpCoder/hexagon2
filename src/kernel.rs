@@ -9,18 +9,12 @@ pub mod serio;
 pub mod debug;
 pub mod mem;
 
-use core::panic::PanicInfo;
 use core::arch::asm;
 use core::arch::global_asm;
-use phys::gpio::*;
 use phys::irq::*;
-use phys::uart::Baud;
 use serio::*;
 use phys::pins::*;
 use phys::*;
-
-const TX_PIN: usize = 1;
-const RX_PIN: usize = 0;
 
 #[no_mangle]
 pub fn main() {
@@ -33,7 +27,6 @@ pub fn main() {
 
     // Setup GPIO pin 13 (the LED on teensy)
     pin_mode(13, Mode::Output);
-
 
     // Ignite system clock for keeping track of millis()
     // which is also used for the wait implementation.
@@ -50,13 +43,7 @@ pub fn main() {
 
     loop { 
         unsafe {
-            // pin_out(TX_PIN, Power::High);
-            // wait_ns(500000);
-            // pin_out(TX_PIN, Power::Low);
-            // wait_ns(500000);
             serio_write(b"Hello\n");
-            // serio_write_byte(b'a');
-
             wait_wow(1);
             asm!("nop");
         }

@@ -26,11 +26,11 @@ pub fn itoa_u<'a> (number: u64) -> [u8; 10] {
 
     // For now, we're using static length stuff
     // this is debug anyway.
-    let mut result = &mut [b' '; 10];
+    let result = &mut [b' '; 10];
     let mut idx = 0;
     let mut temp = number;
     while temp > 0 {
-        let mut element = temp % 10;
+        let element = temp % 10;
         temp /= 10;
         result[idx] = math_int_to_char(element as u8);
         idx += 1;

@@ -77,7 +77,7 @@ pub fn gpio_direction(pin: &Pin, pad: u32, direction: Dir) {
     let addr = get_addr(pin) + 0x4;
     let original_value = read_word(addr);
     
-    let value = match direction {
+    match direction {
         Dir::Input => {
             assign(addr, original_value & !(0x1 << pad));
         },

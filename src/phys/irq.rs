@@ -12,6 +12,7 @@ use crate::phys::{
 
 
 extern "C" {
+    #[allow(improper_ctypes)]
     fn set_nvic(addr: *const IrqTable);
 }
 
