@@ -2,14 +2,8 @@
 #define __disable_irq() __asm__ volatile("CPSID i":::"memory");
 #define __enable_irq()	__asm__ volatile("CPSIE i":::"memory");
 
-
 typedef long unsigned int uint32_t;
 
-extern void err(void);
-extern void teensy_debug(uint32_t value);
-extern void debug_u32_asm(uint32_t value);
-extern void serio_handle_irq(void);
-extern void irq_init(void);
 extern void main(void);
 
 __attribute__((section(".vectable")))
@@ -60,7 +54,6 @@ void startup() {
     // Rust will also access this through raw memory pointers
     uint32_t addr = (uint32_t)&irq_table;
     mmio32(0xE000ED08) = addr;
-    debug(addr);
     
     // Branch to main
     __asm__ volatile("bl main");
@@ -270,11 +263,4 @@ static void memory_clear(uint32_t *dest, uint32_t *dest_end)
     {
         *dest++ = 0;
     }
-}
-
-__attribute__((section(".startup"), used)) 
-void debug(uint32_t addr) {
-    teensy_debug(addr);
-    // __asm__ volatile("mov r0, r0");
-    // __asm__ volatile("b teensy_debug");
 }

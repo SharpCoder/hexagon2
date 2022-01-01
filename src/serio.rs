@@ -29,7 +29,6 @@ pub enum SerioDevice {
     Uart8 = 0x7,
 }
 
-
 /** 
     This encapsulates an entire Uart device
     being instantiated, including all necessary memory
@@ -230,29 +229,12 @@ fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
 }
 
 pub fn serio_init() {
-    // fill_irq(serio_handle_irq);
-    // put_irq(0, serio_handle_irq);
-    // put_irq(1, serio_handle_irq);
-    // put_irq(2, serio_handle_irq);
-    // put_irq(3, serio_handle_irq);
-    // put_irq(4, serio_handle_irq);
-    // put_irq(5, serio_handle_irq);
-    // put_irq(6, serio_handle_irq);
-    // put_irq(7, serio_handle_irq);
-    // put_irq(20, serio_handle_irq);
-    // put_irq(21, serio_handle_irq);
-    // put_irq(22, serio_handle_irq);
-    // put_irq(23, serio_handle_irq);
-    // put_irq(24, serio_handle_irq);
-    // put_irq(25, serio_handle_irq);
-    // fill_irq(serio_handle_irq);
     let uart = get_uart_interface(SerioDevice::Uart6);
     uart.initialize();
 }
 
 pub fn serio_write(bytes: &[u8]) {
     serial_write(SerioDevice::Uart6, bytes);
-    serial_write(SerioDevice::Uart4, bytes);
 }
 
 pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
@@ -266,7 +248,6 @@ pub fn serio_baud(rate: f32) {
 
 #[no_mangle]
 pub fn serio_handle_irq() {
-    // debug::blink(2, crate::debug::Speed::Fast);
     disable_interrupts();
     get_uart_interface(SerioDevice::Uart1).handle_irq();
     get_uart_interface(SerioDevice::Uart2).handle_irq();

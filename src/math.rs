@@ -6,6 +6,7 @@ pub fn int_to_char(number: u8) -> u8 {
     }
 }
 
+// Technically this supports up-to base 26 :P
 pub fn int_to_hex(number: u8) -> u8 {
     if number < 10 {
         return int_to_char(number);
@@ -76,8 +77,6 @@ fn compact(arr: &mut [u8]) {
     }
 }
 
-// There's a bug somewhere
-// it outputs things like 0982892 on occasion
 pub fn itoa_u64(val: u64) -> [u8; 20] {
     let result = &mut[b' '; 20];
     let upper_val = val / 100000000;
