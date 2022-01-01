@@ -10,6 +10,7 @@ ENTRY(ImageVectorTable)
 
 SECTIONS
 {
+
     .text.progmem : {
         KEEP(*(.flashconfig))
         FILL(0xFF)
@@ -17,6 +18,8 @@ SECTIONS
         KEEP(*(.ivt))
         KEEP(*(.bootdata))
         KEEP(*(.startup))
+        KEEP(*(.vectors))
+
         *(.progmem*)
                 . = ALIGN(4);
                 KEEP(*(.init))
@@ -39,10 +42,9 @@ SECTIONS
     .data : {
         *(.rodata*)
         *(.data*)
-        KEEP(*(.counter))
-        KEEP(*(.vectors))
         . = ALIGN(16);
     } > DTCM  AT> FLASH
+
 
     .bss ALIGN(4) : {
         *(.bss*)
@@ -76,7 +78,8 @@ SECTIONS
 
     _flashimagelen = SIZEOF(.text.progmem) + SIZEOF(.text.itcm) + SIZEOF(.data);
     _teensy_model_identifier = 0x24;
-
+    _data_size = SIZEOF(.data);
+    
     .debug_info     0 : { *(.debug_info) }
     .debug_abbrev   0 : { *(.debug_abbrev) }
     .debug_line     0 : { *(.debug_line) }

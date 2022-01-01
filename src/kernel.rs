@@ -1,8 +1,8 @@
-#![feature(lang_items, generators)]
+#![feature(lang_items)]
 #![crate_type = "staticlib"]
 #![no_std]
 pub mod phys;
-pub mod drivers;
+// pub mod drivers;
 pub mod clock;
 pub mod serio;
 pub mod debug;
@@ -24,8 +24,8 @@ const RX_PIN: usize = 0;
 #[no_mangle]
 pub fn main() {
     // Initialize irq system, (disables all interrupts)
-    irq_init();
     disable_interrupts();
+    // irq_init();
 
     // Initialize clocks
     phys_clocks_en();
@@ -33,25 +33,27 @@ pub fn main() {
     // Setup GPIO pin 13 (the LED on teensy)
     pin_mode(13, Mode::Output);
 
+
     // Ignite system clock for keeping track of millis()
     // which is also used for the wait implementation.
     clock::clock_init();
 
+    // Setup serial
+    serio_init();
+    serio_baud(9600.0);
+
     // Enable interrupts across the system
     enable_interrupts();
-
-    debug::blink(3, debug::Speed::Fast);
+    // pendsv();
 
     loop { 
         unsafe {
-            // drivers::ws2812::ws2812_loop();
-
             // pin_out(TX_PIN, Power::High);
             // wait_ns(500000);
             // pin_out(TX_PIN, Power::Low);
             // wait_ns(500000);
-            // debug::blink(1, debug::Speed::Fast);
-            serio_write(b"Hello");
+            serio_write(b"Hello\n");
+            // serio_write_byte(b'a');
 
             wait_wow(1);
             asm!("nop");
@@ -104,14 +106,27 @@ extern "C" {
     pub fn ptr_to_addr_byte(ptr: *const u8) -> u32;
 } 
 
+#[no_mangle]
+pub fn err() {
+    pin_out(13, Power::High);
+    loop {
+        unsafe { asm!("nop"); }
+    }
+}
 
 // Yeah how tf do you do this in rust? Idk
 // These functions take a pointer and return the absolute address
 // to that pointer as a word. Somehow.
 global_asm!("
+    ptr_to_addr_word:
     ptr_to_addr_byte:
         add r0, sp, #4
+        mov pc, lr
 
-    ptr_to_addr_word:
-        add r0, sp, #4
+    _ZN4core9panicking18panic_bounds_check17h9048f255eeb8dcc3E:
+        bl      err
+        b hang
+
+    hang:
+        b hang
 ");

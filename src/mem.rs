@@ -8,20 +8,20 @@ use core::mem::{size_of};
 use crate::phys::addrs::OCRAM2;
 
 extern "C" {
-     static _heap_start: u32; // Thank you, linker
+     static _heap_end: u32; // Thank you, linker
 }
 
 const MEMORY_MAXIMUM: u32 = 0x7D_0000; // 512kb
-static mut MEMORY_OFFSET: u32 = 0;
+static mut MEMORY_OFFSET: u32 = 0xD_000;
 
-pub fn mem_alloc(bytes: usize) -> *mut u32 {
+pub fn alloc(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
         if MEMORY_OFFSET + bytes as u32 > MEMORY_MAXIMUM {
             MEMORY_OFFSET = 0;
         }
 
-        let ptr = (_heap_start + MEMORY_OFFSET) as *mut u32;
+        let ptr = (_heap_end + MEMORY_OFFSET) as *mut u32;
         MEMORY_OFFSET += bytes as u32;
         return ptr;
     }
@@ -32,7 +32,7 @@ pub fn mem_alloc(bytes: usize) -> *mut u32 {
 /// if all memory is used up. Clearly, this is a bad idea. Will be improved over time.
 pub fn kalloc<T>() -> *mut T {
     let bytes = size_of::<T>();
-    return mem_alloc(bytes) as *mut T;
+    return alloc(bytes) as *mut T;
 }
 
 /// Free a pointer by updating the pagefile

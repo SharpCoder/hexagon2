@@ -1,9 +1,7 @@
 #!/bin/sh
 mkdir -p out/
 
-rm -rf out/*.asm
-rm -rf out/*.map
-rm -rf out/*.lst
+rm -rf out/*
 
 # Compile rust
 rustc --target thumbv7em-none-eabihf \

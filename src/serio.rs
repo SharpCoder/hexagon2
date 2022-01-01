@@ -14,35 +14,28 @@ use crate::phys::pins::*;
 use crate::phys::xbar::*;
 use crate::phys::*;
 
-const UART_BUFFER_SIZE: usize = 512; // bytes
-static mut UART_DEVICES: [Uart; 8] = [
-    Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::UART1),
-    Uart::new(Device::Uart2, 14, 15, Irq::UART2),
-    Uart::new(Device::Uart3, 17, 16, Irq::UART3),
-    Uart::new(Device::Uart4, 8, 7, Irq::UART4),
-    Uart::new(Device::Uart5, 0, 0, Irq::UART5), // NOTE: THIS DEVICE DOESN'T HAVE VALID PINS
-    Uart::new(Device::Uart6, 1, 0, Irq::UART6),
-    Uart::new(Device::Uart7, 29, 28, Irq::UART7),
-    Uart::new(Device::Uart8, 20, 21, Irq::UART8),
-];
+const UART_BUFFER_SIZE: usize = 1024; // bytes
+static mut Uart1: Uart = Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::UART1);
+static mut Uart2: Uart = Uart::new(Device::Uart2, 14, 15, Irq::UART2);
+static mut Uart3: Uart = Uart::new(Device::Uart3, 17, 16, Irq::UART3);
+static mut Uart4: Uart = Uart::new(Device::Uart4, 8, 7, Irq::UART4);
+static mut Uart5: Uart = Uart::new(Device::Uart5, 1, 0, Irq::UART5); // NOTE: THIS DEVICE DOESN'T HAVE VALID PINS
+static mut Uart6: Uart = Uart::new(Device::Uart6, 1, 0, Irq::UART6);
+static mut Uart7: Uart = Uart::new(Device::Uart7, 29, 28, Irq::UART7);
+static mut Uart8: Uart = Uart::new(Device::Uart8, 20, 21, Irq::UART8);
 
 #[derive(Clone, Copy)]
 pub enum SerioDevice {
-    Uart1 = 0x1,
-    Uart2 = 0x2,
-    Uart3 = 0x3,
-    Uart4 = 0x4,
-    Uart5 = 0x5,
-    Uart6 = 0x6,
-    Uart7 = 0x7,
-    Uart8 = 0x8,
+    Uart1 = 0x0,
+    Uart2 = 0x1,
+    Uart3 = 0x2,
+    Uart4 = 0x3,
+    Uart5 = 0x4,
+    Uart6 = 0x5,
+    Uart7 = 0x6,
+    Uart8 = 0x7,
 }
 
-// The device serial communication is hardcoded tos
-pub const SERIO_DEV: Device = Device::Uart6;
-pub const SERIO_IRQ: Irq = Irq::UART6;
-pub const TX_PIN: usize = 1;
-pub const RX_PIN: usize = 0;
 
 /** 
     This encapsulates an entire Uart device
@@ -87,11 +80,11 @@ impl Uart {
             drive_strength: DriveStrength::MaxDiv3,
             fast_slew_rate: true,
         });
-
-        uart_disable(&self.device);
-        uart_sw_reset(&self.device, true);
-        uart_sw_reset(&self.device, false);
-        uart_configure(&self.device, UartConfig {
+        
+        uart_disable(self.device);
+        uart_sw_reset(self.device, true);
+        uart_sw_reset(self.device, false);
+        uart_configure(self.device, UartConfig {
             r9t8: false,
             invert_transmission_polarity: false,
             overrun_irq_en: false,
@@ -100,7 +93,7 @@ impl Uart {
             parity_error_irq_en: false,
             tx_irq_en: false,
             rx_irq_en: false,
-            tx_complete_irq_en: true,
+            tx_complete_irq_en: false, // true
             idle_line_irq_en: false,
             tx_en: false,
             rx_en: false,
@@ -113,7 +106,7 @@ impl Uart {
             parity_type: ParityType::Even,
         });
     
-        uart_configure_fifo(&self.device, FifoConfig {
+        uart_configure_fifo(self.device, FifoConfig {
             tx_fifo_underflow_flag: false,
             rx_fifo_underflow_flag: false,
             tx_flush: false,
@@ -126,25 +119,24 @@ impl Uart {
             rx_fifo_depth: BufferDepth::Data1Word,
         });
     
-        uart_set_pin_config(&self.device, InputTrigger::Disabled);
-        uart_disable_fifo(&self.device);
-    
-        attach_irq(&self.irq, uart_irq_handler);
-        irq_enable(&self.irq);
-    
-        uart_watermark(&self.device);
-        uart_enable(&self.device);
+        pin_mode(self.tx_pin, Mode::Output);
+        uart_set_pin_config(self.device, InputTrigger::Disabled);
+        uart_disable_fifo(self.device);
         
-        // pin_mode(self.tx_pin, Mode::Output);
-        // pin_out(self.tx_pin, Power::Low);
+        uart_watermark(self.device);
+        uart_enable(self.device);
         
-        // Default baud rate
-        self.set_baud(9600.0);
-        self.initialized = true;
+        pin_out(self.tx_pin, Power::Low);
+        
+        attach_irq(self.irq, serio_handle_irq);
+        fill_irq(serio_handle_irq);
+        irq_enable(self.irq);
+
+        self.initialized = true;        
     }
 
     pub fn set_baud(&self, rate: f32) {
-        uart_baud_rate(&self.device, rate);
+        uart_baud_rate(self.device, rate);
     }
 
     pub fn write(&mut self, bytes: &[u8]) {
@@ -160,13 +152,18 @@ impl Uart {
     }
 
     fn enqueue(&mut self, byte: u8) {
+        // Make sure we're not buffer overflowed
+        if (self.buffer_head + 1) >= UART_BUFFER_SIZE {
+            return;
+        }
+
         self.buffer[self.buffer_head] = byte;
         self.buffer_head += 1;
 
-        if self.buffer_head > self.buffer.len() {
-            // This is technically a fatal condition I think.
-            // TODO: error logging of some kind.
-            self.buffer_head = 0;
+        if self.buffer_head == 1 {
+            pin_out(self.tx_pin, Power::High);
+            // uart_write_fifo(self.device, byte);
+            uart_set_reg(self.device, &CTRL_TCIE);
         }
     }
 
@@ -197,74 +194,78 @@ impl Uart {
         if !self.initialized || self.irq_processing {
             return;
         }
+        
+        
         // This prevents circular calls
         self.irq_processing = true;
-        irq_disable(&self.irq);
 
         // If tx is empty
-        if uart_get_irq_statuses(&self.device) & (0x1 << 23) > 0 {
+        if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
             match self.dequeue() {
                 None => {
                     // Disengage, I guess?
+                    uart_clear_reg(self.device, &CTRL_TCIE);
+                    
                 },
                 Some(byte) => {
                     // Clear TSC
-                    uart_disable(&self.device);
-                    uart_enable(&self.device);
-                    uart_sbk(&self.device);
+                    uart_disable(self.device);
+                    uart_enable(self.device);
+                    uart_sbk(self.device);
 
                     // Get the next byte to write and beam it
-                    uart_write_fifo(&self.device, byte);
+                    uart_write_fifo(self.device, byte);
                 }
             }
         }
 
-        uart_clear_irq(&self.device);
-        irq_enable(&self.irq);
         self.irq_processing = false;
+        uart_clear_irq(self.device);
     }
 }
 
-// The main function to use unless you are an advanced user
+fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
+    unsafe {
+        return match device {
+            SerioDevice::Uart1 => &mut Uart1,
+            SerioDevice::Uart2 => &mut Uart2,
+            SerioDevice::Uart3 => &mut Uart3,
+            SerioDevice::Uart4 => &mut Uart4,
+            SerioDevice::Uart5 => &mut Uart5,
+            SerioDevice::Uart6 => &mut Uart6,
+            SerioDevice::Uart7 => &mut Uart7,
+            SerioDevice::Uart8 => &mut Uart8,
+        };
+    }
+}
+
+pub fn serio_init() {
+    fill_irq(serio_handle_irq);
+    let uart = get_uart_interface(SerioDevice::Uart6);
+    uart.initialize();
+}
+
 pub fn serio_write(bytes: &[u8]) {
-    serial_write(&SerioDevice::Uart6, bytes);
+    serial_write(SerioDevice::Uart6, bytes);
+}
+
+pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
+    let uart = get_uart_interface(device);
+    unsafe { uart.write(bytes); }
 }
 
 pub fn serio_baud(rate: f32) {
-    let mut device = unsafe { &UART_DEVICES[SerioDevice::Uart6 as usize] };
-    device.set_baud(rate);
+    uart_baud_rate(Device::Uart6, rate);
 }
 
-
-pub fn serial_write(device: &SerioDevice, bytes: &[u8]) {
-    let device_idx = *device as usize;
-
-    // Check for uart5 because idk how to support that one
-    match device {
-        SerioDevice::Uart5 => {
-            panic!("Uart5 is not supported");
-        },
-        _ => {
-            
-        },
-    };
-    
-    let uart = unsafe { &mut UART_DEVICES[device_idx] };
-    if !uart.initialized {
-        uart.initialize();
-    }
-
-    uart.write(bytes);
-}
-
-pub fn uart_irq_handler() {
-    let mut device_id = 0;
-    let uart_count = unsafe { UART_DEVICES.len() };
-
-    // Map over each device and tell it an irq event happened.
-    while device_id < uart_count {
-        let device = unsafe { &mut UART_DEVICES[device_id] };
-        device.handle_irq();
-        device_id += 1;
-    }
+#[no_mangle]
+pub fn serio_handle_irq() {
+    disable_interrupts();
+    get_uart_interface(SerioDevice::Uart1).handle_irq();
+    get_uart_interface(SerioDevice::Uart2).handle_irq();
+    get_uart_interface(SerioDevice::Uart3).handle_irq();
+    get_uart_interface(SerioDevice::Uart4).handle_irq();
+    get_uart_interface(SerioDevice::Uart5).handle_irq();
+    get_uart_interface(SerioDevice::Uart6).handle_irq();
+    enable_interrupts();
 }

@@ -98,6 +98,7 @@ pub enum IdleConfiguration {
     Idle128Char = 0x7,
 }
 
+#[derive(Copy, Clone)]
 pub enum Device {
     Uart1,
     Uart2,
@@ -123,25 +124,25 @@ pub struct FifoConfig {
     pub rx_fifo_depth: BufferDepth,
 }
 
-pub fn uart_or_reg(device: &Device, register: &Reg, value: u32) {
+pub fn uart_or_reg(device: Device, register: &Reg, value: u32) {
     let addr = get_addr(device) + register.base;
     let val = read_word(addr) | value;
     assign(addr, val);
 }
 
-pub fn uart_and_reg(device: &Device, register: &Reg, value: u32) {
+pub fn uart_and_reg(device: Device, register: &Reg, value: u32) {
     let addr = get_addr(device) + register.base;
     let val = read_word(addr) & value;
     assign(addr, val);
 }
 
-pub fn uart_set_reg(device: &Device, register: &Reg) {
+pub fn uart_set_reg(device: Device, register: &Reg) {
     let addr = get_addr(device) + register.base;
     let val = read_word(addr) | register.mask;
     assign(addr, val);
 }
 
-pub fn uart_clear_reg(device: &Device, register: &Reg) {
+pub fn uart_clear_reg(device: Device, register: &Reg) {
     let addr = get_addr(device) + register.base;
     let val = read_word(addr) & !register.mask;
     assign(addr, val);
@@ -271,7 +272,7 @@ pub fn uart_start_clock() {
     assign(0x400F_C07C, read_word(0x400F_C07C) | (0x3 << 26));
 }
 
-pub fn get_addr(device: &Device) -> u32 {
+pub fn get_addr(device: Device) -> u32 {
     return match device {
         Device::Uart1 => addrs::UART1,
         Device::Uart2 => addrs::UART2,
@@ -285,7 +286,7 @@ pub fn get_addr(device: &Device) -> u32 {
 }
 
 // Set the software reset pin on or off
-pub fn uart_sw_reset(device: &Device, sw_reset: bool) {
+pub fn uart_sw_reset(device: Device, sw_reset: bool) {
     let value = match sw_reset {
         true => 0x2,
         false => 0x0,
@@ -297,12 +298,12 @@ pub fn uart_sw_reset(device: &Device, sw_reset: bool) {
     unsafe { asm!("nop"); }
 }
 
-pub fn uart_configure(device: &Device, configuration: UartConfig) {
+pub fn uart_configure(device: Device, configuration: UartConfig) {
     let addr = get_addr(device) + 0x18;
     assign(addr, config_to_u32(&configuration, 0x0));
 }
 
-pub fn uart_set_tie(device: &Device, en: bool) {
+pub fn uart_set_tie(device: Device, en: bool) {
     let addr = get_addr(device) + 0x18;
     let origin = read_word(addr);
 
@@ -314,12 +315,12 @@ pub fn uart_set_tie(device: &Device, en: bool) {
     assign(addr, val);
 }
 
-pub fn uart_configure_fifo(device: &Device, configuration: FifoConfig) {
+pub fn uart_configure_fifo(device: Device, configuration: FifoConfig) {
     let addr = get_addr(device) + 0x28;
     assign(addr, fifo_config_to_u32(&configuration, read_word(addr)));
 }
 
-pub fn uart_set_pin_config(device: &Device, mode: InputTrigger) {
+pub fn uart_set_pin_config(device: Device, mode: InputTrigger) {
     let addr = get_addr(device) + 0xC;
     match mode {
         InputTrigger::Disabled => { 
@@ -337,21 +338,21 @@ pub fn uart_set_pin_config(device: &Device, mode: InputTrigger) {
     }
 }
 
-pub fn uart_enable(device: &Device) {
+pub fn uart_enable(device: Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
     assign(addr, baseline | (0x1 << 19));
     unsafe { asm!("nop"); }
 }
 
-pub fn uart_disable(device: &Device) {
+pub fn uart_disable(device: Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
     assign(addr, baseline & !(0x1 << 19));
     unsafe { asm!("nop"); }
 }
 
-pub fn uart_write_fifo(device: &Device, byte: u8) {
+pub fn uart_write_fifo(device: Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
     let original = read_word(addr);
 
@@ -360,62 +361,62 @@ pub fn uart_write_fifo(device: &Device, byte: u8) {
     // assign(addr, 0xFFF);
 }
 
-pub fn uart_baud_rate(device: &Device, rate: f32) {
+pub fn uart_baud_rate(device: Device, rate: f32) {
     // TODO: Explain why this works (if it works)
     let baud_clock = 24000000.0; // MHz
     let sbr = (baud_clock / (rate * 16.0)) as u32;
-    uart_disable(&device);
+    uart_disable(device);
 
     let addr = get_addr(device) + 0x10;
     let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | sbr;
     assign(addr, value);
 
-    uart_enable(&device);
+    uart_enable(device);
 }
 
-pub fn uart_enable_dma(device: &Device) {
+pub fn uart_enable_dma(device: Device) {
     let addr = get_addr(device) + 0x10;
     assign(addr, read_word(addr) | (0x1 << 21) | (0x1 << 23));
 }
 
-pub fn uart_disable_dma(device: &Device) {
+pub fn uart_disable_dma(device: Device) {
     let addr = get_addr(device) + 0x10;
     assign(addr, read_word(addr) & !(0x1 << 21) & !(0x1 << 23));
 }
 
-pub fn uart_flush(device: &Device) {
+pub fn uart_flush(device: Device) {
     let addr = get_addr(device) + 0x1C;
     let original = read_word(addr);
     assign(addr, original | (0x1<<15));
 }
 
-pub fn uart_sbk(device: &Device) {
+pub fn uart_sbk(device: Device) {
     let addr = get_addr(device) + 0x18;
     let original = read_word(addr);
     assign(addr, original | (0x1<<16));
     assign(addr, original & !(0x1<<16));
 }
 
-pub fn uart_watermark(device: &Device) {
+pub fn uart_watermark(device: Device) {
     let addr = get_addr(device) + 0x2C;
     assign(addr, 0x01);
 }
 
-pub fn uart_enable_fifo(device: &Device) {
+pub fn uart_enable_fifo(device: Device) {
     let addr = get_addr(device) + 0x28;
     assign(addr, read_word(addr) | (0x1 << 7));
 }
 
-pub fn uart_disable_fifo(device: &Device) {
+pub fn uart_disable_fifo(device: Device) {
     let addr = get_addr(device) + 0x28;
     assign(addr, read_word(addr) & !(0x1 << 7));
 }
 
-pub fn uart_get_irq_statuses(device: &Device) -> u32 {
+pub fn uart_get_irq_statuses(device: Device) -> u32 {
     return read_word(get_addr(device) + 0x14);
 }
 
-pub fn uart_clear_irq(device: &Device) {
+pub fn uart_clear_irq(device: Device) {
     let addr = get_addr(device) + 0x14;
     assign(addr, read_word(addr) | 0xC80FC000);
 }

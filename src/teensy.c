@@ -5,8 +5,7 @@
 
 typedef long unsigned int uint32_t;
 
-extern uint32_t VEC_TABLE[256];
-extern void interrupt_handler(void);
+extern void irq_init(void);
 extern void main(void);
 
 extern unsigned long _stextload;
@@ -17,10 +16,13 @@ extern unsigned long _sdata;
 extern unsigned long _edata;
 extern unsigned long _sbss;
 extern unsigned long _ebss;
+extern unsigned long _heap_end;
+extern unsigned long _heap_start;
 extern unsigned long _flexram_bank_config;
 extern unsigned long _estack;
 extern unsigned long _flashimagelen;
 
+static uint32_t test_estack(void);
 void startup(void);
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end);
 static void memory_clear(uint32_t *dest, uint32_t *dest_end);
@@ -34,7 +36,7 @@ void startup() {
 
     // Enable FPU
     mmio32(0xE000ED88) = mmio32(0xE000ED88) | (0xFF<<20);
-    
+
     __asm__ volatile("isb");
     __asm__ volatile("dsb");
 
@@ -46,8 +48,14 @@ void startup() {
     memory_copy(&_sdata, &_sdataload, &_edata);
     memory_clear(&_sbss, &_ebss);
 
-    // Update VTOR
-    mmio32(0xE000ED08) = (uint32_t)&VEC_TABLE;
+    __asm__ volatile("bl irq_init");
+
+    // Copy stack pointer to the first uint32_t
+    // entry located at the NVIC which can be 
+    // found by looking at the address stored
+    // in 0xE000ED08... because of the code in irq_init
+    uint32_t addr = mmio32(0xE000ED08);
+    mmio32(addr) = (uint32_t)&_estack;
 
     // Branch to main
     __asm__ volatile("bl main");
@@ -257,4 +265,9 @@ static void memory_clear(uint32_t *dest, uint32_t *dest_end)
     {
         *dest++ = 0;
     }
+}
+
+__attribute__(( section(".startup"), used, naked ))
+static uint32_t test_estack() {
+    return ((uint32_t)&_estack);
 }
