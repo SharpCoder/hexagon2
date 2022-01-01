@@ -53,7 +53,7 @@ pub static mut VECTORS: IrqTable = IrqTable {
     svc_handler: noop,
     rsv4: 0x0,
     rsv5: 0x0,
-    pendsv_handler: noop,
+    pendsv_handler: crate::err,
     systick_handler: noop,    
     interrupts: [noop; MAX_SUPPORTED_IRQ],
 };
@@ -143,6 +143,14 @@ pub fn fill_irq(ptr: Ptr) {
     }
 }
 
+
+pub fn put_irq(irq_number: usize, ptr: Ptr) {
+    unsafe {
+        VECTORS.interrupts[irq_number] = ptr;
+    }
+}
+
+
 pub fn attach_irq(irq_number: Irq, ptr: Ptr) {
     unsafe {
         VECTORS.interrupts[irq_number as usize] = ptr;
@@ -158,7 +166,6 @@ pub fn fault_handler() {
 #[no_mangle]
 pub fn noop() {
     unsafe {
-        crate::err();
         asm!("nop");
     }
 }

@@ -3,6 +3,7 @@
 #![no_std]
 pub mod phys;
 // pub mod drivers;
+pub mod math;
 pub mod clock;
 pub mod serio;
 pub mod debug;
@@ -45,6 +46,7 @@ pub fn main() {
     // Enable interrupts across the system
     enable_interrupts();
     // pendsv();
+    debug::blink(4, debug::Speed::Fast);
 
     loop { 
         unsafe {

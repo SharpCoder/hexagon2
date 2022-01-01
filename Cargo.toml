@@ -1,0 +1,19 @@
+[package]
+name = "hexagon2_kernel"
+version = "0.0.1"
+authors = ["Josh Cole"]
+publish = false
+
+[unstable]
+asm = "yes"
+build-std = ["core"]
+
+[build]
+target = "thumbv7em-none-eabihf"
+all_targets = false
+
+[lib]
+name = "hexagon2_kernel"
+path = "src/lib.rs"
+
+[dependencies]

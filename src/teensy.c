@@ -22,8 +22,8 @@ extern unsigned long _flexram_bank_config;
 extern unsigned long _estack;
 extern unsigned long _flashimagelen;
 
-static uint32_t test_estack(void);
 void startup(void);
+void set_nvic(uint32_t addr);
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end);
 static void memory_clear(uint32_t *dest, uint32_t *dest_end);
 
@@ -54,9 +54,9 @@ void startup() {
     // entry located at the NVIC which can be 
     // found by looking at the address stored
     // in 0xE000ED08... because of the code in irq_init
-    uint32_t addr = mmio32(0xE000ED08);
-    mmio32(addr) = (uint32_t)&_estack;
-
+    // uint32_t addr = mmio32(0xE000ED08);
+    // mmio32(addr) = (uint32_t)&_estack;
+    // mmio32(0xE000ED08) = addr + 22;
     // Branch to main
     __asm__ volatile("bl main");
 }
@@ -247,7 +247,7 @@ uint32_t FlexSPI_NOR_Config[128] = {
     0  // reserved
 };
 
-__attribute__((section(".startup"), optimize("no-tree-loop-distribute-patterns")))
+__attribute__((section(".startup"), used, optimize("no-tree-loop-distribute-patterns")))
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end)
 {
     if (dest == src)
@@ -258,7 +258,7 @@ static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end)
     }
 }
 
-__attribute__((section(".startup"), optimize("no-tree-loop-distribute-patterns")))
+__attribute__((section(".startup"), used, optimize("no-tree-loop-distribute-patterns")))
 static void memory_clear(uint32_t *dest, uint32_t *dest_end)
 {
     while (dest < dest_end)
@@ -267,7 +267,7 @@ static void memory_clear(uint32_t *dest, uint32_t *dest_end)
     }
 }
 
-__attribute__(( section(".startup"), used, naked ))
-static uint32_t test_estack() {
-    return ((uint32_t)&_estack);
+__attribute__((naked, used))
+void set_nvic(uint32_t addr) {
+    mmio32(0xE000ED08) = addr - 24;
 }

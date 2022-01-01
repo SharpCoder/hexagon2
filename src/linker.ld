@@ -17,10 +17,9 @@ SECTIONS
         . = ORIGIN(FLASH) + 0x1000;
         KEEP(*(.ivt))
         KEEP(*(.bootdata))
-        KEEP(*(.startup))
-        KEEP(*(.vectors))
 
         *(.progmem*)
+        KEEP(*(.startup))
                 . = ALIGN(4);
                 KEEP(*(.init))
                 __preinit_array_start = .;
