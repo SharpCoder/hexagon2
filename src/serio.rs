@@ -3,22 +3,19 @@
  * based on UART physical hardware. For simplicity, it is tightly
  * coupled to a specific uart device.
 */
-
-use crate::debug;
-use crate::math;
 use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
 
 const UART_BUFFER_SIZE: usize = 1024; // bytes
-static mut UART1: Uart = Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::UART1);
-static mut UART2: Uart = Uart::new(Device::Uart2, 14, 15, Irq::UART2);
-static mut UART3: Uart = Uart::new(Device::Uart3, 17, 16, Irq::UART3);
-static mut UART4: Uart = Uart::new(Device::Uart4, 8, 7, Irq::UART4);
-static mut UART5: Uart = Uart::new(Device::Uart5, 1, 0, Irq::UART5); // NOTE: THIS DEVICE DOESN'T HAVE VALID PINS
-static mut UART6: Uart = Uart::new(Device::Uart6, 1, 0, Irq::UART6);
-static mut UART7: Uart = Uart::new(Device::Uart7, 29, 28, Irq::UART7);
-static mut UART8: Uart = Uart::new(Device::Uart8, 20, 21, Irq::UART8);
+static mut UART1: Uart = Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::Uart1);
+static mut UART2: Uart = Uart::new(Device::Uart2, 14, 15, Irq::Uart2);
+static mut UART3: Uart = Uart::new(Device::Uart3, 17, 16, Irq::Uart3);
+static mut UART4: Uart = Uart::new(Device::Uart4, 8, 7, Irq::Uart4);
+static mut UART5: Uart = Uart::new(Device::Uart5, 1, 0, Irq::Uart5); // NOTE: THIS DEVICE DOESN'T HAVE VALID PINS
+static mut UART6: Uart = Uart::new(Device::Uart6, 1, 0, Irq::Uart6);
+static mut UART7: Uart = Uart::new(Device::Uart7, 29, 28, Irq::Uart7);
+static mut UART8: Uart = Uart::new(Device::Uart8, 20, 21, Irq::Uart8);
 
 #[derive(Clone, Copy)]
 pub enum SerioDevice {
@@ -124,7 +121,10 @@ impl Uart {
         
         pin_out(self.tx_pin, Power::Low);
         
+        irq_attach(self.irq, serio_handle_irq);
         irq_enable(self.irq);
+
+        uart_baud_rate(self.device, 9600.0);
 
         self.initialized = true;        
     }
@@ -231,7 +231,7 @@ fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
 
 pub fn serio_init() {
     // fill_irq(serio_handle_irq);
-    put_irq(0, serio_handle_irq);
+    // put_irq(0, serio_handle_irq);
     // put_irq(1, serio_handle_irq);
     // put_irq(2, serio_handle_irq);
     // put_irq(3, serio_handle_irq);
@@ -245,19 +245,14 @@ pub fn serio_init() {
     // put_irq(23, serio_handle_irq);
     // put_irq(24, serio_handle_irq);
     // put_irq(25, serio_handle_irq);
-    fill_irq(serio_handle_irq);
+    // fill_irq(serio_handle_irq);
     let uart = get_uart_interface(SerioDevice::Uart6);
     uart.initialize();
 }
 
-pub fn serio_debug(num: u64, text: &[u8]) {
-    serio_write(&math::itoa_u64(num));
-    serio_write(text);
-    serio_write(b"\n");
-}
-
 pub fn serio_write(bytes: &[u8]) {
     serial_write(SerioDevice::Uart6, bytes);
+    serial_write(SerioDevice::Uart4, bytes);
 }
 
 pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
@@ -271,7 +266,7 @@ pub fn serio_baud(rate: f32) {
 
 #[no_mangle]
 pub fn serio_handle_irq() {
-    debug::blink(2, crate::debug::Speed::Fast);
+    // debug::blink(2, crate::debug::Speed::Fast);
     disable_interrupts();
     get_uart_interface(SerioDevice::Uart1).handle_irq();
     get_uart_interface(SerioDevice::Uart2).handle_irq();

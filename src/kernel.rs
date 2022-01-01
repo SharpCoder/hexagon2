@@ -15,12 +15,12 @@ use phys::irq::*;
 use serio::*;
 use phys::pins::*;
 use phys::*;
+use debug::*;
 
 #[no_mangle]
 pub fn main() {
     // Initialize irq system, (disables all interrupts)
     disable_interrupts();
-    // irq_init();
 
     // Initialize clocks
     phys_clocks_en();
@@ -36,19 +36,45 @@ pub fn main() {
     serio_init();
     serio_baud(9600.0);
 
+    // irq::reset_nvic();
+
     // Enable interrupts across the system
     enable_interrupts();
     // pendsv();
-    debug::blink(4, debug::Speed::Fast);
+    // debug::blink(4, debug::Speed::Fast);
+    debug_str(b"======== New Instance ========");
+    debug_hex(irq_addr(), b"IRQ Address");
+    debug_u32(irq_size() as u32, b"IRQ Size");
+    debug_str(b"");
 
+
+    let ivt = irq::get_ivt();
+    unsafe {
+        (*ivt).pendsv_handler = err;
+    }
+
+    wait_ns(1000000000);
+    pendsv();
+    
     loop { 
         unsafe {
-            serio_write(b"Hello\n");
-            wait_wow(1);
+            // serio_write(b"Hello\n");
+            // wait_wow(1);
             asm!("nop");
+            wait_ns(1000000000);
         }
         
     }
+}
+
+#[no_mangle]
+#[inline]
+pub fn teensy_debug(val: u32) {
+    disable_interrupts();
+    phys_clocks_en();
+    serio_init();
+    serio_baud(9600.0);
+    debug_hex(val, b"TEENSY DEBUG");
 }
 
 pub fn wait_wow(_nano: u64) {

@@ -2,7 +2,6 @@
 
 type Ptr = fn();
 use core::arch::asm;
-use core::arch::global_asm;
 use crate::phys::{ 
     addrs,
     assign,
@@ -10,13 +9,7 @@ use crate::phys::{
     set_bit,
  };
 
-
-extern "C" {
-    #[allow(improper_ctypes)]
-    fn set_nvic(addr: *const IrqTable);
-}
-
-const MAX_SUPPORTED_IRQ: usize = 256;
+const MAX_SUPPORTED_IRQ: usize = 1024;
 
 #[repr(C)]
 pub struct IrqTable {
@@ -62,17 +55,17 @@ pub static mut VECTORS: IrqTable = IrqTable {
 /** Interrupts */
 #[derive(Copy, Clone)]
 pub enum Irq {
-    UART1 = 20,
-    UART2 = 21,
-    UART3 = 22,
-    UART4 = 23,
-    UART5 = 24,
-    UART6 = 25,
-    UART7 = 26,
-    UART8 = 29,
-    GPT1 = 100,
-    GPT2 = 101,
-    PIT = 122,
+    Uart1 = 20,
+    Uart2 = 21,
+    Uart3 = 22,
+    Uart4 = 23,
+    Uart5 = 24,
+    Uart6 = 25,
+    Uart7 = 26,
+    Uart8 = 29,
+    Gpt1 = 100,
+    Gpt2 = 101,
+    PeriodicTimer = 122,
 }
 
 pub fn enable_interrupts() {
@@ -85,26 +78,25 @@ pub fn disable_interrupts() {
     unsafe {
         asm!("CPSID i");
     }
-
 }
 
-#[no_mangle]
-pub fn irq_init() {
-    unsafe {
-        set_nvic(&VECTORS);
-    }
-
-    // Disable all interrupts
-    assign(addrs::NVIC_IRQ_CLEAR_REG + 0x0, 0xFFFF_FFFF);
-    assign(addrs::NVIC_IRQ_CLEAR_REG + 0x4, 0xFFFF_FFFF);
-    assign(addrs::NVIC_IRQ_CLEAR_REG + 0x8, 0xFFFF_FFFF);
-    assign(addrs::NVIC_IRQ_CLEAR_REG + 0xC, 0xFFFF_FFFF);
-    // Reset all interrupt vector handlers
-    fill_irq(noop);
-    // Reset the interrupt pointers
-    irq_clear_pending();
+// Return the current address stored
+// in the NVIC
+pub fn irq_addr() -> u32 {
+    return read_word(0xe000ed08);
 }
 
+// Return the total size of the IVT
+pub fn irq_size() -> u32 {
+    return core::mem::size_of::<IrqTable>() as u32;
+}
+
+// Get the current IVT wherever it may be stored
+pub fn get_ivt() -> *mut IrqTable {
+    return read_word(0xe000ed08) as *mut IrqTable
+}
+
+// Enable a specific interrupt
 pub fn irq_enable(irq_number: Irq) {
     let num = irq_number as u32;
     let bank = num / 32;
@@ -115,6 +107,7 @@ pub fn irq_enable(irq_number: Irq) {
     assign(addr, next_value);
 }
 
+// Disable a specific interrupt
 pub fn irq_disable(irq_number: Irq) {
     let num = irq_number as u32;
     let bank = num / 32;
@@ -132,54 +125,90 @@ pub fn irq_clear_pending() {
     assign(addrs::NVIC_IRQ_CLEAR_PENDING_REG + 0xC, 0x0);
 }
 
-// DO NOT USE!!!
-// Unless you know what you are doing
-pub fn fill_irq(ptr: Ptr) {
+
+/**
+This method exists to copy the "shadow NVIC" into
+the real NVIC.
+
+Why?
+
+The actual address stored in the NVIC changes sometimes.
+I don't know why. But it seems like the data gets copied
+to a new location randomly. I have my theories, and it
+seems to only happen after the stack pointer
+is moved around. So anyway, this is just the nuclear
+approach to really fkn thoroughly making sure
+the NVIC has the value I think it has.
+
+Spent like 20 hours debugging this. I am so done
+with magic memory locations changing around.
+*/
+fn update_ivt() {
+    let ivt = get_ivt();
     unsafe {
-        let mut index = 0;
-        while index < VECTORS.interrupts.len() {
-            VECTORS.interrupts[index] = ptr;
-            index += 1;
+        (*ivt).init_sp =  VECTORS.init_sp;
+        (*ivt).reset_handler = VECTORS.reset_handler;
+        (*ivt).nmi_handler = VECTORS.nmi_handler;
+        (*ivt).hardfault_handler = VECTORS.hardfault_handler;
+        (*ivt).mpufault_handler = VECTORS.mpufault_handler;
+        (*ivt).busfault_handler = VECTORS.busfault_handler;
+        (*ivt).usagefault_handler = VECTORS.usagefault_handler;
+        (*ivt).rsv0 = VECTORS.rsv0;
+        (*ivt).rsv1 = VECTORS.rsv1;
+        (*ivt).rsv2 = VECTORS.rsv2;
+        (*ivt).rsv3 = VECTORS.rsv3;
+        (*ivt).svc_handler = VECTORS.svc_handler;
+        (*ivt).rsv4 = VECTORS.rsv4;
+        (*ivt).rsv5 = VECTORS.rsv5;
+        (*ivt).svc_handler = VECTORS.svc_handler;
+        (*ivt).pendsv_handler = VECTORS.pendsv_handler;
+        (*ivt).systick_handler = VECTORS.systick_handler;
+        let mut i = 0;
+        while i < MAX_SUPPORTED_IRQ {
+            (*ivt).interrupts[i] = VECTORS.interrupts[i];
+            i += 1;
         }
     }
 }
 
-
-pub fn put_irq(irq_number: usize, ptr: Ptr) {
+// Internal method for assigning a specific irq
+// at a specific index to the IVT.
+fn put_irq(irq_number: usize, ptr: Ptr) {
     unsafe {
+        // Update shadow copy
         VECTORS.interrupts[irq_number] = ptr;
+        // Copy shadow to actual NVIC
+        update_ivt();
     }
 }
 
-
-pub fn attach_irq(irq_number: Irq, ptr: Ptr) {
-    unsafe {
-        VECTORS.interrupts[irq_number as usize] = ptr;
-        asm!("nop");
+// DO NOT USE!!!
+// Unless you know what you are doing
+pub fn fill_irq(ptr: Ptr) {
+    let mut index = 0;
+    while index < MAX_SUPPORTED_IRQ {
+        put_irq(index, ptr);
+        index += 1;
     }
 }
 
-#[no_mangle]
+// Public method for attaching an interrupt to an
+// enum-gated IRQ source.
+pub fn irq_attach(irq_number: Irq, ptr: Ptr) {
+    put_irq(irq_number as usize, ptr);
+}
+
+// Some kind of hard-fault, typically
+// this is a catastrophic function that hangs
+// the program.
 pub fn fault_handler() {
     crate::err();
 }
 
-#[no_mangle]
+// An un-implemented interrupt
 pub fn noop() {
     unsafe {
+        crate::debug::blink(1, crate::debug::Speed::Fast);
         asm!("nop");
     }
 }
-
-global_asm!("
-    ptr_fn_to_addr_byte:
-        add r0, sp, #4
-        mov pc, lr
-
-    set_nvic:
-        ldr	r3, [pc, #4]
-        nop
-        str	r0, [r3, #0]
-        mov pc, lr
-        .word	0xE000ED08
-");

@@ -5,8 +5,15 @@
 
 typedef long unsigned int uint32_t;
 
+extern void err(void);
+extern void teensy_debug(uint32_t value);
+extern void debug_u32_asm(uint32_t value);
+extern void serio_handle_irq(void);
 extern void irq_init(void);
 extern void main(void);
+
+__attribute__((section(".vectable")))
+uint32_t irq_table[250];
 
 extern unsigned long _stextload;
 extern unsigned long _stext;
@@ -21,9 +28,10 @@ extern unsigned long _heap_start;
 extern unsigned long _flexram_bank_config;
 extern unsigned long _estack;
 extern unsigned long _flashimagelen;
+extern unsigned long _vectable_addr;
 
 void startup(void);
-void set_nvic(uint32_t addr);
+void debug(uint32_t addr);
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end);
 static void memory_clear(uint32_t *dest, uint32_t *dest_end);
 
@@ -33,7 +41,7 @@ void startup() {
     mmio32(0x400AC000 + 0x44) = (uint32_t)&_flexram_bank_config;
     mmio32(0x400AC000 + 0x40) = 0x00000007;
     mmio32(0x400AC000 + 0x38) = 0x00AA0000;
-
+    
     // Enable FPU
     mmio32(0xE000ED88) = mmio32(0xE000ED88) | (0xFF<<20);
 
@@ -47,16 +55,13 @@ void startup() {
     memory_copy(&_stext, &_stextload, &_etext);
     memory_copy(&_sdata, &_sdataload, &_edata);
     memory_clear(&_sbss, &_ebss);
-
-    __asm__ volatile("bl irq_init");
-
-    // Copy stack pointer to the first uint32_t
-    // entry located at the NVIC which can be 
-    // found by looking at the address stored
-    // in 0xE000ED08... because of the code in irq_init
-    // uint32_t addr = mmio32(0xE000ED08);
-    // mmio32(addr) = (uint32_t)&_estack;
-    // mmio32(0xE000ED08) = addr + 22;
+    
+    // Setup the NVIC
+    // Rust will also access this through raw memory pointers
+    uint32_t addr = (uint32_t)&irq_table;
+    mmio32(0xE000ED08) = addr;
+    debug(addr);
+    
     // Branch to main
     __asm__ volatile("bl main");
 }
@@ -267,7 +272,9 @@ static void memory_clear(uint32_t *dest, uint32_t *dest_end)
     }
 }
 
-__attribute__((naked, used))
-void set_nvic(uint32_t addr) {
-    mmio32(0xE000ED08) = addr - 24;
+__attribute__((section(".startup"), used)) 
+void debug(uint32_t addr) {
+    teensy_debug(addr);
+    // __asm__ volatile("mov r0, r0");
+    // __asm__ volatile("b teensy_debug");
 }

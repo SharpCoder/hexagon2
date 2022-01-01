@@ -1,5 +1,6 @@
 use core::arch::asm;
 use crate::phys::pins::*;
+use crate::math::*;
 
 #[derive(Copy, Clone)]
 pub enum Speed {
@@ -27,4 +28,32 @@ pub fn blink(count: u32, speed: Speed) {
         wait(&speed);
         i += 1;
     }
+}
+
+#[no_mangle]
+pub fn debug_u32_asm(hex: u32) {
+    crate::serio::serio_write(b"0x");
+    crate::serio::serio_write(&to_base(hex, 16));
+    crate::serio::serio_write(b"\n");
+}
+
+pub fn debug_hex(hex: u32, message: &[u8]) {
+    crate::serio::serio_write(b"0x");
+    crate::serio::serio_write(&to_base(hex, 16));
+    debug_str(message);
+}
+
+pub fn debug_u64(val: u64, message: &[u8]) {
+    crate::serio::serio_write(&itoa_u64(val));
+    debug_str(message);
+}
+
+pub fn debug_u32(val: u32, message: &[u8]) {
+    crate::serio::serio_write(&to_base(val, 10));
+    debug_str(message);
+}
+
+pub fn debug_str(message: &[u8]) {
+    crate::serio::serio_write(message);
+    crate::serio::serio_write(b"\n");
 }
