@@ -19,7 +19,7 @@ impl PingTask {
     pub fn new() -> PingTask {
         return PingTask {
             gate: Gate::new()
-                .when_nano(25000000, || {
+                .when_nano(65000000, || {
                     debug_str(b"ping pong");
                 })
                 .compile()

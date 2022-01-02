@@ -21,7 +21,7 @@ impl ClockTask {
             gate: Gate::new()
                 .when_nano(100000000, || {
                     debug_u64(crate::clock::nanos(), b"beep boop");
-                    blink(2, Speed::Fast);
+                    // blink(2, Speed::Fast);
                 })
                 .compile()
         }

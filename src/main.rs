@@ -61,10 +61,14 @@ pub trait Task {
     fn system_loop(&mut self) {}
 }
 
+pub fn wait(ms: u64) {
+    return wait_ns(1000000 * ms);
+}
+
 pub fn wait_ns(nano: u64) {
     unsafe {
         let origin = clock::nanos();
-        let target = nano / 10;
+        let target = nano;
         while (origin + target) > clock::nanos() {
             asm!("nop");
         }

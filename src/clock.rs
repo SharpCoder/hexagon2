@@ -36,5 +36,5 @@ pub fn clock_init() {
 }
 
 pub fn nanos() -> u64 {
-    return pit_read_lifetime();
+    return pit_read_lifetime() * 9;
 }
