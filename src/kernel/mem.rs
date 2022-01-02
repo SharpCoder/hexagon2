@@ -21,7 +21,7 @@ pub fn alloc(bytes: usize) -> *mut u32 {
             MEMORY_OFFSET = 0;
         }
 
-        let ptr = (_heap_end + MEMORY_OFFSET) as *mut u32;
+        let ptr = (OCRAM2 + MEMORY_OFFSET) as *mut u32;
         MEMORY_OFFSET += bytes as u32;
         return ptr;
     }

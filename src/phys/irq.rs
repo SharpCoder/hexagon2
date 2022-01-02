@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-type Ptr = fn();
+type Fn = fn();
 use core::arch::asm;
 use crate::phys::{ 
     addrs,
@@ -14,22 +14,22 @@ const MAX_SUPPORTED_IRQ: usize = 1024;
 #[repr(C)]
 pub struct IrqTable {
     pub init_sp: u32, // This gets set magically in c
-    pub reset_handler: Ptr,
-    pub nmi_handler: Ptr,
-    pub hardfault_handler: Ptr,
-    pub mpufault_handler: Ptr,
-    pub busfault_handler: Ptr,
-    pub usagefault_handler: Ptr,
+    pub reset_handler: Fn,
+    pub nmi_handler: Fn,
+    pub hardfault_handler: Fn,
+    pub mpufault_handler: Fn,
+    pub busfault_handler: Fn,
+    pub usagefault_handler: Fn,
     pub rsv0: u32,
     pub rsv1: u32,
     pub rsv2: u32,
     pub rsv3: u32,
-    pub svc_handler: Ptr,
+    pub svc_handler: Fn,
     pub rsv4: u32,
     pub rsv5: u32,
-    pub pendsv_handler: Ptr,
-    pub systick_handler: Ptr,
-    pub interrupts: [Ptr; MAX_SUPPORTED_IRQ],
+    pub pendsv_handler: Fn,
+    pub systick_handler: Fn,
+    pub interrupts: [Fn; MAX_SUPPORTED_IRQ],
 }
 
 pub static mut VECTORS: IrqTable = IrqTable {
@@ -173,7 +173,7 @@ fn update_ivt() {
 
 // Internal method for assigning a specific irq
 // at a specific index to the IVT.
-fn put_irq(irq_number: usize, ptr: Ptr) {
+fn put_irq(irq_number: usize, ptr: Fn) {
     unsafe {
         // Update shadow copy
         VECTORS.interrupts[irq_number] = ptr;
@@ -184,18 +184,18 @@ fn put_irq(irq_number: usize, ptr: Ptr) {
 
 // DO NOT USE!!!
 // Unless you know what you are doing
-pub fn fill_irq(ptr: Ptr) {
+pub fn fill_irq(func: Fn) {
     let mut index = 0;
     while index < MAX_SUPPORTED_IRQ {
-        put_irq(index, ptr);
+        put_irq(index, func);
         index += 1;
     }
 }
 
 // Public method for attaching an interrupt to an
 // enum-gated IRQ source.
-pub fn irq_attach(irq_number: Irq, ptr: Ptr) {
-    put_irq(irq_number as usize, ptr);
+pub fn irq_attach(irq_number: Irq, func: Fn) {
+    put_irq(irq_number as usize, func);
 }
 
 // Some kind of hard-fault, typically

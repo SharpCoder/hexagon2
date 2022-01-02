@@ -5,8 +5,9 @@ pub mod phys;
 pub mod kernel;
 pub mod drivers;
 pub mod clock;
+pub mod gate;
+pub mod tasks;
 
-// use kernel::*;
 use core::arch::asm;
 use core::arch::global_asm;
 use phys::*;
@@ -14,6 +15,8 @@ use phys::irq::*;
 use phys::pins::*;
 use kernel::debug::*;
 use kernel::serio::*;
+use kernel::list::*;
+use gate::*;
 
 #[no_mangle]
 pub fn main() {
@@ -42,20 +45,20 @@ pub fn main() {
     debug_u32(irq_size() as u32, b"IRQ Size");
     debug_str(b"");
     
+    let mut program = tasks::Program::new();
+    program.init();
+
     loop { 
+        program.system_loop();
         unsafe {
             asm!("nop");
         }
-        
     }
 }
 
-pub fn wait_wow(_nano: u64) {
-    let mut r = 0;
-    while r < 3500000 {
-        r = r + 1;
-        unsafe { asm!( "nop"); }
-    }
+pub trait Task {
+    fn init(&mut self) {}
+    fn system_loop(&mut self) {}
 }
 
 pub fn wait_ns(nano: u64) {

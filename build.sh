@@ -7,8 +7,9 @@ rm -rf out/*
 rustc --target thumbv7em-none-eabihf \
     -C panic=abort \
     --crate-type staticlib \
-    -O --emit=obj \
+    -O --emit=link \
     -o out/kernel.o \
+    -C opt-level=3 \
     src/main.rs \
 
 
@@ -27,6 +28,8 @@ arm-none-eabi-gcc \
 arm-none-eabi-ld \
     -Map=out/kernel.map \
     -T src/linker.ld \
+    -strip-all \
+    --gc-sections \
     out/teensy.o out/kernel.o \
     -o out/kernel.elf
 
