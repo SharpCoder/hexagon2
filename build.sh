@@ -9,7 +9,7 @@ rustc --target thumbv7em-none-eabihf \
     --crate-type staticlib \
     -O --emit=obj \
     -o out/kernel.o \
-    src/kernel.rs \
+    src/main.rs \
 
 
 # Compile assembly

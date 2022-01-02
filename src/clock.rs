@@ -1,13 +1,7 @@
 /**
  *  This is a system device which keeps track of time by using the periodic timer 
  **/
-
-use crate::phys::{
-    addrs,
-    assign,
-    read_word,
-};
-
+use crate::phys::*;
 use crate::phys::periodic_timers::*;
 
 pub fn clock_init() {
@@ -30,7 +24,6 @@ pub fn clock_init() {
         irq_en: false,
         en: false,
     });
-
 
     // Set maximum load value
     pit_load_value(&PeriodicTimerSource::Timer1, 0xFFFF_FFFF);

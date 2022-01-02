@@ -208,7 +208,6 @@ pub fn fault_handler() {
 // An un-implemented interrupt
 pub fn noop() {
     unsafe {
-        crate::debug::blink(1, crate::debug::Speed::Fast);
         asm!("nop");
     }
 }
