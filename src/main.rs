@@ -1,11 +1,15 @@
 #![feature(lang_items)]
 #![crate_type = "staticlib"]
 #![no_std]
-pub mod phys;
-pub mod kernel;
-pub mod drivers;
 pub mod clock;
+pub mod debug;
+pub mod drivers;
 pub mod gate;
+pub mod list;
+pub mod math;
+pub mod mem;
+pub mod phys;
+pub mod serio;
 pub mod tasks;
 
 use core::arch::asm;
@@ -13,9 +17,9 @@ use core::arch::global_asm;
 use phys::*;
 use phys::irq::*;
 use phys::pins::*;
-use kernel::debug::*;
-use kernel::serio::*;
-use kernel::list::*;
+use debug::*;
+use serio::*;
+use list::*;
 use gate::*;
 
 pub const S_TO_NANO: u64 = 1000000000;

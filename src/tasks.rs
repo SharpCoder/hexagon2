@@ -12,8 +12,8 @@ pub mod ws2812_task;
 pub mod blink_task;
 
 use crate::Task;
-use crate::kernel::list::*;
-use crate::kernel::debug::*;
+use crate::list::*;
+use crate::debug::*;
 use crate::tasks::clock_task::*;
 use crate::tasks::ping_task::*;
 use crate::tasks::ws2812_task::*;

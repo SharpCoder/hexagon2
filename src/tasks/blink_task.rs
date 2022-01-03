@@ -7,7 +7,7 @@ blink requests without tying up system resources.
 
 use crate::Task;
 use crate::Gate;
-use crate::kernel::debug;
+use crate::debug;
 
 pub struct BlinkTask { 
     gate: Gate,

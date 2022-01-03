@@ -23,7 +23,7 @@ impl Task for WS2812Task {
             }
             
             self.driver.set_color(0, wheel(self.color));
-            self.target = nanos() + 10000000;
+            self.target = nanos() + crate::MS_TO_NANO * 5;
         }
     }
 }

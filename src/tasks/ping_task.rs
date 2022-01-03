@@ -1,6 +1,6 @@
 use crate::Task;
 use crate::Gate;
-use crate::kernel::debug::*;
+use crate::debug::*;
 
 pub struct PingTask { 
     gate: Gate,

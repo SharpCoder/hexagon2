@@ -1,7 +1,7 @@
 use core::arch::asm;
 use crate::phys::pins::*;
-use crate::kernel::math::*;
-use crate::kernel::serio::*;
+use crate::math::*;
+use crate::serio::*;
 
 #[derive(Copy, Clone)]
 pub struct BlinkConfig {

@@ -5,7 +5,7 @@
     standard operations including pop, and get.
 */
 #![allow(dead_code)]
-use crate::kernel::mem::{ kalloc, free };
+use crate::mem::{ kalloc, free };
 
 #[derive(Copy, Clone)]
 pub struct Node<T : Copy> {
