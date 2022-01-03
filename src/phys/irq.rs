@@ -187,9 +187,12 @@ fn put_irq(irq_number: usize, ptr: Fn) {
 pub fn fill_irq(func: Fn) {
     let mut index = 0;
     while index < MAX_SUPPORTED_IRQ {
-        put_irq(index, func);
+        unsafe {
+            VECTORS.interrupts[index] = func;
+        }
         index += 1;
     }
+    update_ivt();
 }
 
 // Public method for attaching an interrupt to an

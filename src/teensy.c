@@ -25,7 +25,6 @@ extern unsigned long _flashimagelen;
 extern unsigned long _vectable_addr;
 
 void startup(void);
-void debug(uint32_t addr);
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end);
 static void memory_clear(uint32_t *dest, uint32_t *dest_end);
 
