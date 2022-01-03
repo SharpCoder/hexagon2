@@ -1,6 +1,5 @@
-use core::arch::asm;
-use crate::phys::pins::*;
 use crate::math::*;
+use crate::phys::pins::*;
 use crate::serio::*;
 
 #[derive(Copy, Clone)]

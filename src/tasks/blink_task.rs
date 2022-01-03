@@ -28,7 +28,7 @@ impl BlinkTask {
     pub fn new() -> BlinkTask {
         return BlinkTask {
             gate: Gate::new()
-                .when(|this: &mut Gate| {
+                .when(|_this: &mut Gate| {
                     return unsafe { debug::BLINK_CONFIG.remaining_count } > 0;
                 }, || {
                     unsafe {
@@ -37,7 +37,7 @@ impl BlinkTask {
                             debug::BLINK_CONFIG.speed as u64;
                     }
                 })
-                .when(|this: &mut Gate| {
+                .when(|_this: &mut Gate| {
                     return crate::clock::nanos() > unsafe { NEXT_BLINK_EVENT };
                 }, || {
                     if unsafe { debug::BLINK_CONFIG.remaining_count } % 2 == 0 {

@@ -19,13 +19,13 @@ impl Node {
 }
 
 #[derive(Copy, Clone)]
-pub struct WS2812Driver<const size: usize> {
-    nodes: [Node; size],
+pub struct WS2812Driver<const SIZE: usize> {
+    nodes: [Node; SIZE],
     pin: usize,
 }
 
-impl<const size: usize> WS2812Driver<size> {
-    pub fn new(pin: usize) -> WS2812Driver::<size> {
+impl<const SIZE: usize> WS2812Driver<SIZE> {
+    pub fn new(pin: usize) -> WS2812Driver::<SIZE> {
         // Configure the pin
         pin_mode(pin, Mode::Output);
         pin_pad_config(pin, PadConfig {
@@ -39,15 +39,15 @@ impl<const size: usize> WS2812Driver<size> {
             fast_slew_rate: false,           // SRE
         });
 
-        return WS2812Driver::<size> {
-            nodes: [Node::new(0, 0, 0); size],
+        return WS2812Driver::<SIZE> {
+            nodes: [Node::new(0, 0, 0); SIZE],
             pin: pin,
         }
     }
 
     pub fn set_color(&mut self, index: usize, rgb: u32) {
         // Don't process requests out of bounds
-        if index >= size {
+        if index >= SIZE {
             return;
         }
 
@@ -78,26 +78,26 @@ impl<const size: usize> WS2812Driver<size> {
     }
 
     fn flush(&self) {
-        let mut i = 0;
-        let mut r = 0;
+        let mut node_index = 0;
+        let mut bit_index;
 
-        while i < size {
-            let node = self.nodes[i];
+        while node_index < SIZE {
+            let node = self.nodes[node_index];
             let color: u32 = rgb_to_hex(node.red, node.green, node.blue);
 
             // Now we need to process each bit
-            r = 23;
-            while r >= 0 {
-                let bit = color & (0x1 << r);
+            bit_index = 23;
+            while bit_index >= 0 {
+                let bit = color & (0x1 << bit_index);
                 if bit > 0 {
                     self.on_bit();
                 } else {
                     self.off_bit();
                 }
-                r -= 1;
+                bit_index -= 1;
             }
 
-            i += 1;
+            node_index += 1;
         }
         
         self.rest();

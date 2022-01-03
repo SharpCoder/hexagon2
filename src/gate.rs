@@ -43,7 +43,6 @@ impl Gate {
     }
 
     pub fn when_nano(&mut self, duration_nanos: u64, then: Fn) -> &mut Self {
-        let index = self.tail;
         self.conditions[self.tail] = |this: &mut Gate| {
             return nanos() > this.target_times[this.current_index];
         };
@@ -75,7 +74,7 @@ impl Gate {
     }
 }
 
-fn base_cond_fn(this: &mut Gate) -> bool {
+fn base_cond_fn(_this: &mut Gate) -> bool {
     return true;
 }
 

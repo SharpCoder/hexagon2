@@ -9,11 +9,11 @@ use crate::phys::{
     set_bit,
  };
 
-const MAX_SUPPORTED_IRQ: usize = 1024;
+const MAX_SUPPORTED_IRQ: usize = 158;
 
 #[repr(C)]
 pub struct IrqTable {
-    pub init_sp: u32, // This gets set magically in c
+    pub init_sp: u32,
     pub reset_handler: Fn,
     pub nmi_handler: Fn,
     pub hardfault_handler: Fn,
@@ -33,7 +33,7 @@ pub struct IrqTable {
 }
 
 pub static mut VECTORS: IrqTable = IrqTable {
-    init_sp: 0x00, // This gets set magically in c
+    init_sp: 0x00, // This should probably not be 0.
     reset_handler: noop,
     nmi_handler: fault_handler, 
     hardfault_handler: fault_handler,
@@ -177,9 +177,9 @@ fn put_irq(irq_number: usize, ptr: Fn) {
     unsafe {
         // Update shadow copy
         VECTORS.interrupts[irq_number] = ptr;
-        // Copy shadow to actual NVIC
-        update_ivt();
     }
+    // Copy shadow to actual NVIC
+    update_ivt();
 }
 
 // DO NOT USE!!!

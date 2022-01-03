@@ -19,7 +19,6 @@ use phys::irq::*;
 use phys::pins::*;
 use debug::*;
 use serio::*;
-use list::*;
 use gate::*;
 
 pub const S_TO_NANO: u64 = 1000000000;
@@ -54,7 +53,7 @@ pub fn main() {
 
     tasks::run_tasks();
 
-    while true {
+    loop {
         unsafe {
             asm!("nop");
         }

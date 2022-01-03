@@ -18,7 +18,7 @@ impl Task for WS2812Task {
     fn system_loop(&mut self) {
         if nanos() > self.target {
             self.color += 1;
-            if self.color > 255 {
+            if self.color >= 255 {
                 self.color = 0;
             }
             

@@ -19,13 +19,6 @@ use crate::tasks::ping_task::*;
 use crate::tasks::ws2812_task::*;
 use crate::tasks::blink_task::*;
 
-pub struct Program {
-    clock_task: ClockTask,
-    ping_task: PingTask,
-    ws2812_task: WS2812Task,
-}
-
-
 pub fn run_tasks() {
     let mut stack = Stack::<u32>::new();
     stack.push(100);
@@ -51,7 +44,7 @@ pub fn run_tasks() {
         }
     }
     
-    while true {
+    loop {
         task1.system_loop();
         task2.system_loop();
         task3.system_loop();
