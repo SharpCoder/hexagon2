@@ -9,7 +9,7 @@ use crate::phys::*;
 use crate::phys::addrs::OCRAM2;
 
 const MEMORY_MAXIMUM: u32 = 0x7_FFFF; // 512kb
-const MEMORY_BEGIN_OFFSET: u32 = 0x0_FFF; // 4kb buffer
+const MEMORY_BEGIN_OFFSET: u32 = 0x0_FFC; // 4kb buffer (note: it should be word aligned)
 static mut MEMORY_OFFSET: u32 = MEMORY_BEGIN_OFFSET;
 
 pub fn alloc(bytes: usize) -> *mut u32 {
@@ -36,11 +36,9 @@ pub fn kalloc<T>() -> *mut T {
 
 /// Free a pointer by updating the pagefile
 pub fn free<T>(ptr: *mut T) {
-    let bytes = size_of::<T>();
-    let zero_ptr = ptr as *mut u32;
-    for i in 0 .. bytes / 4 {
-        unsafe { 
-            *(zero_ptr.offset(i as isize)) = 0;
-        }
+    let bytes = size_of::<T>() as u32;
+    let zero_ptr = ptr as u32;
+    for i in 0u32 .. (bytes / 4) {
+        assign(zero_ptr + (i * 4), 0);
     }
 }

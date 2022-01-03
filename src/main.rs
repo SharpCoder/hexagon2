@@ -18,6 +18,9 @@ use kernel::serio::*;
 use kernel::list::*;
 use gate::*;
 
+pub const S_TO_NANO: u64 = 1000000000;
+pub const MS_TO_NANO: u64 = 1000000;
+
 #[no_mangle]
 pub fn main() {
     // Initialize irq system, (disables all interrupts)
@@ -61,7 +64,7 @@ pub trait Task {
 }
 
 pub fn wait(ms: u64) {
-    return wait_ns(1000000 * ms);
+    return wait_ns(MS_TO_NANO * ms);
 }
 
 pub fn wait_ns(nano: u64) {
@@ -103,6 +106,8 @@ pub fn err() {
     }
 }
 
+// Although I'm including the core library, I like
+// my own implementation better.
 global_asm!("
     _ZN4core9panicking18panic_bounds_check17h9048f255eeb8dcc3E:
         bl      err

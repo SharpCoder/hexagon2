@@ -261,7 +261,6 @@ fn config_to_u32(config: &UartConfig, baseline: u32) -> u32 {
 }
 
 pub fn uart_start_clock() {
-
     // First, select the oscillator clock so all the math works
     assign(0x400F_C024, (read_word(0x400F_C024) & !0x1F) | 0x1 << 6);
 
@@ -357,8 +356,6 @@ pub fn uart_write_fifo(device: Device, byte: u8) {
     let original = read_word(addr);
 
     assign(addr, (original & !0xFFF) | byte as u32);
-    // assign_8(addr, byte);
-    // assign(addr, 0xFFF);
 }
 
 pub fn uart_baud_rate(device: Device, rate: f32) {
@@ -399,7 +396,7 @@ pub fn uart_sbk(device: Device) {
 
 pub fn uart_watermark(device: Device) {
     let addr = get_addr(device) + 0x2C;
-    assign(addr, 0x01);
+    assign(addr, 0x02);
 }
 
 pub fn uart_enable_fifo(device: Device) {

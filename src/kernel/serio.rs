@@ -7,7 +7,7 @@ use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
 
-const UART_BUFFER_SIZE: usize = 1024; // bytes
+const UART_BUFFER_SIZE: usize = 512; // bytes
 static mut UART1: Uart = Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::Uart1);
 static mut UART2: Uart = Uart::new(Device::Uart2, 14, 15, Irq::Uart2);
 static mut UART3: Uart = Uart::new(Device::Uart3, 17, 16, Irq::Uart3);
@@ -141,8 +141,12 @@ impl Uart {
     }
 
     fn enqueue(&mut self, byte: u8) {
+        disable_interrupts();
+        
         // Make sure we're not buffer overflowed
         if (self.buffer_head + 1) >= UART_BUFFER_SIZE {
+
+            crate::err();
             return;
         }
 
@@ -151,14 +155,16 @@ impl Uart {
 
         if self.buffer_head == 1 {
             pin_out(self.tx_pin, Power::High);
-            // uart_write_fifo(self.device, byte);
             uart_set_reg(self.device, &CTRL_TCIE);
         }
+
+        enable_interrupts();
     }
 
     fn dequeue(&mut self) -> Option<u8> {
         // This would def be a no-hire if it were an interview :P
         if self.buffer_head > 0 {
+            disable_interrupts();
             // Take the head element
             let result = self.buffer[0];
 
@@ -171,6 +177,7 @@ impl Uart {
 
             // Decrement the head
             self.buffer_head -= 1;
+            enable_interrupts();
             return Some(result);
         } else {
             return None;
@@ -183,6 +190,7 @@ impl Uart {
         if !self.initialized || self.irq_processing {
             return;
         }
+        disable_interrupts();
         
         
         // This prevents circular calls
@@ -210,6 +218,8 @@ impl Uart {
 
         self.irq_processing = false;
         uart_clear_irq(self.device);
+
+        enable_interrupts();
     }
 }
 
