@@ -4,11 +4,15 @@ firmware. It is incorporated into the kernel
 but exists on its own.
 */
 
+use core::arch::asm;
+
 pub mod clock_task;
 pub mod ping_task;
 pub mod ws2812_task;
 
 use crate::Task;
+use crate::kernel::list::*;
+use crate::kernel::debug::*;
 use crate::tasks::clock_task::*;
 use crate::tasks::ping_task::*;
 use crate::tasks::ws2812_task::*;
@@ -19,26 +23,37 @@ pub struct Program {
     ws2812_task: WS2812Task,
 }
 
-impl Program {
-    pub fn new() -> Program {
-        return Program {
-            clock_task: ClockTask::new(),
-            ping_task: PingTask::new(),
-            ws2812_task: WS2812Task::new(),
-        };
-    }
-}
 
-impl Task for Program {
-    fn init(&mut self) {
-        self.clock_task.init();
-        self.ping_task.init();
-        self.ws2812_task.init();
-    }
+pub fn run_tasks() {
+    let mut stack = Stack::<u32>::new();
+    stack.push(100);
+    // stack.push(200);
+    // stack.push(300);
 
-    fn system_loop(&mut self) {
-        self.clock_task.system_loop();
-        self.ping_task.system_loop();
-        self.ws2812_task.system_loop(); 
+    let mut task1 = ClockTask::new();
+    let mut task2 = PingTask::new();
+    let mut task3 = WS2812Task::new();
+
+    task1.init();
+    task2.init();
+    task3.init();
+
+    match stack.pop() {
+        Some(number) => {
+            debug_u32(number, b"pop");
+        } ,
+        None => {
+            debug_str(b"no items");
+        }
     }
+    
+    while true {
+        // task1.system_loop();
+        // task2.system_loop();
+        task3.system_loop();
+        unsafe {
+            asm!("nop");
+        }
+    }
+    
 }

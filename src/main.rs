@@ -44,16 +44,15 @@ pub fn main() {
     debug_hex(irq_addr(), b"IRQ Address");
     debug_u32(irq_size() as u32, b"IRQ Size");
     debug_str(b"");
-    
-    let mut program = tasks::Program::new();
-    program.init();
 
-    loop { 
-        program.system_loop();
+    tasks::run_tasks();
+
+    while true {
         unsafe {
             asm!("nop");
         }
     }
+    
 }
 
 pub trait Task {

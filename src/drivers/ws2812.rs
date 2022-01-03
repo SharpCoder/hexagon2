@@ -46,7 +46,11 @@ impl<const size: usize> WS2812Driver<size> {
     }
 
     pub fn set_color(&mut self, index: usize, rgb: u32) {
-        // WS2812 are actually GRB
+        // Don't process requests out of bounds
+        if index >= size {
+            return;
+        }
+
         self.nodes[index].red = ((rgb & 0xFF0000) >> 16) as u8;
         self.nodes[index].green = ((rgb & 0x00FF00) >> 8) as u8;
         self.nodes[index].blue = ((rgb & 0x0000FF) >> 0) as u8;
@@ -72,7 +76,6 @@ impl<const size: usize> WS2812Driver<size> {
         pin_out(self.pin, Power::Low);
         wait_ns(55_000);
     }
-
 
     fn flush(&self) {
         let mut i = 0;
@@ -102,19 +105,17 @@ impl<const size: usize> WS2812Driver<size> {
 }
 
 pub fn rgb_to_hex(r: u8, g: u8, b: u8) -> u32 {
-    return ((g as u32) << 16) |
-        ((r as u32) << 8) |
+    return ((r as u32) << 16) |
+        ((g as u32) << 8) |
         (b as u32); 
 }
 
 pub fn wheel(pos: u8) -> u32 {
     if pos < 85 {
-      return rgb_to_hex(pos * 3, 255 - pos * 3, 0);
-    } 
-    else if pos < 170 {
-      return rgb_to_hex(255 - pos - 85 * 3, 0, (pos - 85) * 3);
-    } 
-    else {
-      return rgb_to_hex(0, (pos - 170) * 3, 255 - (pos - 170) * 3);
+        return rgb_to_hex(pos * 3, 255 - pos * 3, 0);
+    } else if pos < 170 {
+        return rgb_to_hex(255 - pos - 85 * 3, 0, (pos - 85) * 3);
+    } else {
+        return rgb_to_hex(0, (pos - 170) * 3, 255 - (pos - 170) * 3);
     }
-  }
+}

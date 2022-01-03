@@ -12,7 +12,7 @@ pub struct WS2812Task {
 
 impl Task for WS2812Task {
     fn init(&mut self) {
-        self.driver.set_color(0, 0xFF0000);
+        self.driver.set_color(0, 0x0000FF);
     }
 
     fn system_loop(&mut self) {

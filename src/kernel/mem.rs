@@ -5,20 +5,19 @@
 #![allow(dead_code, unused_imports)]
 
 use core::mem::{size_of};
+use crate::phys::*;
 use crate::phys::addrs::OCRAM2;
 
-extern "C" {
-     static _heap_end: u32; // Thank you, linker
-}
-
-const MEMORY_MAXIMUM: u32 = 0x7D_0000; // 512kb
-static mut MEMORY_OFFSET: u32 = 0xD_000;
+const MEMORY_MAXIMUM: u32 = 0x7_FFFF; // 512kb
+const MEMORY_BEGIN_OFFSET: u32 = 0x0_FFF; // 4kb buffer
+static mut MEMORY_OFFSET: u32 = MEMORY_BEGIN_OFFSET;
 
 pub fn alloc(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
         if MEMORY_OFFSET + bytes as u32 > MEMORY_MAXIMUM {
-            MEMORY_OFFSET = 0;
+            MEMORY_OFFSET = MEMORY_BEGIN_OFFSET;
+            crate::err();
         }
 
         let ptr = (OCRAM2 + MEMORY_OFFSET) as *mut u32;
