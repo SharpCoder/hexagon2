@@ -206,9 +206,9 @@ impl Uart {
                 },
                 Some(byte) => {
                     // Clear TSC
-                    uart_disable(self.device);
-                    uart_enable(self.device);
-                    uart_sbk(self.device);
+                    // uart_disable(self.device);
+                    // uart_enable(self.device);
+                    // uart_sbk(self.device);
 
                     // Get the next byte to write and beam it
                     uart_write_fifo(self.device, byte);
@@ -217,9 +217,8 @@ impl Uart {
         }
 
         self.irq_processing = false;
-        uart_clear_irq(self.device);
-
         enable_interrupts();
+        uart_clear_irq(self.device);
     }
 }
 

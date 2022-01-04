@@ -37,19 +37,32 @@ pub fn blink(count: u8, speed: Speed) {
     }
 }
 
+// Silly function to skip repeated spaces which
+// are common int he iota function I wrote.
+fn send_with_trim(message: &[u8]) {
+    for i in 0 .. message.len() {
+        let cur = message[i];
+        if i < message.len() - 1 && message[i+1] == b' ' && cur == b' ' {
+            continue;
+        } else {
+            serio_write(&[cur]);
+        }
+    }
+}
+
 pub fn debug_hex(hex: u32, message: &[u8]) {
     serio_write(b"0x");
-    serio_write(&to_base(hex, 16));
+    send_with_trim(&to_base(hex as u64, 16));
     debug_str(message);
 }
 
 pub fn debug_u64(val: u64, message: &[u8]) {
-    serio_write(&itoa_u64(val));
+    send_with_trim(&itoa_u64(val));
     debug_str(message);
 }
 
 pub fn debug_u32(val: u32, message: &[u8]) {
-    serio_write(&to_base(val, 10));
+    send_with_trim(&to_base(val as u64, 10));
     debug_str(message);
 }
 
