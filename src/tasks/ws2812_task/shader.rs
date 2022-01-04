@@ -46,12 +46,12 @@ impl <const SIZE: usize> Shader<SIZE> for XmasShader {
         let color: u32;
 
         if pos < 85 {
-            color = rgb_to_hex(pos * 3, 255 - pos * 3, 0);
+            color = rgb_to_hex(255 - pos * 3, pos * 3, 0);
         } else if pos < 170 {
-            color = rgb_to_hex(255 - pos - 85 * 3, pos - 85, 0);
+            color = rgb_to_hex((pos - 85) * 3, 255 - (pos - 85) * 3, 0);
         } else {
             self.count = 0;
-            color = rgb_to_hex(3, 170 - 85, 0);
+            color = rgb_to_hex(255, 0, 0);
         }
 
         (*driver).set_color(context.node_id, color);
