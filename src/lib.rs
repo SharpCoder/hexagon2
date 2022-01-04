@@ -3,4 +3,4 @@
 // include standard library and stuff.
 pub mod mem;
 pub mod math;
-pub mod list;
+pub mod datastructures;

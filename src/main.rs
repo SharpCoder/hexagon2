@@ -5,7 +5,7 @@ pub mod clock;
 pub mod debug;
 pub mod drivers;
 pub mod gate;
-pub mod list;
+pub mod datastructures;
 pub mod math;
 pub mod mem;
 pub mod phys;

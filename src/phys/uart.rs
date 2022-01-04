@@ -340,14 +340,14 @@ pub fn uart_set_pin_config(device: Device, mode: InputTrigger) {
 pub fn uart_enable(device: Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
-    assign(addr, baseline | (0x1 << 19));
+    assign(addr, baseline | (0x1 << 19) | (0x1 << 18));
     unsafe { asm!("nop"); }
 }
 
 pub fn uart_disable(device: Device) {
     let addr = get_addr(device) + 0x18;
     let baseline = read_word(addr);
-    assign(addr, baseline & !(0x1 << 19));
+    assign(addr, baseline & !((0x1 << 19) | (0x1 << 18)));
     unsafe { asm!("nop"); }
 }
 
@@ -356,6 +356,16 @@ pub fn uart_write_fifo(device: Device, byte: u8) {
     let original = read_word(addr);
 
     assign(addr, (original & !0xFFF) | byte as u32);
+}
+
+pub fn uart_read_fifo(device: Device) -> u8 {
+    let addr = get_addr(device) + 0x1c;
+    return (read_word(addr) & 0xFFF) as u8;
+}
+
+pub fn uart_get_receive_count(device: Device) -> u32 {
+    let addr = get_addr(device) + 0x2C;
+    return (read_word(addr) & (0x3 << 24)) >> 24;
 }
 
 pub fn uart_baud_rate(device: Device, rate: u32) {

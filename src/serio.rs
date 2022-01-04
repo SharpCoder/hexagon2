@@ -6,8 +6,9 @@
 use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
+use crate::datastructures::*;
 
-const UART_BUFFER_SIZE: usize = 512; // bytes
+const UART_BUFFER_SIZE: usize = 256; // bytes
 static mut UART1: Uart = Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::Uart1);
 static mut UART2: Uart = Uart::new(Device::Uart2, 14, 15, Irq::Uart2);
 static mut UART3: Uart = Uart::new(Device::Uart3, 17, 16, Irq::Uart3);
@@ -29,6 +30,8 @@ pub enum SerioDevice {
     Uart8 = 0x7,
 }
 
+static DEFAULT_SERIO_DEVICE: SerioDevice = SerioDevice::Uart6;
+
 /** 
     This encapsulates an entire Uart device
     being instantiated, including all necessary memory
@@ -41,7 +44,8 @@ struct Uart {
     initialized: bool,
     irq_processing: bool,
     irq: Irq,
-    buffer: [u8; UART_BUFFER_SIZE],
+    tx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
+    rx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
     buffer_head: usize,
 }
 
@@ -49,7 +53,14 @@ impl Uart {
     pub const fn new(device: Device, tx_pin: usize, rx_pin: usize, irq: Irq) -> Uart {
         return Uart {
             device: device,
-            buffer: [0; UART_BUFFER_SIZE],
+            tx_buffer: Buffer::<UART_BUFFER_SIZE, u8> {
+                data: [0; UART_BUFFER_SIZE],
+                tail: 0,
+            },
+            rx_buffer: Buffer::<UART_BUFFER_SIZE, u8> {
+                data: [0; UART_BUFFER_SIZE],
+                tail: 0,
+            },
             buffer_head: 0,
             initialized: false,
             irq_processing: false,
@@ -84,7 +95,7 @@ impl Uart {
             framing_error_irq_en: false,
             parity_error_irq_en: false,
             tx_irq_en: false,
-            rx_irq_en: false,
+            rx_irq_en: true,
             tx_complete_irq_en: false, // true
             idle_line_irq_en: false,
             tx_en: false,
@@ -107,8 +118,8 @@ impl Uart {
             rx_fifo_underflow_irq_en: false,
             tx_fifo_en: true,
             tx_fifo_depth: BufferDepth::Data128Words,
-            rx_fifo_en: false,
-            rx_fifo_depth: BufferDepth::Data1Word,
+            rx_fifo_en: true,
+            rx_fifo_depth: BufferDepth::Data128Words,
         });
     
         pin_mode(self.tx_pin, Mode::Output);
@@ -128,55 +139,57 @@ impl Uart {
         self.initialized = true;        
     }
 
+    pub fn available(&self) -> usize {
+        return self.rx_buffer.size();
+    }
+
     pub fn write(&mut self, bytes: &[u8]) {
         if !self.initialized {
             self.initialize();
         }
 
         disable_interrupts();
-        let mut byte_idx = 0;
-        while byte_idx < bytes.len() {
-            self.enqueue(bytes[byte_idx]);
-            byte_idx += 1;
+        for byte_idx in 0 .. bytes.len() {
+            self.tx_buffer.enqueue(bytes[byte_idx]);
         }
+
+        pin_out(self.tx_pin, Power::High);
+        uart_set_reg(self.device, &CTRL_TCIE);
         enable_interrupts();
     }
 
-    fn enqueue(&mut self, byte: u8) {
-        // Make sure we're not buffer overflowed
-        if (self.buffer_head + 1) >= UART_BUFFER_SIZE {
+    pub fn read(&mut self) -> Option<u8> {
+        return self.rx_buffer.dequeue();
+    }
 
-            crate::err();
-            return;
-        }
-
-        self.buffer[self.buffer_head] = byte;
-        self.buffer_head += 1;
-
-        if self.buffer_head == 1 {
-            pin_out(self.tx_pin, Power::High);
-            uart_set_reg(self.device, &CTRL_TCIE);
+    fn handle_receive_irq(&mut self) {
+        // If data register is full
+        if uart_get_irq_statuses(self.device) & (0x1 << 21) > 0 {
+            // Read until it is empty
+            while uart_get_receive_count(self.device) > 0 {
+                self.rx_buffer.enqueue(uart_read_fifo(self.device));
+            }
         }
     }
 
-    fn dequeue(&mut self) -> Option<u8> {
-        // This would def be a no-hire if it were an interview :P
-        if self.buffer_head > 0 {
-            // Take the head element
-            let result = self.buffer[0];
+    fn handle_send_irq(&mut self) {
+        // If tx is empty
+        if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
+            match self.tx_buffer.dequeue() {
+                None => {
+                    // Disengage, I guess?
+                    uart_clear_reg(self.device, &CTRL_TCIE);
+                },
+                Some(byte) => {
+                    // Clear TSC
+                    uart_disable(self.device);
+                    uart_enable(self.device);
+                    uart_sbk(self.device);
 
-            // Shift everything over to the left
-            let mut idx = 0;
-            while idx < self.buffer_head {
-                self.buffer[idx] = self.buffer[idx + 1];
-                idx += 1;
+                    // Get the next byte to write and beam it
+                    uart_write_fifo(self.device, byte);
+                }
             }
-
-            // Decrement the head
-            self.buffer_head -= 1;
-            return Some(result);
-        } else {
-            return None;
         }
     }
 
@@ -188,30 +201,10 @@ impl Uart {
         }
         disable_interrupts();
         
-        
         // This prevents circular calls
         self.irq_processing = true;
-
-        // If tx is empty
-        if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
-            match self.dequeue() {
-                None => {
-                    // Disengage, I guess?
-                    uart_clear_reg(self.device, &CTRL_TCIE);
-                    
-                },
-                Some(byte) => {
-                    // Clear TSC
-                    // uart_disable(self.device);
-                    // uart_enable(self.device);
-                    // uart_sbk(self.device);
-
-                    // Get the next byte to write and beam it
-                    uart_write_fifo(self.device, byte);
-                }
-            }
-        }
-
+        self.handle_receive_irq();
+        self.handle_send_irq();
         self.irq_processing = false;
         enable_interrupts();
         uart_clear_irq(self.device);
@@ -234,12 +227,30 @@ fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
 }
 
 pub fn serio_init() {
-    let uart = get_uart_interface(SerioDevice::Uart6);
+    let uart = get_uart_interface(DEFAULT_SERIO_DEVICE);
     uart.initialize();
 }
 
 pub fn serio_write(bytes: &[u8]) {
-    serial_write(SerioDevice::Uart6, bytes);
+    serial_write(DEFAULT_SERIO_DEVICE, bytes);
+}
+
+pub fn serio_available() -> usize {
+    return serial_available(DEFAULT_SERIO_DEVICE);
+}
+
+pub fn serio_read() -> Option<u8> {
+    return serial_read(DEFAULT_SERIO_DEVICE);
+}
+
+pub fn serial_read(device: SerioDevice) -> Option<u8> {
+    let uart = get_uart_interface(device);
+    return uart.read();
+}
+
+pub fn serial_available(device: SerioDevice) -> usize {
+    let uart = get_uart_interface(device);
+    return uart.available();
 }
 
 pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
