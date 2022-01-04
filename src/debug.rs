@@ -10,7 +10,7 @@ pub struct BlinkConfig {
 
 #[derive(Copy, Clone)]
 pub enum Speed {
-    Slow = (crate::MS_TO_NANO * 1100u64) as isize,
+    Slow = (crate::MS_TO_NANO * 1000u64) as isize,
     Fast = (crate::MS_TO_NANO * 350u64) as isize,
     Normal = (crate::MS_TO_NANO * 700u64) as isize,
 }

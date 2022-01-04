@@ -39,15 +39,15 @@ SECTIONS
     } > ITCM  AT> FLASH
 
     .data : {
+        *(.vectable)
+        . = ALIGN(16);
+        FILL(0x00)
+        . += 4096;
         *(.rodata*)
         *(.data*)
         . = ALIGN(16);
     } > DTCM  AT> FLASH
 
-    .data.vectable : {
-        *(.vectable)
-        . = ALIGN(16);
-    } > DTCM AT> FLASH
 
     .bss ALIGN(4) : {
         *(.bss*)
@@ -75,7 +75,7 @@ SECTIONS
     _heap_start = ADDR(.bss.dma) + SIZEOF(.bss.dma);
     _heap_end = ORIGIN(RAM) + LENGTH(RAM);
 
-    _vectable_addr = ADDR(.data.vectable);
+    _vectable_addr = ADDR(.data) + SIZEOF(.data) - 4096;
 
     _itcm_block_count = (SIZEOF(.text.itcm) + 0x7FFE) >> 15;
     _flexram_bank_config = 0xAAAAAAAA | ((1 << (_itcm_block_count * 2)) - 1);

@@ -15,17 +15,8 @@ pub struct BlinkTask {
 
 static mut NEXT_BLINK_EVENT: u64 = 0x0;
 
-impl Task for BlinkTask {
-    fn init(&mut self) {
-    }
-
-    fn system_loop(&mut self) {
-        self.gate.process();
-    }
-}
-
-impl BlinkTask {
-    pub fn new() -> BlinkTask {
+impl Task<BlinkTask> for BlinkTask {
+    fn new() -> BlinkTask {
         return BlinkTask {
             gate: Gate::new()
                 .when(|_this: &mut Gate| {
@@ -52,5 +43,12 @@ impl BlinkTask {
                 })
                 .compile()
         }
+    }
+
+    fn init(&mut self) {
+    }
+
+    fn system_loop(&mut self) {
+        self.gate.process();
     }
 }

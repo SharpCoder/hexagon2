@@ -22,7 +22,7 @@ use serio::*;
 use gate::*;
 
 pub const S_TO_NANO: u64 = 1000000000;
-pub const MS_TO_NANO: u64 = 1000000;
+pub const MS_TO_NANO: u64 = S_TO_NANO / 1000;
 
 #[no_mangle]
 pub fn main() {
@@ -61,13 +61,10 @@ pub fn main() {
     
 }
 
-pub trait Task {
-    fn init(&mut self) {}
-    fn system_loop(&mut self) {}
-}
-
-pub fn wait(ms: u64) {
-    return wait_ns(MS_TO_NANO * ms);
+pub trait Task<T> {
+    fn new() -> T;
+    fn init(&mut self);
+    fn system_loop(&mut self);
 }
 
 pub fn wait_ns(nano: u64) {

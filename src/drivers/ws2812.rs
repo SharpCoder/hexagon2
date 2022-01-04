@@ -54,6 +54,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         self.nodes[index].red = ((rgb & 0xFF0000) >> 16) as u8;
         self.nodes[index].green = ((rgb & 0x00FF00) >> 8) as u8;
         self.nodes[index].blue = ((rgb & 0x0000FF) >> 0) as u8;
+
         self.flush();
     }
 

@@ -9,7 +9,7 @@ use crate::phys::{
     set_bit,
  };
 
-const MAX_SUPPORTED_IRQ: usize = 158;
+const MAX_SUPPORTED_IRQ: usize = 256;
 
 #[repr(C)]
 pub struct IrqTable {
@@ -93,7 +93,7 @@ pub fn irq_size() -> u32 {
 
 // Get the current IVT wherever it may be stored
 pub fn get_ivt() -> *mut IrqTable {
-    return read_word(0xe000ed08) as *mut IrqTable
+    return irq_addr() as *mut IrqTable
 }
 
 // Enable a specific interrupt
@@ -143,10 +143,11 @@ the NVIC has the value I think it has.
 Spent like 20 hours debugging this. I am so done
 with magic memory locations changing around.
 */
-fn update_ivt() {
+pub fn update_ivt() {
     let ivt = get_ivt();
     unsafe {
-        (*ivt).init_sp =  VECTORS.init_sp;
+        // We have no idea here
+        // (*ivt).init_sp =  VECTORS.init_sp;
         (*ivt).reset_handler = VECTORS.reset_handler;
         (*ivt).nmi_handler = VECTORS.nmi_handler;
         (*ivt).hardfault_handler = VECTORS.hardfault_handler;

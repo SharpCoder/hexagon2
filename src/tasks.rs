@@ -20,10 +20,6 @@ use crate::tasks::ws2812_task::*;
 use crate::tasks::blink_task::*;
 
 pub fn run_tasks() {
-    let mut stack = Stack::<u32>::new();
-    stack.push(100);
-    // stack.push(200);
-    // stack.push(300);
 
     let mut task1 = ClockTask::new();
     let mut task2 = PingTask::new();
@@ -35,15 +31,6 @@ pub fn run_tasks() {
     task3.init();
     blink_task.init();
 
-    match stack.pop() {
-        Some(number) => {
-            debug_u32(number, b"pop");
-        } ,
-        None => {
-            debug_str(b"no items");
-        }
-    }
-    
     loop {
         task1.system_loop();
         task2.system_loop();

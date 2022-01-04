@@ -6,24 +6,22 @@ pub struct ClockTask {
     gate: Gate,
 }
 
-impl Task for ClockTask {
+impl Task<ClockTask> for ClockTask {
+    fn new() -> ClockTask {
+        return ClockTask {
+            gate: Gate::new()
+                .when_nano(crate::MS_TO_NANO * 1000, || {
+                    debug_u64(crate::clock::nanos() / crate::MS_TO_NANO, b"beep boop");
+                    blink(2, Speed::Fast);
+                })
+                .compile()
+        }
+    }
+
     fn init(&mut self) {
     }
 
     fn system_loop(&mut self) {
         self.gate.process();
-    }
-}
-
-impl ClockTask {
-    pub fn new() -> ClockTask {
-        return ClockTask {
-            gate: Gate::new()
-                .when_nano(1000000000, || {
-                    debug_u64(crate::clock::nanos(), b"beep boop");
-                    blink(2, Speed::Fast);
-                })
-                .compile()
-        }
     }
 }

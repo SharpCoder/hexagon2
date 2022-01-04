@@ -6,8 +6,11 @@ typedef long unsigned int uint32_t;
 
 extern void main(void);
 
+// This basically blanks out the NVIC and
+// gets us a valid pointer to the correct
+// location.
 __attribute__((section(".vectable")))
-uint32_t irq_table[250];
+uint32_t irq_table[256 + 16];
 
 extern unsigned long _stextload;
 extern unsigned long _stext;
@@ -23,8 +26,10 @@ extern unsigned long _flexram_bank_config;
 extern unsigned long _estack;
 extern unsigned long _flashimagelen;
 extern unsigned long _vectable_addr;
+extern unsigned long _data_size;
 
 void startup(void);
+
 static void memory_copy(uint32_t *dest, const uint32_t *src, uint32_t *dest_end);
 static void memory_clear(uint32_t *dest, uint32_t *dest_end);
 
@@ -48,12 +53,15 @@ void startup() {
     memory_copy(&_stext, &_stextload, &_etext);
     memory_copy(&_sdata, &_sdataload, &_edata);
     memory_clear(&_sbss, &_ebss);
+
+    // Assign stack pointer
+    irq_table[0] = (uint32_t)&_estack;
     
     // Setup the NVIC
     // Rust will also access this through raw memory pointers
     uint32_t addr = (uint32_t)&irq_table;
     mmio32(0xE000ED08) = addr;
-    
+
     // Branch to main
     __asm__ volatile("bl main");
 }
