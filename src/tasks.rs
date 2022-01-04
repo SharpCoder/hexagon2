@@ -27,7 +27,7 @@ pub fn run_tasks() {
     let mut blink_task = BlinkTask::new();
 
     task1.init();
-    // task2.init();
+    task2.init();
     task3.init();
     blink_task.init();
 

@@ -30,7 +30,7 @@ pub fn blink_led_off() {
 
 pub fn blink(count: u8, speed: Speed) {
     unsafe {
-        if BLINK_CONFIG.remaining_count == 0 {
+        if BLINK_CONFIG.remaining_count == 0 || speed as isize != BLINK_CONFIG.speed as isize {
             BLINK_CONFIG.speed = speed;
             BLINK_CONFIG.remaining_count = count;
         }

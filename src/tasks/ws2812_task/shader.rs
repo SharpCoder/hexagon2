@@ -6,6 +6,7 @@ pub struct ShaderContext {
     pub total_nodes: usize,
     pub current_time: u64,
     pub temperature: i32,
+    pub audio_bands: [u32; 7], // Data from the band equalizer
     pub registers: [i32; 10],
     pub color: u32,
 }
@@ -17,6 +18,7 @@ impl ShaderContext {
             total_nodes: total_nodes,
             current_time: crate::clock::nanos(),
             temperature: 0,
+            audio_bands: [0; 7],
             registers: [0; 10],
             color: 0xFF0000,
         }
@@ -24,6 +26,7 @@ impl ShaderContext {
 }
 
 pub trait Shader<const SIZE: usize> {
+    fn name(&self) -> &[u8];
     fn init(&mut self, context: ShaderContext) -> ShaderContext;
     fn update(&mut self, context: ShaderContext) -> ShaderContext;
 }
@@ -31,28 +34,28 @@ pub trait Shader<const SIZE: usize> {
 /**
 Basic rainbow shader
 */
-pub struct BasicShader {
-    count: u8,
-}
-
+pub struct BasicShader {}
 impl <const SIZE: usize> Shader<SIZE> for BasicShader {
+    fn name(&self) -> &[u8] { return b"Basic"; }
+
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
         return context;
     }
-
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context: ShaderContext = context;
-        next_context.color = wheel(self.count + (context.node_id / context.total_nodes) as u8 );
-        self.count += 1;
+        let count = context.registers[0] as u8;
+        next_context.color = wheel(count + (context.node_id / context.total_nodes) as u8 );
+        next_context.registers[0] += 1;
+        if next_context.registers[0] > 255 {
+            next_context.registers[0] = 0;
+        }
         return next_context;
     }
 }
 
 impl BasicShader {
     pub const fn new() -> BasicShader {
-        return BasicShader {
-            count: 0,
-        };
+        return BasicShader {};
     }
 }
 
@@ -60,17 +63,15 @@ impl BasicShader {
 /**
 Xmas themed shader
 */
-pub struct XmasShader {
-    count: u8,
-}
+pub struct XmasShader {}
 impl XmasShader {
     pub const fn new() -> XmasShader {
-        return XmasShader {
-            count: 0,
-        };
+        return XmasShader {};
     }
 }
 impl <const SIZE: usize> Shader<SIZE> for XmasShader {
+    fn name(&self) -> &[u8] { return b"Xmas"; }
+
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context = context;
         // Randomize the starting position for each node
@@ -80,7 +81,7 @@ impl <const SIZE: usize> Shader<SIZE> for XmasShader {
     
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context: ShaderContext = context;
-        let pos = context.registers[0] as u8;// + (context.node_id / SIZE) as u8;
+        let pos = context.registers[0] as u8;
 
         // R -> G -> R wheel
         if pos < 85 {
@@ -88,11 +89,89 @@ impl <const SIZE: usize> Shader<SIZE> for XmasShader {
         } else if pos < 170 {
             next_context.color = rgb_to_hex((pos - 85) * 3, 255 - (pos - 85) * 3, 0);
         } else {
-            self.count = 0;
+            next_context.registers[0] = 0;
             next_context.color = rgb_to_hex(252, 3, 0);
         }
 
         next_context.registers[0] += 1;
+        return next_context;
+    }
+}
+
+
+/**
+One of my favorites, constrained rainbow
+*/
+pub struct ConstrainedRainbowShader {}
+impl ConstrainedRainbowShader {
+    pub const fn new() -> ConstrainedRainbowShader {
+        return ConstrainedRainbowShader {};
+    }
+}
+impl <const SIZE: usize> Shader<SIZE> for ConstrainedRainbowShader {
+    fn name(&self) -> &[u8] { return b"Constrained Rainbow"; }
+
+    fn init(&mut self, context: ShaderContext) -> ShaderContext {
+        let mut next_context = context;
+        
+        let start = 0u64;
+        let end = 45u64;
+
+        // Registers 1 and 2 are lower and upper limit
+        next_context.registers[1] = start as i32;
+        next_context.registers[2] = end as i32;
+        // Register 3 is whether to go up or down
+        next_context.registers[3] = 1;
+        // Randomize the starting position for each node
+        next_context.registers[0] = (start + crate::math::rand() % (end - start)) as i32;
+        return next_context;
+    }
+    
+    fn update(&mut self, context: ShaderContext) -> ShaderContext {
+        let mut next_context: ShaderContext = context;
+        let mut pos = context.registers[0] as u8;
+        let mut next_pos: i32;
+
+        if context.registers[3] > 0 {
+            next_pos = pos as i32 + 1;
+        } else {
+            next_pos = pos as i32 - 1;
+        }
+
+        if next_pos >= context.registers[2] {
+            next_context.registers[3] = 0;
+        } else if next_pos <= context.registers[1] {
+            next_context.registers[3] = 1;
+        }
+
+        next_context.color = wheel(pos as u8);
+        next_context.registers[0] = next_pos as i32;
+        return next_context;
+    }
+}
+
+
+/* 
+Audio Equalizer uses the onboard equalizer chip attuned to
+the speaker in order to create an effect that mimics
+the sound around it.
+*/
+pub struct AudioEqualizerShader {}
+impl AudioEqualizerShader {
+    pub const fn new() -> AudioEqualizerShader {
+        return AudioEqualizerShader {};
+    }
+}
+impl <const SIZE: usize> Shader<SIZE> for AudioEqualizerShader {
+    fn name(&self) -> &[u8] { return b"Audio Equalizer"; }
+    
+    fn init(&mut self, context: ShaderContext) -> ShaderContext {
+        let mut next_context = context;
+        return next_context;
+    }
+    
+    fn update(&mut self, context: ShaderContext) -> ShaderContext {
+        let mut next_context: ShaderContext = context;
         return next_context;
     }
 }

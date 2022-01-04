@@ -6,15 +6,19 @@ use crate::clock::*;
 
 use self::shader::*;
 
-const LEDS: usize = 200;
+const LEDS: usize = 1;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
+static mut CONSTRAINED_RAINBOW_SHADER: ConstrainedRainbowShader = ConstrainedRainbowShader::new();
+static mut AUDIO_EQUALIZER_SHADER: AudioEqualizerShader = AudioEqualizerShader::new();
 
 fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<LEDS> {
     return match shader {
         ActiveShader::Basic => unsafe { &mut BASIC_SHADER }, 
         ActiveShader::Xmas => unsafe { &mut XMAS_SHADER },
+        ActiveShader::Constrained => unsafe { &mut CONSTRAINED_RAINBOW_SHADER },
+        ActiveShader::AudioEqualizer => unsafe { &mut AUDIO_EQUALIZER_SHADER },
     };
 }
 
@@ -30,13 +34,26 @@ pub struct WS2812Task {
 pub enum ActiveShader {
     Basic,
     Xmas,
+    Constrained,
+    AudioEqualizer,
+}
+
+impl ActiveShader {
+    pub fn list() -> [ActiveShader; 4] {
+        return [
+            ActiveShader::Basic,
+            ActiveShader::Xmas,
+            ActiveShader::Constrained,
+            ActiveShader::AudioEqualizer,
+        ];
+    }
 }
 
 impl Task<WS2812Task> for WS2812Task {
 
     fn new() -> WS2812Task {
         return WS2812Task { 
-            shader: ActiveShader::Xmas,
+            shader: ActiveShader::Constrained,
             target: 0,
             contexts: [ShaderContext::new(0, LEDS); LEDS],
             driver: WS2812Driver::<LEDS>::new(

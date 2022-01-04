@@ -10,8 +10,8 @@ impl Task<PingTask> for PingTask {
     fn new() -> PingTask {
         return PingTask {
             gate: Gate::new()
-                .when_nano(crate::MS_TO_NANO * 500, || {
-                    debug_u32(crate::math::rand() as u32, b"random");
+                .when_nano(crate::MS_TO_NANO * 3500, || {
+                    debug_u64(crate::math::rand(), b"random");
                     debug_str(b"ping pong");
                 })
                 .compile()

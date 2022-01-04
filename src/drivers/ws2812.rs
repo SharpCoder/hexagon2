@@ -29,15 +29,17 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         // Configure the pin
         pin_mode(pin, Mode::Output);
         pin_pad_config(pin, PadConfig {
-            hysterisis: true,               // HYS
+            hysterisis: false,               // HYS
             resistance: PullUpDown::PullDown100k, // PUS
             pull_keep: PullKeep::Pull,            // PUE
             pull_keep_en: false,             // PKE
             open_drain: false,               // ODE
-            speed: PinSpeed::Max200MHz,                // SPEED
-            drive_strength: DriveStrength::MaxDiv3,  // DSE
+            speed: PinSpeed::Medium100MHz,                // SPEED
+            drive_strength: DriveStrength::Disabled,  // DSE
             fast_slew_rate: false,           // SRE
         });
+
+        pin_out(pin, Power::Low);
 
         return WS2812Driver::<SIZE> {
             nodes: [Node::new(0, 0, 0); SIZE],
@@ -58,27 +60,27 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(800);
+        wait_ns(600);
         pin_out(self.pin, Power::Low);
-        wait_ns(450);
+        wait_ns(600);
     }
 
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(400);
+        wait_ns(300);
         pin_out(self.pin, Power::Low);
-        wait_ns(850);
+        wait_ns(900);
 
     }
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(55_000);
+        wait_ns(8_000_000);
     }
 
     pub fn flush(&self) {
         let mut node_index = 0;
-        let mut bit_index;
+        let mut bit_index: i32;
 
         while node_index < SIZE {
             let node = self.nodes[node_index];
@@ -108,12 +110,15 @@ pub fn rgb_to_hex(r: u8, g: u8, b: u8) -> u32 {
         (b as u32); 
 }
 
-pub fn wheel(pos: u8) -> u32 {
+pub fn wheel(wheel_pos: u8) -> u32 {
+    let mut pos = wheel_pos;
     if pos < 85 {
-        return rgb_to_hex(pos * 3, 255 - pos * 3, 0);
+        return rgb_to_hex(255 - pos * 3, 0, pos * 3);
     } else if pos < 170 {
-        return rgb_to_hex(255 - pos - 85 * 3, 0, (pos - 85) * 3);
+        pos -= 85;
+        return rgb_to_hex(0, pos * 3, 255 - pos * 3);
     } else {
-        return rgb_to_hex(0, (pos - 170) * 3, 255 - (pos - 170) * 3);
+        pos -= 170;
+        return rgb_to_hex(pos * 3, 255 - pos * 3, 0);
     }
 }

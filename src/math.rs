@@ -106,6 +106,12 @@ pub fn rand() -> u64 {
     }
 }
 
+pub fn seed_rand(val: u64) {
+    unsafe {
+        XORSHIFT_REGS[0] = val;
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
