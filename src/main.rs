@@ -41,7 +41,7 @@ pub fn main() {
 
     // Setup serial
     serio_init();
-    serio_baud(9600.0);
+    serio_baud(9600);
 
     // Enable interrupts across the system
     enable_interrupts();

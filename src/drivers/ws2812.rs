@@ -54,22 +54,20 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         self.nodes[index].red = ((rgb & 0xFF0000) >> 16) as u8;
         self.nodes[index].green = ((rgb & 0x00FF00) >> 8) as u8;
         self.nodes[index].blue = ((rgb & 0x0000FF) >> 0) as u8;
-
-        self.flush();
     }
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(700);
+        wait_ns(800);
         pin_out(self.pin, Power::Low);
-        wait_ns(600);
+        wait_ns(450);
     }
 
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(350);
+        wait_ns(400);
         pin_out(self.pin, Power::Low);
-        wait_ns(800);
+        wait_ns(850);
 
     }
 
@@ -78,7 +76,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         wait_ns(55_000);
     }
 
-    fn flush(&self) {
+    pub fn flush(&self) {
         let mut node_index = 0;
         let mut bit_index;
 
@@ -97,7 +95,6 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
                 }
                 bit_index -= 1;
             }
-
             node_index += 1;
         }
         

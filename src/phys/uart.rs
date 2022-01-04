@@ -358,10 +358,10 @@ pub fn uart_write_fifo(device: Device, byte: u8) {
     assign(addr, (original & !0xFFF) | byte as u32);
 }
 
-pub fn uart_baud_rate(device: Device, rate: f32) {
+pub fn uart_baud_rate(device: Device, rate: u32) {
     // TODO: Explain why this works (if it works)
-    let baud_clock = 24000000.0; // MHz
-    let sbr = (baud_clock / (rate * 16.0)) as u32;
+    let baud_clock = 24000000; // MHz
+    let sbr = baud_clock / rate / 16;
     uart_disable(device);
 
     let addr = get_addr(device) + 0x10;

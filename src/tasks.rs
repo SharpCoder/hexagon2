@@ -22,7 +22,7 @@ use crate::tasks::blink_task::*;
 pub fn run_tasks() {
 
     let mut task1 = ClockTask::new();
-    // let mut task2 = PingTask::new();
+    let mut task2 = PingTask::new();
     let mut task3 = WS2812Task::new();
     let mut blink_task = BlinkTask::new();
 
@@ -33,7 +33,7 @@ pub fn run_tasks() {
 
     loop {
         task1.system_loop();
-        // task2.system_loop();
+        task2.system_loop();
         task3.system_loop();
         blink_task.system_loop();
         unsafe {

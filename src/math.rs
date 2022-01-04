@@ -89,6 +89,23 @@ pub fn itoa_u8(val: u8) -> [u8; 20] {
     return to_base(val as u64, 10);
 }
 
+// Amazing prng XORSHIFT+
+// https://en.wikipedia.org/wiki/Xorshift
+// 128 bits is kinda overkill though.
+static mut XORSHIFT_REGS: [u64;2] = [0xFAE0, 0xFFAA_FFDC];
+pub fn rand() -> u64 {
+    unsafe {
+        let mut t = XORSHIFT_REGS[0];
+        let s = XORSHIFT_REGS[1];
+        XORSHIFT_REGS[0] = s;
+        t ^= t << 23;
+        t ^= t >> 18;
+        t ^= s ^ (s >> 5);
+        XORSHIFT_REGS[1] = t;
+        return t + s;
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

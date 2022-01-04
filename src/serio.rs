@@ -123,7 +123,7 @@ impl Uart {
         irq_attach(self.irq, serio_handle_irq);
         irq_enable(self.irq);
 
-        uart_baud_rate(self.device, 9600.0);
+        uart_baud_rate(self.device, 9600);
 
         self.initialized = true;        
     }
@@ -133,16 +133,16 @@ impl Uart {
             self.initialize();
         }
 
+        disable_interrupts();
         let mut byte_idx = 0;
         while byte_idx < bytes.len() {
             self.enqueue(bytes[byte_idx]);
             byte_idx += 1;
         }
+        enable_interrupts();
     }
 
     fn enqueue(&mut self, byte: u8) {
-        disable_interrupts();
-        
         // Make sure we're not buffer overflowed
         if (self.buffer_head + 1) >= UART_BUFFER_SIZE {
 
@@ -157,14 +157,11 @@ impl Uart {
             pin_out(self.tx_pin, Power::High);
             uart_set_reg(self.device, &CTRL_TCIE);
         }
-
-        enable_interrupts();
     }
 
     fn dequeue(&mut self) -> Option<u8> {
         // This would def be a no-hire if it were an interview :P
         if self.buffer_head > 0 {
-            disable_interrupts();
             // Take the head element
             let result = self.buffer[0];
 
@@ -177,7 +174,6 @@ impl Uart {
 
             // Decrement the head
             self.buffer_head -= 1;
-            enable_interrupts();
             return Some(result);
         } else {
             return None;
@@ -251,11 +247,10 @@ pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
     uart.write(bytes);
 }
 
-pub fn serio_baud(rate: f32) {
+pub fn serio_baud(rate: u32) {
     uart_baud_rate(Device::Uart6, rate);
 }
 
-#[no_mangle]
 pub fn serio_handle_irq() {
     disable_interrupts();
     get_uart_interface(SerioDevice::Uart1).handle_irq();

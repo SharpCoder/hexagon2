@@ -12,8 +12,9 @@ rustc --target thumbv7em-none-eabihf \
     -C opt-level=3 \
     src/main.rs \
 
-
-# Compile assembly
+# Compile c code which is vaguely used
+# to setup and copy some memory around.
+# This could actually be migrated to rust someday.
 arm-none-eabi-gcc \
     -O3 \
     -Wall \
@@ -23,14 +24,14 @@ arm-none-eabi-gcc \
     -mfloat-abi=hard \
     -c src/teensy.c -o out/teensy.o
 
-
-# Generate elf
+# Generate the elf
 arm-none-eabi-ld \
     -Map=out/kernel.map \
     -T src/linker.ld \
     -strip-all \
     --gc-sections \
-    out/teensy.o out/kernel.o \
+    out/teensy.o \
+    out/kernel.o \
     -o out/kernel.elf
 
 # Dump a bunch of debug stuff

@@ -25,8 +25,6 @@ extern unsigned long _heap_start;
 extern unsigned long _flexram_bank_config;
 extern unsigned long _estack;
 extern unsigned long _flashimagelen;
-extern unsigned long _vectable_addr;
-extern unsigned long _data_size;
 
 void startup(void);
 
