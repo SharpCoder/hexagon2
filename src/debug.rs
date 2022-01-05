@@ -1,6 +1,7 @@
-use crate::math::*;
+use crate::{math::*, MS_TO_NANO};
 use crate::phys::pins::*;
 use crate::serio::*;
+use crate::*;
 
 #[derive(Copy, Clone)]
 pub struct BlinkConfig {
@@ -34,6 +35,21 @@ pub fn blink(count: u8, speed: Speed) {
             BLINK_CONFIG.speed = speed;
             BLINK_CONFIG.remaining_count = count;
         }
+    }
+}
+
+/***
+ * This method will flash LED 13
+ * using hardware-level waits
+ * (hard wait) instead of relying
+ * on gates.
+ * */
+pub fn blink_hardware(count: u8) {
+    for i in 0 .. count {
+        blink_led_on();
+        wait_ns(MS_TO_NANO * 500);
+        blink_led_off();
+        wait_ns(MS_TO_NANO * 500);
     }
 }
 

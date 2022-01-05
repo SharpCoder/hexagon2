@@ -124,6 +124,11 @@ pub struct FifoConfig {
     pub rx_fifo_depth: BufferDepth,
 }
 
+pub fn uart_clear_idle(device: Device) {
+    let addr = get_addr(device) + 0x14;
+    assign(addr, read_word(addr) | (0x1 << 20));
+}
+
 pub fn uart_or_reg(device: Device, register: &Reg, value: u32) {
     let addr = get_addr(device) + register.base;
     let val = read_word(addr) | value;
@@ -162,6 +167,9 @@ fn fifo_config_to_u32(config: &FifoConfig, baseline: u32) -> u32 {
     // Read Only
     // result = result & !(0x7 << 4);
     // result = result & (config.tx_fifo_depth as u32) << 4;
+
+    // TODO: DELETE THIS
+    result = result | (0x1 << 10);
 
     result = set_bit_from_bool(result, 7, config.tx_fifo_en);
     result = set_bit_from_bool(result, 8, config.rx_fifo_underflow_irq_en);
@@ -360,22 +368,22 @@ pub fn uart_write_fifo(device: Device, byte: u8) {
 
 pub fn uart_read_fifo(device: Device) -> u8 {
     let addr = get_addr(device) + 0x1c;
-    return (read_word(addr) & 0xFFF) as u8;
+    return (read_word(addr) & 0x3ff) as u8;
 }
 
 pub fn uart_get_receive_count(device: Device) -> u32 {
     let addr = get_addr(device) + 0x2C;
-    return (read_word(addr) & (0x3 << 24)) >> 24;
+    return (read_word(addr) & (0x7 << 24)) >> 24;
 }
 
 pub fn uart_baud_rate(device: Device, rate: u32) {
     // TODO: Explain why this works (if it works)
     let baud_clock = 24000000; // MHz
-    let sbr = baud_clock / rate / 16;
+    let sbr = baud_clock / (rate * 16);
     uart_disable(device);
 
     let addr = get_addr(device) + 0x10;
-    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | sbr;
+    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | (0x1 << 14) | sbr;
     assign(addr, value);
 
     uart_enable(device);
@@ -406,7 +414,7 @@ pub fn uart_sbk(device: Device) {
 
 pub fn uart_watermark(device: Device) {
     let addr = get_addr(device) + 0x2C;
-    assign(addr, 0x02);
+    assign(addr, 0x02 | (0x2 << 16));
 }
 
 pub fn uart_enable_fifo(device: Device) {
@@ -425,5 +433,5 @@ pub fn uart_get_irq_statuses(device: Device) -> u32 {
 
 pub fn uart_clear_irq(device: Device) {
     let addr = get_addr(device) + 0x14;
-    assign(addr, read_word(addr) | 0xC80FC000);
+    assign(addr, read_word(addr) | 0xC81FC000);
 }

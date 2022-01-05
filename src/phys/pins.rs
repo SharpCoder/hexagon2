@@ -111,7 +111,7 @@ const PIN_MUX: [u32;  40] = [
 
 pub fn pin_mux_config(pin: usize, alt: Alt) {
     let addr = PIN_MUX[pin];
-    assign(addr, alt as u32);
+    assign(addr, (read_word(addr) & !0x7) | alt as u32);
 }
 
 pub fn pin_pad_config(pin: usize, config: PadConfig) {
@@ -135,12 +135,18 @@ pub fn pin_pad_config(pin: usize, config: PadConfig) {
 /** This method will mux the pin */
 pub fn pin_mode(pin: usize, mode: Mode) {
     gpio_speed(&PIN_TO_GPIO_PIN[pin], MuxSpeed::Fast);
+    // gpio_clear(&PIN_TO_GPIO_PIN[pin], 0x1 << PIN_BITS[pin]);
+    // Mux control pad
 
     match mode {
         Mode::Output => {
+            // Make sure the pad is not overridden to be input
+            // assign(PIN_MUX[pin], read_word(PIN_MUX[pin]) & !(0x1 << 4));
             gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Output);
         },
         Mode::Input => {
+            // Mux the pad so it is overridden to be input
+            // assign(PIN_MUX[pin], read_word(PIN_MUX[pin]) | (0x1 << 4));
             gpio_direction(&PIN_TO_GPIO_PIN[pin], PIN_BITS[pin] as u32, Dir::Input);
         }
     }
@@ -157,4 +163,10 @@ pub fn pin_out(pin: usize, power: Power) {
             gpio_clear(&PIN_TO_GPIO_PIN[pin], mask);
         }
     }
+}
+
+// This method is a digital read of the specific pin
+pub fn pin_read(pin: usize) -> u32 {
+    let mask = 0x1 << PIN_BITS[pin];
+    return gpio_read(&PIN_TO_GPIO_PIN[pin], mask);
 }

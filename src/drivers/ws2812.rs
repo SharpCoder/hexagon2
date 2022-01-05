@@ -1,5 +1,6 @@
 use crate::wait_ns;
 use crate::phys::pins::*;
+use crate::phys::irq::*;
 
 #[derive(Clone, Copy)]
 struct Node {
@@ -82,6 +83,10 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         let mut node_index = 0;
         let mut bit_index: i32;
 
+        // We need to disable interrupts so things
+        // don't interfere with the timing.
+        disable_interrupts();
+
         while node_index < SIZE {
             let node = self.nodes[node_index];
             let color: u32 = rgb_to_hex(node.red, node.green, node.blue);
@@ -101,6 +106,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         }
         
         self.rest();
+        enable_interrupts();
     }
 }
 

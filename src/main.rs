@@ -45,14 +45,14 @@ pub fn main() {
 
     // Enable interrupts across the system
     enable_interrupts();
-
+    
     debug_str(b"======== New Instance ========");
     debug_hex(irq_addr(), b"IRQ Address");
     debug_u32(irq_size() as u32, b"IRQ Size");
     debug_str(b"");
 
     tasks::run_tasks();
-
+    
     loop {
         unsafe {
             asm!("nop");
@@ -99,8 +99,13 @@ pub extern fn my_panic(_info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
+#[inline]
 pub fn err() {
+    disable_interrupts();
+    
+    pin_mode(13, Mode::Output);
     pin_out(13, Power::High);
+
     loop {
         unsafe { asm!("nop"); }
     }

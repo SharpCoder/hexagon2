@@ -87,12 +87,21 @@ pub fn gpio_direction(pin: &Pin, pad: u32, direction: Dir) {
     };
 }
 
-pub fn gpio_set(pin: &Pin, value: u32) {
+pub fn gpio_set(pin: &Pin, mask: u32) {
     let addr = get_addr(pin) + 0x84;
-    assign(addr, value);
+    assign(addr, mask);
 }
 
-pub fn gpio_clear(pin: &Pin, value: u32) {
+pub fn gpio_clear(pin: &Pin, mask: u32) {
     let addr = get_addr(pin) + 0x88;
-    assign(addr, value);
+    assign(addr, mask);
+}
+
+pub fn gpio_read(pin: &Pin, mask: u32) -> u32 {
+    let addr = get_addr(pin) + 0x8;
+
+    // Read from DSR first
+    let word = read_word(get_addr(pin));
+
+    return (read_word(addr) | word) & mask;
 }

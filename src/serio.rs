@@ -6,6 +6,8 @@
 use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
+use crate::phys::xbar::*;
+use crate::debug::*;
 use crate::datastructures::*;
 
 const UART_BUFFER_SIZE: usize = 256; // bytes
@@ -83,7 +85,19 @@ impl Uart {
             drive_strength: DriveStrength::MaxDiv3,
             fast_slew_rate: true,
         });
-        
+
+        pin_mux_config(self.rx_pin, Alt::Alt2);
+        pin_pad_config(self.rx_pin, PadConfig {
+            hysterisis: true,
+            resistance: PullUpDown::PullUp22k,
+            pull_keep: PullKeep::Pull,
+            pull_keep_en: true,
+            open_drain: false,
+            speed: PinSpeed::Low50MHz,
+            drive_strength: DriveStrength::Max,
+            fast_slew_rate: false,
+        });
+
         uart_disable(self.device);
         uart_sw_reset(self.device, true);
         uart_sw_reset(self.device, false);
@@ -117,18 +131,24 @@ impl Uart {
             tx_fifo_overflow_irq_en: false,
             rx_fifo_underflow_irq_en: false,
             tx_fifo_en: true,
-            tx_fifo_depth: BufferDepth::Data128Words,
+            tx_fifo_depth: BufferDepth::Data16Words,
             rx_fifo_en: true,
-            rx_fifo_depth: BufferDepth::Data128Words,
+            rx_fifo_depth: BufferDepth::Data16Words,
         });
-    
-        pin_mode(self.tx_pin, Mode::Output);
+
+
+        // uart_set_pin_config(self.device, InputTrigger::Rxd);
         uart_set_pin_config(self.device, InputTrigger::Disabled);
         uart_disable_fifo(self.device);
         
         uart_watermark(self.device);
         uart_enable(self.device);
-        
+
+        pin_mode(self.tx_pin, Mode::Output);
+        pin_mode(self.rx_pin, Mode::Input);
+        crate::phys::assign(0x401F_8550, 0x1);
+
+
         pin_out(self.tx_pin, Power::Low);
         
         irq_attach(self.irq, serio_handle_irq);
@@ -136,10 +156,14 @@ impl Uart {
 
         uart_baud_rate(self.device, 9600);
 
+        // XBAR mux
+        // xbar_connect(17, 124);
+        
+
         self.initialized = true;        
     }
 
-    pub fn available(&self) -> usize {
+    pub fn available(&self) -> usize {        
         return self.rx_buffer.size();
     }
 
@@ -163,12 +187,21 @@ impl Uart {
     }
 
     fn handle_receive_irq(&mut self) {
+        
         // If data register is full
         if uart_get_irq_statuses(self.device) & (0x1 << 21) > 0 {
             // Read until it is empty
-            while uart_get_receive_count(self.device) > 0 {
-                self.rx_buffer.enqueue(uart_read_fifo(self.device));
+            while uart_get_receive_count(self.device) > 2 {
+                // blink_hardware(2);
+
+                let msg: u8 = uart_read_fifo(self.device);
+                self.rx_buffer.enqueue(msg);
             }
+        }
+        
+        if uart_get_irq_statuses(self.device) & (0x1 << 20) > 0 {
+            // Idle
+            uart_clear_idle(self.device);
         }
     }
 
@@ -182,9 +215,9 @@ impl Uart {
                 },
                 Some(byte) => {
                     // Clear TSC
-                    uart_disable(self.device);
-                    uart_enable(self.device);
-                    uart_sbk(self.device);
+                    // uart_disable(self.device);
+                    // uart_enable(self.device);
+                    // uart_sbk(self.device);
 
                     // Get the next byte to write and beam it
                     uart_write_fifo(self.device, byte);
@@ -200,14 +233,15 @@ impl Uart {
             return;
         }
         disable_interrupts();
-        
+        // crate::err();
         // This prevents circular calls
         self.irq_processing = true;
         self.handle_receive_irq();
         self.handle_send_irq();
         self.irq_processing = false;
-        enable_interrupts();
         uart_clear_irq(self.device);
+        
+        enable_interrupts();
     }
 }
 
