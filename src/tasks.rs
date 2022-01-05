@@ -13,8 +13,6 @@ pub mod blink_task;
 pub mod serial_task;
 
 use crate::Task;
-use crate::debug::*;
-use crate::phys::pins::*;
 use crate::tasks::clock_task::*;
 use crate::tasks::ping_task::*;
 use crate::tasks::ws2812_task::*;
@@ -29,24 +27,20 @@ pub fn run_tasks() {
     let mut blink_task = BlinkTask::new();
     let mut serial_task = SerialTask::new();
 
-    // task1.init();
-    // task2.init();
-    // task3.init();
+    task1.init();
+    task2.init();
+    task3.init();
     blink_task.init();
     serial_task.init();
 
     loop {
         
-        // task1.system_loop();
-        // task2.system_loop();
-        // task3.system_loop();
+        task1.system_loop();
+        task2.system_loop();
+        task3.system_loop();
         blink_task.system_loop();
         serial_task.system_loop();
 
-        // blink(2, Speed::Fast);
-
-        pin_mode(14, Mode::Output);
-        pin_out(14, Power::High);
         unsafe {
             asm!("nop");
         }

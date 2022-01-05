@@ -412,9 +412,9 @@ pub fn uart_sbk(device: Device) {
     assign(addr, original & !(0x1<<16));
 }
 
-pub fn uart_watermark(device: Device) {
+pub fn uart_watermark(device: Device, val: u32) {
     let addr = get_addr(device) + 0x2C;
-    assign(addr, 0x02 | (0x2 << 16));
+    assign(addr, (val & 0x3) | ((val & 0x3) << 16));
 }
 
 pub fn uart_enable_fifo(device: Device) {

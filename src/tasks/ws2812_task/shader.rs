@@ -129,8 +129,8 @@ impl <const SIZE: usize> Shader<SIZE> for ConstrainedRainbowShader {
     
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context: ShaderContext = context;
-        let mut pos = context.registers[0] as u8;
-        let mut next_pos: i32;
+        let pos = context.registers[0] as u8;
+        let next_pos: i32;
 
         if context.registers[3] > 0 {
             next_pos = pos as i32 + 1;
@@ -164,9 +164,9 @@ impl AudioEqualizerShader {
 }
 impl <const SIZE: usize> Shader<SIZE> for AudioEqualizerShader {
     fn name(&self) -> &[u8] { return b"Audio Equalizer"; }
-    
+
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
-        let mut next_context = context;
+        let next_context = context;
         return next_context;
     }
     

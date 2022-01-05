@@ -11,7 +11,7 @@ impl Task<ClockTask> for ClockTask {
         return ClockTask {
             gate: Gate::new()
                 .when_nano(crate::MS_TO_NANO * 1000, || {
-                    // debug_u64(crate::clock::nanos() / crate::MS_TO_NANO, b"beep boop");
+                    debug_u64(crate::clock::nanos() / crate::MS_TO_NANO, b"beep boop");
                     // blink(2, Speed::Fast);
                 })
                 .compile()

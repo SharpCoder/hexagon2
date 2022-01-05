@@ -13,7 +13,7 @@ impl Task<SerialTask> for SerialTask {
         return SerialTask {
             gate: Gate::new()
                 .when_nano(crate::MS_TO_NANO * 850, noop)
-                .when(|gate: &mut Gate| {
+                .when(|_gate: &mut Gate| {
                     return serio_available() > 5;
                 }, || {
 

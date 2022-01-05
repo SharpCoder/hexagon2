@@ -45,7 +45,7 @@ pub fn blink(count: u8, speed: Speed) {
  * on gates.
  * */
 pub fn blink_hardware(count: u8) {
-    for i in 0 .. count {
+    for _ in 0 .. count {
         blink_led_on();
         wait_ns(MS_TO_NANO * 500);
         blink_led_off();

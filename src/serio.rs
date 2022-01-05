@@ -6,9 +6,7 @@
 use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
-use crate::phys::xbar::*;
 use crate::phys::addrs;
-use crate::debug::*;
 use crate::datastructures::*;
 
 struct HardwareConfig {
@@ -20,6 +18,7 @@ struct HardwareConfig {
     sel_inp_val: Option<u32>,
 }
 
+const UART_WATERMARK_SIZE: u32 = 0x2;
 const UART_BUFFER_SIZE: usize = 256; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
     device: Device::Uart1,
@@ -117,7 +116,6 @@ struct Uart {
     tx_pin: usize,
     rx_pin: usize,
     initialized: bool,
-    irq_processing: bool,
     irq: Irq,
     tx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
     rx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
@@ -140,7 +138,6 @@ impl Uart {
             },
             buffer_head: 0,
             initialized: false,
-            irq_processing: false,
             tx_pin: config.tx_pin,
             rx_pin: config.rx_pin,
             sel_inp_reg: config.sel_inp_reg,
@@ -175,6 +172,7 @@ impl Uart {
             fast_slew_rate: false,
         });
 
+        // Configure the base settings
         uart_disable(self.device);
         uart_sw_reset(self.device, true);
         uart_sw_reset(self.device, false);
@@ -217,16 +215,16 @@ impl Uart {
         uart_set_pin_config(self.device, InputTrigger::Disabled);
         uart_disable_fifo(self.device);
         
-        uart_watermark(self.device);
+        uart_watermark(self.device, UART_WATERMARK_SIZE);
         uart_enable(self.device);
 
         pin_mode(self.tx_pin, Mode::Output);
         pin_mode(self.rx_pin, Mode::Input);
 
+        // If this uart requires additional input muxing, do it.
         if self.sel_inp_reg.is_some() {
             crate::phys::assign(self.sel_inp_reg.unwrap(), self.sel_inp_val.unwrap());
         }
-
 
         pin_out(self.tx_pin, Power::Low);
         
@@ -244,10 +242,6 @@ impl Uart {
     }
 
     pub fn write(&mut self, bytes: &[u8]) {
-        if !self.initialized {
-            self.initialize();
-        }
-
         disable_interrupts();
         for byte_idx in 0 .. bytes.len() {
             self.tx_buffer.enqueue(bytes[byte_idx]);
@@ -263,11 +257,10 @@ impl Uart {
     }
 
     fn handle_receive_irq(&mut self) {
-        
         // If data register is full
         if uart_get_irq_statuses(self.device) & (0x1 << 21) > 0 {
             // Read until it is empty
-            while uart_get_receive_count(self.device) > 2 {
+            for _ in 0 .. uart_get_receive_count(self.device) {
                 let msg: u8 = uart_read_fifo(self.device);
                 self.rx_buffer.enqueue(msg);
             }
@@ -303,18 +296,15 @@ impl Uart {
     pub fn handle_irq(&mut self) {
         // Don't process a uart device that hasn't
         // been used
-        if !self.initialized || self.irq_processing {
+        if !self.initialized {
             return;
         }
+
         disable_interrupts();
-        // crate::err();
         // This prevents circular calls
-        self.irq_processing = true;
         self.handle_receive_irq();
         self.handle_send_irq();
-        self.irq_processing = false;
         uart_clear_irq(self.device);
-        
         enable_interrupts();
     }
 }
