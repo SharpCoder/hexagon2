@@ -142,8 +142,8 @@ impl <const SIZE: usize, T : Copy> Buffer<SIZE, T> {
         return self.tail;
     }
 
-    pub fn as_array(&self) -> [T; SIZE] {
-        return self.data;
+    pub fn as_array(&self) -> &[T] {
+        return &self.data[0..SIZE];
     }
 }
 

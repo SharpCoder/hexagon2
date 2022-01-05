@@ -7,18 +7,91 @@ use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
 use crate::phys::xbar::*;
+use crate::phys::addrs;
 use crate::debug::*;
 use crate::datastructures::*;
 
+struct HardwareConfig {
+    device: Device,
+    tx_pin: usize,
+    rx_pin: usize,
+    irq: Irq,
+    sel_inp_reg: Option<u32>,
+    sel_inp_val: Option<u32>,
+}
+
 const UART_BUFFER_SIZE: usize = 256; // bytes
-static mut UART1: Uart = Uart::new(Device::Uart1, /* TX Pin */ 24, /* RX Pin */ 25, /* IRQ */ Irq::Uart1);
-static mut UART2: Uart = Uart::new(Device::Uart2, 14, 15, Irq::Uart2);
-static mut UART3: Uart = Uart::new(Device::Uart3, 17, 16, Irq::Uart3);
-static mut UART4: Uart = Uart::new(Device::Uart4, 8, 7, Irq::Uart4);
-static mut UART5: Uart = Uart::new(Device::Uart5, 1, 0, Irq::Uart5); // NOTE: THIS DEVICE DOESN'T HAVE VALID PINS
-static mut UART6: Uart = Uart::new(Device::Uart6, 1, 0, Irq::Uart6);
-static mut UART7: Uart = Uart::new(Device::Uart7, 29, 28, Irq::Uart7);
-static mut UART8: Uart = Uart::new(Device::Uart8, 20, 21, Irq::Uart8);
+static mut UART1: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart1,
+    tx_pin: 24,
+    rx_pin: 25,
+    irq: Irq::Uart1,
+    sel_inp_reg: None,
+    sel_inp_val: None,
+ });
+ 
+ static mut UART2: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart2, 
+    tx_pin: 14, 
+    rx_pin: 15, 
+    irq: Irq::Uart2,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART2_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x1),
+ });
+
+static mut UART3: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart3, 
+    tx_pin: 17, 
+    rx_pin: 16, 
+    irq: Irq::Uart3,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART3_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x0),
+});
+
+static mut UART4: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart4, 
+    tx_pin: 8, 
+    rx_pin: 7, 
+    irq: Irq::Uart4,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART4_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x2),
+});
+
+static mut UART5: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart5, 
+    tx_pin: 1, 
+    rx_pin: 0, 
+    irq: Irq::Uart5,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART5_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x0),
+}); // NOTE: THIS DEVICE DOESN'T HAVE VALID PINS
+
+static mut UART6: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart6, 
+    tx_pin: 1, 
+    rx_pin: 0, 
+    irq: Irq::Uart6,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART6_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x1),
+});
+
+static mut UART7: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart7, 
+    tx_pin: 29, 
+    rx_pin: 28, 
+    irq: Irq::Uart7,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART7_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x1),
+});
+
+static mut UART8: Uart = Uart::new(HardwareConfig {
+    device: Device::Uart8, 
+    tx_pin: 20, 
+    rx_pin: 21, 
+    irq: Irq::Uart8,
+    sel_inp_reg: Some(addrs::IOMUXC_LPUART8_RX_SELECT_INPUT),
+    sel_inp_val: Some(0x0),
+});
 
 #[derive(Clone, Copy)]
 pub enum SerioDevice {
@@ -48,13 +121,15 @@ struct Uart {
     irq: Irq,
     tx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
     rx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
+    sel_inp_reg: Option<u32>,
+    sel_inp_val: Option<u32>,
     buffer_head: usize,
 }
 
 impl Uart {
-    pub const fn new(device: Device, tx_pin: usize, rx_pin: usize, irq: Irq) -> Uart {
+    pub const fn new(config: HardwareConfig) -> Uart {
         return Uart {
-            device: device,
+            device: config.device,
             tx_buffer: Buffer::<UART_BUFFER_SIZE, u8> {
                 data: [0; UART_BUFFER_SIZE],
                 tail: 0,
@@ -66,9 +141,11 @@ impl Uart {
             buffer_head: 0,
             initialized: false,
             irq_processing: false,
-            tx_pin: tx_pin,
-            rx_pin: rx_pin,
-            irq: irq,
+            tx_pin: config.tx_pin,
+            rx_pin: config.rx_pin,
+            sel_inp_reg: config.sel_inp_reg,
+            sel_inp_val: config.sel_inp_val,
+            irq: config.irq,
         }
     }
 
@@ -137,7 +214,6 @@ impl Uart {
         });
 
 
-        // uart_set_pin_config(self.device, InputTrigger::Rxd);
         uart_set_pin_config(self.device, InputTrigger::Disabled);
         uart_disable_fifo(self.device);
         
@@ -146,7 +222,10 @@ impl Uart {
 
         pin_mode(self.tx_pin, Mode::Output);
         pin_mode(self.rx_pin, Mode::Input);
-        crate::phys::assign(0x401F_8550, 0x1);
+
+        if self.sel_inp_reg.is_some() {
+            crate::phys::assign(self.sel_inp_reg.unwrap(), self.sel_inp_val.unwrap());
+        }
 
 
         pin_out(self.tx_pin, Power::Low);
@@ -156,9 +235,6 @@ impl Uart {
 
         uart_baud_rate(self.device, 9600);
 
-        // XBAR mux
-        // xbar_connect(17, 124);
-        
 
         self.initialized = true;        
     }
@@ -192,8 +268,6 @@ impl Uart {
         if uart_get_irq_statuses(self.device) & (0x1 << 21) > 0 {
             // Read until it is empty
             while uart_get_receive_count(self.device) > 2 {
-                // blink_hardware(2);
-
                 let msg: u8 = uart_read_fifo(self.device);
                 self.rx_buffer.enqueue(msg);
             }
