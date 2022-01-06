@@ -27,7 +27,7 @@ pub fn run_tasks() {
 
     loop {
         blink(1, Speed::Fast);
-        
+
         rgb_task.system_loop();
         blink_task.system_loop();
         wifi_task.system_loop();
