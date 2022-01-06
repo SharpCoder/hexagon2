@@ -118,6 +118,11 @@ pub struct Buffer<const SIZE: usize, T> {
 
 impl <const SIZE: usize, T : Copy> Stack<T> for Buffer<SIZE, T> {
     fn push(&mut self, item: T) {
+        if self.tail == SIZE {
+            // Discard the data. we are buffer oerflow.
+            return;
+        }
+        
         self.data[self.tail] = item;
         self.tail += 1;
     }
@@ -135,6 +140,11 @@ impl <const SIZE: usize, T : Copy> Stack<T> for Buffer<SIZE, T> {
 
 impl <const SIZE: usize, T : Copy> Queue<T> for Buffer<SIZE, T> {
     fn enqueue(&mut self, item: T) {
+        if self.tail == SIZE {
+            // Discard the data. we are buffer oerflow.
+            return;
+        }
+
         self.data[self.tail] = item;
         self.tail += 1;
     }
@@ -180,10 +190,10 @@ impl <const SIZE: usize, T : Copy> Buffer<SIZE, T> {
     }
 
     pub fn as_array(&self) -> &[T] {
-        return &self.data[0..SIZE];
+        return &self.data[0..self.tail];
     }
 
-    pub fn flush(&mut self) {
+    pub fn clear(&mut self) {
         self.tail = 0;
     }
 }

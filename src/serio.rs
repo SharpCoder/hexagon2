@@ -183,7 +183,7 @@ impl Uart {
         uart_configure(self.device, UartConfig {
             r9t8: false,
             invert_transmission_polarity: false,
-            overrun_irq_en: false,
+            overrun_irq_en: true,
             noise_error_irq_en: false,
             framing_error_irq_en: false,
             parity_error_irq_en: false,
@@ -260,6 +260,10 @@ impl Uart {
         return self.rx_buffer.as_array();
     }
 
+    pub fn clear_rx_buffer(&mut self) {
+        self.rx_buffer.clear();
+    }
+
     pub fn read(&mut self) -> Option<u8> {
         return self.rx_buffer.dequeue();
     }
@@ -278,6 +282,13 @@ impl Uart {
             while uart_has_data(self.device) {
                 let msg: u8 = uart_read_fifo(self.device);
                 self.rx_buffer.enqueue(msg);
+
+                // TODO: Make this work. Currently the system bricks when
+                // it receives too much data.
+                // Check for overrun
+                if (uart_get_irq_statuses(self.device) & (0x1 << 19)) > 0 {
+                    break;
+                }
             }
             
             uart_clear_irq(self.device, UartClearIrqConfig {
@@ -399,6 +410,11 @@ pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
 pub fn serial_buffer<'a>(device: SerioDevice) -> &'a [u8] {
     let uart = get_uart_interface(device);
     return uart.get_rx_buffer();
+}
+
+pub fn serial_clear_rx(device: SerioDevice) {
+    let uart = get_uart_interface(device);
+    uart.clear_rx_buffer();
 }
 
 pub fn serio_baud(rate: u32) {

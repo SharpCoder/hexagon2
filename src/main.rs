@@ -13,6 +13,9 @@ pub mod serio;
 pub mod strings;
 pub mod tasks;
 
+// NOTE: remove this if you have trouble building
+pub mod env;
+
 use core::arch::asm;
 use core::arch::global_asm;
 use phys::*;

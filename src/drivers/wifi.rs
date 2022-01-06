@@ -26,7 +26,6 @@ impl WifiDriver {
         // Enable peripheral
         pin_mode(self.reset_pin, Mode::Output);
         pin_mode(self.en_pin, Mode::Input);
-
         disable_interrupts();
         pin_out(self.reset_pin, Power::Low);
         crate::wait_ns(crate::MS_TO_NANO * 50);
@@ -95,7 +94,8 @@ impl <'a> WifiCommandSequence <'a> {
         let driver = self.driver;
         match self.commands.get(self.index) {
             None => {
-                self.advance();
+                // self.advance();
+                crate::err();
             },
             Some(command) => {
 
@@ -144,10 +144,13 @@ impl <'a> WifiCommandSequence <'a> {
     }
 
     fn reset(&mut self) {
+        // Flush the serial buffer
+        serial_clear_rx(self.driver.device);
+        // Reset command lock
         self.command_sent = false;
     }
 
     fn update_time_target(&mut self) {
-        self.time_target = clock::nanos() + crate::MS_TO_NANO * 100;
+        self.time_target = clock::nanos() + crate::MS_TO_NANO * 250;
     }
 }

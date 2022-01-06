@@ -20,7 +20,10 @@ impl WifiTask {
                 &DRIVER,
                 Vector::from_slice(&[
                     WifiCommand::new_with_response(b"AT", b"OK"),
-                    WifiCommand::new_with_response(b"AT", b"OK"),
+                    WifiCommand::new_with_response(b"AT+CWMODE=1", b"OK"),
+                    WifiCommand::new_with_response(b"AT+CWJAP=\"Bird of Prey\",\"password\"", b"OK"),
+                    WifiCommand::new(b"AT+CIPDOMAIN=\"worldtimeapi.org\""),
+                    WifiCommand::new_with_response(b"AT+CIPSTART=\"TCP\",\"213.188.196.246\",80", b"OK"),
                 ])
             ),
         }
