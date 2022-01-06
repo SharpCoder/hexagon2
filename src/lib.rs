@@ -4,3 +4,4 @@
 pub mod mem;
 pub mod math;
 pub mod datastructures;
+pub mod strings;

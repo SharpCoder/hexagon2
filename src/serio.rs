@@ -20,7 +20,7 @@ struct HardwareConfig {
 }
 
 const UART_WATERMARK_SIZE: u32 = 0x1;
-const UART_BUFFER_SIZE: usize = 4096; // bytes
+const UART_BUFFER_SIZE: usize = 256; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
     device: Device::Uart1,
     tx_pin: 24,
@@ -103,9 +103,8 @@ pub enum SerioDevice {
     Uart6 = 0x5,
     Uart7 = 0x6,
     Uart8 = 0x7,
+    Default = 0x8,
 }
-
-static DEFAULT_SERIO_DEVICE: SerioDevice = SerioDevice::Uart6;
 
 /** 
     This encapsulates an entire Uart device
@@ -257,6 +256,10 @@ impl Uart {
         enable_interrupts();
     }
 
+    pub fn get_rx_buffer(&self) -> &[u8] {
+        return self.rx_buffer.as_array();
+    }
+
     pub fn read(&mut self) -> Option<u8> {
         return self.rx_buffer.dequeue();
     }
@@ -348,25 +351,28 @@ fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
             SerioDevice::Uart6 => &mut UART6,
             SerioDevice::Uart7 => &mut UART7,
             SerioDevice::Uart8 => &mut UART8,
+
+            // Specify defaut here
+            SerioDevice::Default => &mut UART6,
         };
     }
 }
 
 pub fn serio_init() {
-    let uart = get_uart_interface(DEFAULT_SERIO_DEVICE);
+    let uart = get_uart_interface(SerioDevice::Default);
     uart.initialize();
 }
 
 pub fn serio_write(bytes: &[u8]) {
-    serial_write(DEFAULT_SERIO_DEVICE, bytes);
+    serial_write(SerioDevice::Default, bytes);
 }
 
 pub fn serio_available() -> usize {
-    return serial_available(DEFAULT_SERIO_DEVICE);
+    return serial_available(SerioDevice::Default);
 }
 
 pub fn serio_read() -> Option<u8> {
-    return serial_read(DEFAULT_SERIO_DEVICE);
+    return serial_read(SerioDevice::Default);
 }
 
 pub fn serial_init(device: SerioDevice) {
@@ -388,6 +394,11 @@ pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
     let uart = get_uart_interface(device);
     uart.initialize();
     uart.write(bytes);
+}
+
+pub fn serial_buffer<'a>(device: SerioDevice) -> &'a [u8] {
+    let uart = get_uart_interface(device);
+    return uart.get_rx_buffer();
 }
 
 pub fn serio_baud(rate: u32) {

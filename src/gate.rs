@@ -9,18 +9,19 @@ until a later point.
 use crate::clock::*;
 
 type CondFn = fn(&mut Gate) -> bool;
-type Fn = fn();
+type ExecFn = fn();
 
 const MAX_SUPPORTED_FUNCTIONS: usize = 128;
 
 #[derive(Copy, Clone)]
 pub struct Gate {
     conditions: [CondFn; MAX_SUPPORTED_FUNCTIONS],
-    functions: [Fn; MAX_SUPPORTED_FUNCTIONS],
+    functions: [ExecFn; MAX_SUPPORTED_FUNCTIONS],
     durations: [u64; MAX_SUPPORTED_FUNCTIONS],
     target_times: [u64; MAX_SUPPORTED_FUNCTIONS],
     current_index: usize,
     tail: usize,
+    once: bool,
 }
 
 impl Gate {
@@ -32,17 +33,18 @@ impl Gate {
             target_times: [0u64; MAX_SUPPORTED_FUNCTIONS],
             current_index: 0usize,
             tail: 0usize,
-        }
-    }
+            once: false,
+        };
+    }   
 
-    pub fn when(&mut self, cond: CondFn, then: Fn) -> &mut Self {
+    pub fn when(&mut self, cond: CondFn, then: ExecFn) -> &mut Self {
         self.conditions[self.tail] = cond;
         self.functions[self.tail] = then;
         self.tail += 1;
         return self;
     }
 
-    pub fn when_nano(&mut self, duration_nanos: u64, then: Fn) -> &mut Self {
+    pub fn when_nano(&mut self, duration_nanos: u64, then: ExecFn) -> &mut Self {
         self.conditions[self.tail] = |this: &mut Gate| {
             return nanos() > this.target_times[this.current_index];
         };
@@ -52,6 +54,13 @@ impl Gate {
         return self;
     }
 
+    /// If called, this gate will only ever execute one time.
+    pub fn once(&mut self) -> &mut Self {
+        self.once = true;
+        return self;
+    }
+    
+    /// Return the compiled gate, ready to be processed.
     pub fn compile(&mut self) -> Gate {
         return *self;
     }

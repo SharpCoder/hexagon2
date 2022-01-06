@@ -18,22 +18,41 @@ pub trait Queue <T> {
     fn dequeue(&mut self) -> Option<T>;
 }
 
+pub trait Array<T> {
+    fn get(&mut self, index: usize) -> Option<T>;
+}
+
 /**
 Vector is a heap-backed datastructure
 which allocates dynamic memory and implements Stack.
 */
 #[derive(Copy, Clone)]
-pub struct Node<T : Copy> {
+pub struct Node<T : Clone + Copy> {
     item: T,
     next: Option<*mut Node<T>>,
 }
 
-pub struct Vector<T : Copy> {
+pub struct Vector<T : Clone + Copy> {
     pub head: Option<*mut Node<T>>,
     pub size: usize,
 }
 
-impl <T: Copy> Stack<T> for Vector<T> {
+impl <T: Clone + Copy> Array<T> for Vector<T> {
+    fn get(&mut self, index: usize) -> Option<T> {
+        if self.head.is_none() || index >= self.size {
+            return None;
+        } else {
+            // Travel n times through the linked list
+            let mut ptr = self.head.unwrap();
+            for _ in 0 .. (self.size - index - 1) {
+                ptr = unsafe { *ptr }.next.unwrap();
+            }
+            return unsafe { Some((*ptr).item) };
+        }
+    }
+}
+
+impl <T: Clone + Copy> Stack<T> for Vector<T> {
     fn push(&mut self, item: T) {
         let ptr = kalloc();
         unsafe {
@@ -68,9 +87,17 @@ impl <T: Copy> Stack<T> for Vector<T> {
         };  
     }
 }
-impl <T: Copy> Vector<T> {
-    fn new() -> Self {
+impl <T: Clone + Copy> Vector<T> {
+    pub fn new() -> Self {
         return Vector { head: None, size: 0 };
+    }
+
+    pub fn from_slice(items: &[T]) -> Self {
+        let mut result = Vector::new();
+        for item in items {
+            result.push(item.clone());
+        }
+        return result;
     }
 
     pub fn size(&self) -> usize {
@@ -130,6 +157,16 @@ impl <const SIZE: usize, T : Copy> Queue<T> for Buffer<SIZE, T> {
     }
 }
 
+impl <const SIZE: usize, T : Copy> Array<T> for Buffer<SIZE, T> {
+    fn get(&mut self, index: usize) -> Option<T> {
+        if index >= self.tail {
+            return None;
+        } else {
+            return Some(self.data[index]);
+        }
+    }
+}
+
 impl <const SIZE: usize, T : Copy> Buffer<SIZE, T> {
     pub fn new(default: T) -> Self {
         return Buffer {
@@ -144,6 +181,10 @@ impl <const SIZE: usize, T : Copy> Buffer<SIZE, T> {
 
     pub fn as_array(&self) -> &[T] {
         return &self.data[0..SIZE];
+    }
+
+    pub fn flush(&mut self) {
+        self.tail = 0;
     }
 }
 
@@ -171,6 +212,28 @@ mod test {
         assert_eq!(list.pop(), Some(32));
         assert_eq!(list.size(), 0);
         assert_eq!(list.pop(), None);
+    }
+
+    #[test]
+    fn stack_get() {
+        let mut list = Vector::new();
+        list.push(32);
+        list.push(64);
+        list.push(128);
+        list.push(256);
+        list.push(512);
+
+        assert_eq!(list.get(0), Some(32));
+        assert_eq!(list.get(1), Some(64));
+        assert_eq!(list.get(3), Some(256));
+        assert_eq!(list.get(2), Some(128));
+        assert_eq!(list.get(4), Some(512));
+        assert_eq!(list.get(5), None);
+        assert_eq!(list.get(100), None);
+
+        let mut list2 = Vector::<i32>::new();
+        assert_eq!(list2.get(0), None);
+        assert_eq!(list2.get(100), None);
     }
 
     #[test]

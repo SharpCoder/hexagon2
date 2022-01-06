@@ -10,6 +10,7 @@ pub mod math;
 pub mod mem;
 pub mod phys;
 pub mod serio;
+pub mod strings;
 pub mod tasks;
 
 use core::arch::asm;
@@ -41,16 +42,11 @@ pub fn main() {
 
     // Setup serial
     serio_init();
-    serio_baud(9600);
+    serio_baud(115200);
 
     // Enable interrupts across the system
     enable_interrupts();
     
-    debug_str(b"======== New Instance ========");
-    debug_hex(irq_addr(), b"IRQ Address");
-    debug_u32(irq_size() as u32, b"IRQ Size");
-    debug_str(b"");
-
     tasks::run_tasks();
     
     loop {
@@ -61,8 +57,7 @@ pub fn main() {
     
 }
 
-pub trait Task<T> {
-    fn new() -> T;
+pub trait Task {
     fn init(&mut self);
     fn system_loop(&mut self);
 }

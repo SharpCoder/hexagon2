@@ -7,6 +7,14 @@ pub fn int_to_hex(number: u8) -> u8 {
     }
 }
 
+pub fn min(left: usize, right: usize) -> usize {
+    if left > right {
+        return right;
+    } else {
+        return left;
+    }
+}
+
 // Given a number, how many digits is it
 pub fn digits(number: u32) -> u8 {
     // Count how many characters there are

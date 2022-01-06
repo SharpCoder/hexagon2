@@ -49,9 +49,8 @@ impl ActiveShader {
     }
 }
 
-impl Task<WS2812Task> for WS2812Task {
-
-    fn new() -> WS2812Task {
+impl WS2812Task {
+    pub fn new() -> WS2812Task {
         return WS2812Task { 
             shader: ActiveShader::Constrained,
             target: 0,
@@ -62,6 +61,16 @@ impl Task<WS2812Task> for WS2812Task {
         };
     }
 
+    pub fn set_shader(&mut self, shader: ActiveShader) {
+        self.shader = shader;
+        let active_shader = get_shader(shader);
+        for i in 0 .. LEDS {
+            self.contexts[i] = active_shader.init(self.contexts[i]);
+        }
+    }
+}
+
+impl Task for WS2812Task {
     fn init(&mut self) {
         for idx in 0 .. LEDS {
             self.contexts[idx].node_id = idx;
@@ -81,16 +90,6 @@ impl Task<WS2812Task> for WS2812Task {
 
             self.driver.flush();
             self.target = nanos() + crate::MS_TO_NANO * 28;
-        }
-    }
-}
-
-impl WS2812Task {
-    pub fn set_shader(&mut self, shader: ActiveShader) {
-        self.shader = shader;
-        let active_shader = get_shader(shader);
-        for i in 0 .. LEDS {
-            self.contexts[i] = active_shader.init(self.contexts[i]);
         }
     }
 }
