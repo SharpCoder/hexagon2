@@ -213,6 +213,14 @@ pub struct UartConfig {
     pub parity_type: ParityType,
 }
 
+fn set_bit_from_bool_without_clear(baseline: u32, bit: u8, value: bool) -> u32 {
+    if value {
+        return set_bit(baseline, bit);
+    } else {
+        return baseline;
+    }
+}
+
 fn set_bit_from_bool(baseline: u32, bit: u8, value: bool) -> u32 {
     if value {
         return set_bit(baseline, bit);
@@ -270,7 +278,7 @@ fn config_to_u32(config: &UartConfig, baseline: u32) -> u32 {
 
 pub fn uart_start_clock() {
     // First, select the oscillator clock so all the math works
-    assign(0x400F_C024, (read_word(0x400F_C024) & !0x1F) | 0x1 << 6);
+    assign(0x400F_C024, read_word(0x400F_C024) & !0x1F & !(0x1 << 6));
 
     assign(0x400FC07C, read_word(0x400FC07C) | (0x3 << 24));
     assign(0x400F_C074, read_word(0x400F_C074) | (0x3 << 2) | (0x3 << 6));
@@ -373,19 +381,22 @@ pub fn uart_read_fifo(device: Device) -> u8 {
 
 pub fn uart_get_receive_count(device: Device) -> u32 {
     let addr = get_addr(device) + 0x2C;
-    return (read_word(addr) & (0x7 << 24)) >> 24;
+    return (read_word(addr) & 7000000) >> 24;
+}
+
+pub fn uart_has_data(device: Device) -> bool {
+    let addr = get_addr(device) + 0x1C;
+    return (read_word(addr) & (0x1 << 12)) == 0;
 }
 
 pub fn uart_baud_rate(device: Device, rate: u32) {
     // TODO: Explain why this works (if it works)
-    let baud_clock = 24000000; // MHz
-    let sbr = baud_clock / (rate * 16);
+    let baud_clock = 80000000; // MHz
+    let sbr = baud_clock / (rate * 30);
     uart_disable(device);
-
     let addr = get_addr(device) + 0x10;
-    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | (0x1 << 14) | sbr;
+    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | (0x1D << 24) | (0x1 << 14) | sbr;
     assign(addr, value);
-
     uart_enable(device);
 }
 
@@ -431,7 +442,29 @@ pub fn uart_get_irq_statuses(device: Device) -> u32 {
     return read_word(get_addr(device) + 0x14);
 }
 
-pub fn uart_clear_irq(device: Device) {
+pub struct UartClearIrqConfig {
+    pub rx_overrun: bool,
+    pub rx_idle: bool,
+    pub rx_data_full: bool,
+    pub rx_line_break: bool,
+    pub rx_pin_active: bool,
+    pub rx_set_data_inverted: bool, // This is not an irq, but it lives in the irq register
+    pub tx_complete: bool,
+    pub tx_empty: bool,
+}
+
+pub fn uart_clear_irq(device: Device, config: UartClearIrqConfig) {
     let addr = get_addr(device) + 0x14;
-    assign(addr, read_word(addr) | 0xC81FC000);
+    let mut baseline = read_word(addr);
+
+    baseline = set_bit_from_bool_without_clear(baseline, 31, config.rx_line_break);
+    baseline = set_bit_from_bool_without_clear(baseline, 30, config.rx_pin_active);
+    baseline = set_bit_from_bool_without_clear(baseline, 28, config.rx_set_data_inverted);
+    baseline = set_bit_from_bool_without_clear(baseline, 23, config.tx_empty);
+    baseline = set_bit_from_bool_without_clear(baseline, 22, config.tx_complete);
+    baseline = set_bit_from_bool_without_clear(baseline, 21, config.rx_data_full);
+    baseline = set_bit_from_bool_without_clear(baseline, 20, config.rx_idle);
+    baseline = set_bit_from_bool_without_clear(baseline, 19, config.rx_overrun);
+
+    assign(addr, baseline);
 }

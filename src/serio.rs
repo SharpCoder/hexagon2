@@ -1,3 +1,4 @@
+use crate::debug::blink_hardware;
 /** 
  * This module represents the serial communication protocol
  * based on UART physical hardware. For simplicity, it is tightly
@@ -18,8 +19,8 @@ struct HardwareConfig {
     sel_inp_val: Option<u32>,
 }
 
-const UART_WATERMARK_SIZE: u32 = 0x2;
-const UART_BUFFER_SIZE: usize = 256; // bytes
+const UART_WATERMARK_SIZE: u32 = 0x1;
+const UART_BUFFER_SIZE: usize = 4096; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
     device: Device::Uart1,
     tx_pin: 24,
@@ -147,6 +148,10 @@ impl Uart {
     }
 
     fn initialize(&mut self) {
+        if self.initialized {
+            return;
+        }
+        
         // Initialize the pins
         pin_mux_config(self.tx_pin, Alt::Alt2);
         pin_pad_config(self.tx_pin, PadConfig {
@@ -184,14 +189,14 @@ impl Uart {
             framing_error_irq_en: false,
             parity_error_irq_en: false,
             tx_irq_en: false,
-            rx_irq_en: true,
+            rx_irq_en: false,
             tx_complete_irq_en: false, // true
             idle_line_irq_en: false,
             tx_en: false,
             rx_en: false,
             match1_irq_en: false,
             match2_irq_en: false,
-            idle_config: IdleConfiguration::Idle16Char,
+            idle_config: IdleConfiguration::Idle4Char,
             doze_en: false,
             bit_mode: BitMode::EightBits,
             parity_en: false,
@@ -206,9 +211,9 @@ impl Uart {
             tx_fifo_overflow_irq_en: false,
             rx_fifo_underflow_irq_en: false,
             tx_fifo_en: true,
-            tx_fifo_depth: BufferDepth::Data16Words,
+            tx_fifo_depth: BufferDepth::Data128Words,
             rx_fifo_en: true,
-            rx_fifo_depth: BufferDepth::Data16Words,
+            rx_fifo_depth: BufferDepth::Data128Words,
         });
 
 
@@ -231,7 +236,7 @@ impl Uart {
         irq_attach(self.irq, serio_handle_irq);
         irq_enable(self.irq);
 
-        uart_baud_rate(self.device, 9600);
+        uart_baud_rate(self.device, 115200);
 
 
         self.initialized = true;        
@@ -257,18 +262,31 @@ impl Uart {
     }
 
     fn handle_receive_irq(&mut self) {
+        let irq_statuses = uart_get_irq_statuses(self.device);
+        
+        if irq_statuses & (0x1 << 20) > 0 {
+            // Idle
+            uart_clear_idle(self.device);
+        }
+        
         // If data register is full
-        if uart_get_irq_statuses(self.device) & (0x1 << 21) > 0 {
+        if irq_statuses & (0x1 << 30) > 0 || irq_statuses & (0x1 << 24) > 0 || irq_statuses & (0x1 << 23) > 0 {
             // Read until it is empty
-            for _ in 0 .. uart_get_receive_count(self.device) {
+            while uart_has_data(self.device) {
                 let msg: u8 = uart_read_fifo(self.device);
                 self.rx_buffer.enqueue(msg);
             }
-        }
-        
-        if uart_get_irq_statuses(self.device) & (0x1 << 20) > 0 {
-            // Idle
-            uart_clear_idle(self.device);
+            
+            uart_clear_irq(self.device, UartClearIrqConfig {
+                rx_data_full: true,
+                rx_idle: true,
+                rx_line_break: true,
+                rx_overrun: true,
+                rx_pin_active: true,
+                rx_set_data_inverted: false,
+                tx_complete: false,
+                tx_empty: false,
+            });
         }
     }
 
@@ -290,6 +308,17 @@ impl Uart {
                     uart_write_fifo(self.device, byte);
                 }
             }
+
+            uart_clear_irq(self.device, UartClearIrqConfig {
+                rx_data_full: false,
+                rx_idle: false,
+                rx_line_break: false,
+                rx_overrun: false,
+                rx_pin_active: false,
+                rx_set_data_inverted: false,
+                tx_complete: true,
+                tx_empty: false,
+            });
         }
     }
 
@@ -304,7 +333,6 @@ impl Uart {
         // This prevents circular calls
         self.handle_receive_irq();
         self.handle_send_irq();
-        uart_clear_irq(self.device);
         enable_interrupts();
     }
 }
@@ -341,6 +369,11 @@ pub fn serio_read() -> Option<u8> {
     return serial_read(DEFAULT_SERIO_DEVICE);
 }
 
+pub fn serial_init(device: SerioDevice) {
+    let uart = get_uart_interface(device);
+    uart.initialize();
+}
+
 pub fn serial_read(device: SerioDevice) -> Option<u8> {
     let uart = get_uart_interface(device);
     return uart.read();
@@ -353,6 +386,7 @@ pub fn serial_available(device: SerioDevice) -> usize {
 
 pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
     let uart = get_uart_interface(device);
+    uart.initialize();
     uart.write(bytes);
 }
 
