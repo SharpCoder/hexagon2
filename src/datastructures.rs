@@ -397,7 +397,7 @@ mod test {
 
     #[test]
     fn test_stack_clone() {
-        let mut list = Vector::from_slice(&[32, 64, 128, 256, 512]);
+        let list = Vector::from_slice(&[32, 64, 128, 256, 512]);
         let mut cloned_list = list.clone();
         assert_eq!(cloned_list.pop(), Some(512));
         assert_eq!(cloned_list.pop(), Some(256));

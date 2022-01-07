@@ -1,6 +1,4 @@
 use crate::clock;
-use crate::gate::*;
-use crate::debug::blink_hardware;
 use crate::phys::irq::{disable_interrupts, enable_interrupts};
 use crate::serio::*;
 use crate::phys::pins::*;
@@ -14,7 +12,6 @@ pub struct WifiDriver {
     queued_commands: Vector<WifiCommandSequence>,
     active_command: usize,
     time_target: u64,
-    rx_buffer: Vector<u8>,
 }
 
 impl WifiDriver {
@@ -26,7 +23,6 @@ impl WifiDriver {
             queued_commands: Vector::new(),
             active_command: 0,
             time_target: 0,
-            rx_buffer: Vector::new(),
         };
     }
 
@@ -65,24 +61,12 @@ impl WifiDriver {
     }
 
     pub fn process(&mut self) {
-        // if clock::nanos() < self.time_target {
-        //     return;
-        // }
-        // self.time_target = clock::nanos() + crate::MS_TO_NANO * 50;
-
-        if serial_available(self.device) > 0 {
-            match serial_read(self.device) {
-                None => {},
-                Some(byte) => {
-                    // self.rx_buffer.enqueue(byte);
-                    serial_write(SerioDevice::Uart4, &[byte]);
-                }
-            }
-            crate::wait_ns(100000);
+        if clock::nanos() < self.time_target {
+            return;
         }
+        self.time_target = clock::nanos() + crate::MS_TO_NANO * 50;
 
         let device = self.device;
-        let buffer = self.rx_buffer;
         let driver = self;
         match driver.queued_commands.get_mut(driver.active_command) {
             None => { },
@@ -90,7 +74,7 @@ impl WifiDriver {
                 if command.is_complete() {
                     driver.active_command += 1;
                 } else {
-                    command.process(device, &buffer);
+                    command.process(device, &Vector::from_slice(serial_buffer(device)));
                 }
             }
         }
@@ -205,7 +189,6 @@ impl WifiCommandSequence {
                         None => {},
                         Some(expected_response) => {
                             if contains(rx_buffer, &expected_response) {
-                                crate::err();
                                 self.advance(device);
                             }
                         }
@@ -230,7 +213,6 @@ impl WifiCommandSequence {
 
     fn advance(&mut self, device: SerioDevice) {
         self.index += 1;
-        crate::err();
         if self.index >= self.commands.size() {
             self.complete = true;
         } else {

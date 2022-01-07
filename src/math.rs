@@ -32,7 +32,7 @@ pub fn to_base(number: u64, base: u64) -> [u8; 20] {
     let result = &mut[b' '; 20];
     let mut idx = 0;
     let mut temp = number;
-    while temp >= 0 {
+    loop {
         let element = temp % base;
         temp /= base;
         result[idx] = int_to_hex(element as u8);

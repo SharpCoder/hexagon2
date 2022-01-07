@@ -1,11 +1,12 @@
-use crate::debug::*;
+// There are some unused variables that are nice to have
+// for the future when this package gets fuller.
+#![allow(unused)]
 
 /** 
  * This module represents the serial communication protocol
  * based on UART physical hardware. For simplicity, it is tightly
  * coupled to a specific uart device.
 */
-use core::arch::asm;
 use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
@@ -245,11 +246,9 @@ impl Uart {
         self.initialized = true;        
     }
 
-    pub fn available(&self) -> usize {   
+    pub fn available(&self) -> usize {
         if self.rx_buffer.size() > 0 {
             return self.rx_buffer.size();
-        } else if uart_has_data(self.device) {
-            return 1;
         } else {
             return 0;
         }
@@ -303,37 +302,33 @@ impl Uart {
     fn handle_receive_irq(&mut self) {
         let irq_statuses = uart_get_irq_statuses(self.device);
         
-        
-        // If data register is full
-        if uart_has_data(self.device) || irq_statuses & (0x1 << 21) > 0 || irq_statuses & (0x1 << 20) > 0 {
-            blink_accumulate();
-            debug_hex(irq_statuses, b"IRQ");
+        // TODO: Implement some logic for these edge cases
+        // but it's really not needed for just simply
+        // receiving messages.
+        let rx_active = irq_statuses & (0x1 << 24) > 0;
+        let rx_buffer_full = irq_statuses & (0x1 << 21) > 0;
+        let rx_idle = irq_statuses & (0x1 << 20) > 0;
+        let rx_overrun = irq_statuses & (0x1 << 19) > 0;
 
-            // Read until it is empty
-            while uart_has_data(self.device) {
-                let msg: u8 = uart_read_fifo(self.device);
-                self.rx_buffer.enqueue(msg);
-            }
-            
-            uart_clear_irq(self.device, UartClearIrqConfig {
-                rx_data_full: true,
-                rx_idle: true,
-                rx_line_break: true,
-                rx_overrun: true,
-                rx_pin_active: true,
-                rx_set_data_inverted: false,
-                tx_complete: false,
-                tx_empty: false,
-            });
+        // Read until it is empty
+        while uart_has_data(self.device) {
+            let msg: u8 = uart_read_fifo(self.device);
+            self.rx_buffer.enqueue(msg);
         }
+            
+        uart_clear_irq(self.device, UartClearIrqConfig {
+            rx_data_full: true,
+            rx_idle: true,
+            rx_line_break: true,
+            rx_overrun: true,
+            rx_pin_active: true,
+            rx_set_data_inverted: false,
+            tx_complete: false,
+            tx_empty: false,
+        });
     }
     
     fn transmit(&mut self) {
-        // uart_disable(self.device);
-        // uart_enable(self.device);
-        // uart_sbk(self.device);
-        // uart_queue_preamble(self.device);
-
         match self.tx_buffer.dequeue() {
             None => {
             },
@@ -347,8 +342,6 @@ impl Uart {
 
         // Activate TCIE (Transmit Complete Interrupt Enable)
         uart_set_reg(self.device, &CTRL_TCIE);
-
-        // crate::wait_ns(crate::MS_TO_NANO);
     }
 
     fn handle_send_irq(&mut self) {
@@ -360,21 +353,19 @@ impl Uart {
         let tx_empty = irq_statuses & (0x1 << 23) > 0;
         let pending_data = self.tx_buffer.size() > 0;
 
-        if tx_complete && self.tx_count > UART_WATERMARK_SIZE {
+        if tx_complete && self.tx_count > (UART_WATERMARK_SIZE + 1) {
             self.tx_count -= 1;
         }
 
         // Check if there is space in the buffer
         if pending_data {
-            for i in self.tx_count .. uart_get_tx_size(self.device) {
+            for _ in self.tx_count .. uart_get_tx_size(self.device) {
                 self.transmit();
             }
         } else if !pending_data {
-            // blink_hardware(1);
             // Disengage, I guess?
             uart_clear_reg(self.device, &CTRL_TIE);
             uart_clear_reg(self.device, &CTRL_TCIE);
-
             uart_clear_irq(self.device, UartClearIrqConfig {
                 rx_data_full: false,
                 rx_idle: false,
@@ -386,25 +377,6 @@ impl Uart {
                 tx_empty: true,
             });
         }
-
-        // If tx is empty
-        // if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
-        //     self.transmit();
-            
-        //     // Isn't timing the whole point of UART?
-        //     // I must be doing something wrong...
-        //     // crate::wait_ns(crate::MS_TO_NANO * 1);
-            // uart_clear_irq(self.device, UartClearIrqConfig {
-            //     rx_data_full: false,
-            //     rx_idle: false,
-            //     rx_line_break: false,
-            //     rx_overrun: false,
-            //     rx_pin_active: false,
-            //     rx_set_data_inverted: false,
-            //     tx_complete: false,
-            //     tx_empty: false,
-            // });
-        // }
     }
 
     pub fn handle_irq(&mut self) {
@@ -416,7 +388,7 @@ impl Uart {
 
         // This prevents circular calls
         disable_interrupts();
-        // self.handle_receive_irq();
+        self.handle_receive_irq();
         self.handle_send_irq();
         enable_interrupts();
     }

@@ -377,8 +377,6 @@ pub fn uart_disable(device: Device) {
 
 pub fn uart_write_fifo(device: Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
-    let original = read_word(addr);
-
     assign_8(addr, byte as u8);
 }
 

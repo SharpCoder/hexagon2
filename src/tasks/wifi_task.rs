@@ -1,10 +1,5 @@
 use crate::Task;
-use crate::Gate;
-use crate::drivers::wifi;
 use crate::drivers::wifi::*;
-use crate::debug::*;
-use crate::serio::*;
-use crate::datastructures::*;
 
 pub struct WifiTask<'a> { 
     // startup_sequence: WifiCommandSequence,
@@ -29,5 +24,3 @@ impl <'a> Task for WifiTask<'a> {
         self.driver.process();
     }
 }
-
-fn noop() {}
