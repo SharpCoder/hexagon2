@@ -48,6 +48,9 @@ pub fn main() {
     serial_init(debug::DEBUG_UART_DEVICE);
 
     debug_str(b"Hello, world");
+    debug_str(b"Hello, world");
+    debug_str(b"Hello, world");
+    debug_str(b"Hello, world");
 
     // Enable interrupts across the system
     enable_interrupts();

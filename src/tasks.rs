@@ -33,7 +33,7 @@ pub fn run_tasks() {
     wifi_task.init();
 
     loop {
-        blink(1, Speed::Fast);
+        // blink(1, Speed::Fast);
 
         rgb_task.system_loop();
         blink_task.system_loop();

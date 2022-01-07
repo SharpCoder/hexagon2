@@ -153,6 +153,17 @@ pub fn uart_clear_reg(device: Device, register: &Reg) {
     assign(addr, val);
 }
 
+pub fn uart_invert_tx(device: Device, inverted: bool) {
+    let addr = get_addr(device) + 0x18;
+    let original = read_word(addr) ;
+    let val = match inverted {
+        true => original | 0x1 << 28,
+        false => original & !(0x1 << 28),
+    };
+
+    assign(addr, val);
+}
+
 fn fifo_config_to_u32(config: &FifoConfig, baseline: u32) -> u32 {
     let mut result: u32 = baseline;   
     // Clear The rx_fifo_depth
@@ -167,9 +178,6 @@ fn fifo_config_to_u32(config: &FifoConfig, baseline: u32) -> u32 {
     // Read Only
     // result = result & !(0x7 << 4);
     // result = result & (config.tx_fifo_depth as u32) << 4;
-
-    // TODO: DELETE THIS
-    result = result | (0x1 << 10);
 
     result = set_bit_from_bool(result, 7, config.tx_fifo_en);
     result = set_bit_from_bool(result, 8, config.rx_fifo_underflow_irq_en);
@@ -332,7 +340,7 @@ pub fn uart_set_tie(device: Device, en: bool) {
 
 pub fn uart_configure_fifo(device: Device, configuration: FifoConfig) {
     let addr = get_addr(device) + 0x28;
-    assign(addr, fifo_config_to_u32(&configuration, read_word(addr)));
+    assign(addr, fifo_config_to_u32(&configuration, 0x0));
 }
 
 pub fn uart_set_pin_config(device: Device, mode: InputTrigger) {
@@ -371,12 +379,39 @@ pub fn uart_write_fifo(device: Device, byte: u8) {
     let addr = get_addr(device) + 0x1C;
     let original = read_word(addr);
 
-    assign(addr, (original & !0xFFF) | byte as u32);
+    assign_8(addr, byte as u8);
+}
+
+pub fn uart_queue_preamble(device: Device) {
+    uart_write_fifo(device, 0x00);
 }
 
 pub fn uart_read_fifo(device: Device) -> u8 {
     let addr = get_addr(device) + 0x1c;
     return (read_word(addr) & 0x3ff) as u8;
+}
+
+/// Returns the depth of the transmit buffer
+pub fn uart_get_tx_size(device: Device) -> u32 {
+    let addr = get_addr(device) + 0x28;
+    let config = read_word(addr) & 0x7;
+    return match config {
+        0x0 => 1,
+        0x1 => 4,
+        0x2 => 8,
+        0x3 => 16,
+        0x4 => 32,
+        0x5 => 64,
+        0x6 => 128,
+        0x7 => 256,
+        _ => 4,
+    };
+}
+
+/// Returns how many bytes are in the tx fifo
+pub fn uart_get_tx_count(device: Device) -> u32 {
+    let addr = get_addr(device) + 0x2C;
+    return (read_word(addr) & 0x700) >> 8;
 }
 
 pub fn uart_get_receive_count(device: Device) -> u32 {
@@ -417,10 +452,9 @@ pub fn uart_flush(device: Device) {
 }
 
 pub fn uart_sbk(device: Device) {
-    let addr = get_addr(device) + 0x18;
+    let addr = get_addr(device) + 0x1C;
     let original = read_word(addr);
-    assign(addr, original | (0x1<<16));
-    assign(addr, original & !(0x1<<16));
+    assign(addr, original & !(0xFF) | (0x1 << 13));
 }
 
 pub fn uart_watermark(device: Device, val: u32) {

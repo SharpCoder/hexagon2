@@ -40,6 +40,13 @@ pub fn blink(count: u8, speed: Speed) {
     }
 }
 
+pub fn blink_accumulate() {
+    unsafe {
+        BLINK_CONFIG.speed = Speed::Fast;
+        BLINK_CONFIG.remaining_count += 2;
+    }
+}
+
 /***
  * This method will flash LED 13
  * using hardware-level waits

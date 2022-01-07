@@ -1,10 +1,11 @@
-use crate::debug::blink_hardware;
-use crate::debug::debug_str;
+use crate::debug::*;
+
 /** 
  * This module represents the serial communication protocol
  * based on UART physical hardware. For simplicity, it is tightly
  * coupled to a specific uart device.
 */
+use core::arch::asm;
 use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
@@ -20,7 +21,7 @@ struct HardwareConfig {
     sel_inp_val: Option<u32>,
 }
 
-const UART_WATERMARK_SIZE: u32 = 0x1;
+const UART_WATERMARK_SIZE: u32 = 0x2;
 const UART_BUFFER_SIZE: usize = 128; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
     device: Device::Uart1,
@@ -123,6 +124,7 @@ struct Uart {
     sel_inp_reg: Option<u32>,
     sel_inp_val: Option<u32>,
     buffer_head: usize,
+    tx_count: u32,
 }
 
 impl Uart {
@@ -144,6 +146,7 @@ impl Uart {
             sel_inp_reg: config.sel_inp_reg,
             sel_inp_val: config.sel_inp_val,
             irq: config.irq,
+            tx_count: UART_WATERMARK_SIZE,
         }
     }
 
@@ -184,13 +187,13 @@ impl Uart {
         uart_configure(self.device, UartConfig {
             r9t8: false,
             invert_transmission_polarity: false,
-            overrun_irq_en: true,
+            overrun_irq_en: false,
             noise_error_irq_en: false,
             framing_error_irq_en: false,
             parity_error_irq_en: false,
-            tx_irq_en: false,
-            rx_irq_en: true,
-            tx_complete_irq_en: true, // true
+            tx_irq_en: false, // This gets set later
+            rx_irq_en: false,
+            tx_complete_irq_en: false,
             idle_line_irq_en: false,
             tx_en: false,
             rx_en: false,
@@ -211,9 +214,9 @@ impl Uart {
             tx_fifo_overflow_irq_en: false,
             rx_fifo_underflow_irq_en: false,
             tx_fifo_en: true,
-            tx_fifo_depth: BufferDepth::Data256Words,
+            tx_fifo_depth: BufferDepth::Data64Words,
             rx_fifo_en: true,
-            rx_fifo_depth: BufferDepth::Data256Words,
+            rx_fifo_depth: BufferDepth::Data64Words,
         });
 
 
@@ -259,7 +262,7 @@ impl Uart {
         }
 
         pin_out(self.tx_pin, Power::High);
-        uart_set_reg(self.device, &CTRL_TCIE);
+        uart_set_reg(self.device, &CTRL_TIE);
         enable_interrupts();
     }
 
@@ -275,7 +278,7 @@ impl Uart {
         }
 
         pin_out(self.tx_pin, Power::High);
-        uart_set_reg(self.device, &CTRL_TCIE);
+        uart_set_reg(self.device, &CTRL_TIE);
         enable_interrupts();
     }
 
@@ -302,7 +305,10 @@ impl Uart {
         
         
         // If data register is full
-        if irq_statuses & (0x1 << 21) > 0 || irq_statuses & (0x1 << 20) > 0 {
+        if uart_has_data(self.device) || irq_statuses & (0x1 << 21) > 0 || irq_statuses & (0x1 << 20) > 0 {
+            blink_accumulate();
+            debug_hex(irq_statuses, b"IRQ");
+
             // Read until it is empty
             while uart_has_data(self.device) {
                 let msg: u8 = uart_read_fifo(self.device);
@@ -321,25 +327,53 @@ impl Uart {
             });
         }
     }
+    
+    fn transmit(&mut self) {
+        // uart_disable(self.device);
+        // uart_enable(self.device);
+        // uart_sbk(self.device);
+        // uart_queue_preamble(self.device);
+
+        match self.tx_buffer.dequeue() {
+            None => {
+            },
+            Some(byte) => {
+                // Get the next byte to write and beam it
+                uart_write_fifo(self.device, byte);
+            }
+        }
+        
+        self.tx_count += 1;
+
+        // Activate TCIE (Transmit Complete Interrupt Enable)
+        uart_set_reg(self.device, &CTRL_TCIE);
+
+        // crate::wait_ns(crate::MS_TO_NANO);
+    }
 
     fn handle_send_irq(&mut self) {
-        // If tx is empty
-        if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
-            match self.tx_buffer.dequeue() {
-                None => {
-                    uart_sbk(self.device);
-                    // Disengage, I guess?
-                    uart_clear_reg(self.device, &CTRL_TCIE);
-                },
-                Some(byte) => {
-                    // Get the next byte to write and beam it
-                    uart_write_fifo(self.device, byte);
-                }
-            }
+        // blink_accumulate();
 
-            // Isn't timing the whole point of UART?
-            // I must be doing something wrong...
-            crate::wait_ns(crate::MS_TO_NANO * 1);
+        // Transmission complete
+        let irq_statuses = uart_get_irq_statuses(self.device);
+        let tx_complete = irq_statuses & (0x1 << 22) > 0;
+        let tx_empty = irq_statuses & (0x1 << 23) > 0;
+        let pending_data = self.tx_buffer.size() > 0;
+
+        if tx_complete && self.tx_count > UART_WATERMARK_SIZE {
+            self.tx_count -= 1;
+        }
+
+        // Check if there is space in the buffer
+        if pending_data {
+            for i in self.tx_count .. uart_get_tx_size(self.device) {
+                self.transmit();
+            }
+        } else if !pending_data {
+            // blink_hardware(1);
+            // Disengage, I guess?
+            uart_clear_reg(self.device, &CTRL_TIE);
+            uart_clear_reg(self.device, &CTRL_TCIE);
 
             uart_clear_irq(self.device, UartClearIrqConfig {
                 rx_data_full: false,
@@ -349,9 +383,28 @@ impl Uart {
                 rx_pin_active: false,
                 rx_set_data_inverted: false,
                 tx_complete: true,
-                tx_empty: false,
+                tx_empty: true,
             });
         }
+
+        // If tx is empty
+        // if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
+        //     self.transmit();
+            
+        //     // Isn't timing the whole point of UART?
+        //     // I must be doing something wrong...
+        //     // crate::wait_ns(crate::MS_TO_NANO * 1);
+            // uart_clear_irq(self.device, UartClearIrqConfig {
+            //     rx_data_full: false,
+            //     rx_idle: false,
+            //     rx_line_break: false,
+            //     rx_overrun: false,
+            //     rx_pin_active: false,
+            //     rx_set_data_inverted: false,
+            //     tx_complete: false,
+            //     tx_empty: false,
+            // });
+        // }
     }
 
     pub fn handle_irq(&mut self) {
@@ -361,9 +414,9 @@ impl Uart {
             return;
         }
 
-        disable_interrupts();
         // This prevents circular calls
-        self.handle_receive_irq();
+        disable_interrupts();
+        // self.handle_receive_irq();
         self.handle_send_irq();
         enable_interrupts();
     }
