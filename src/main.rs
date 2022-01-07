@@ -1,4 +1,4 @@
-#![feature(lang_items)]
+#![feature(lang_items, fn_traits)]
 #![crate_type = "staticlib"]
 #![no_std]
 pub mod clock;
@@ -18,6 +18,8 @@ pub mod env;
 
 use core::arch::asm;
 use core::arch::global_asm;
+use datastructures::*;
+use mem::kalloc;
 use phys::*;
 use phys::irq::*;
 use phys::pins::*;
@@ -61,6 +63,19 @@ pub fn main() {
     }
     
 }
+
+#[derive(Copy, Clone)]
+pub struct Box<T : Clone + Copy> {
+    reference: T,
+}
+
+impl <T : Clone + Copy> Box<T> {
+    pub fn new(reference: T) -> Self {
+        // let ptr = kalloc();
+        return Box { reference: reference };
+    }
+}
+
 
 pub trait Task {
     fn init(&mut self);

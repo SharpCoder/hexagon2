@@ -34,6 +34,8 @@ pub fn run_tasks() {
     periodic_task.init();
 
     loop {
+        // crate::debug::blink(1, crate::debug::Speed::Fast);
+
         periodic_task.system_loop();
         rgb_task.system_loop();
         blink_task.system_loop();

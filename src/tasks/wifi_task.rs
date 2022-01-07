@@ -18,6 +18,9 @@ impl <'a> Task for WifiTask<'a> {
     fn init(&mut self) {
         self.driver.init();
         self.driver.connect(b"Bird of Prey", b"password");
+        self.driver.dns_lookup(b"worldtimeapi.org", |res| {
+
+        });
     }
 
     fn system_loop(&mut self) {

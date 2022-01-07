@@ -1,3 +1,4 @@
+use crate::*;
 use crate::clock;
 use crate::phys::irq::{disable_interrupts, enable_interrupts};
 use crate::serio::*;
@@ -9,7 +10,7 @@ pub struct WifiDriver {
     device: SerioDevice,
     en_pin: usize,
     reset_pin: usize,
-    queued_commands: Vector<WifiCommandSequence>,
+    queued_commands: Vector<WifiCommandSequence<'static>>,
     active_command: usize,
     time_target: u64,
 }
@@ -40,6 +41,29 @@ impl WifiDriver {
                     .with_expected_response(b"OK"),
             ])
         ));
+    }
+
+    pub fn dns_lookup(&mut self, domain: &[u8], callback: fn(ip: [u8;4])) {
+
+
+        self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
+            Vector::from_slice(&[
+                WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
+                WifiCommand::new().with_command(b"AT+CIPDOMAIN=\"")
+                    .join_vec(Vector::from_slice(domain))
+                    .join_vec(Vector::from_slice(b"\""))
+                    .with_transform(|buffer| {
+                        // Take the 
+                        return Vector::new();
+                    })
+                    
+            ]),
+            Box::new(&move || {
+                blink_hardware(2);
+                debug_str(b"OMG WORLD");
+            })
+        ));
+
     }
 
     pub fn init(&self) {
@@ -87,6 +111,11 @@ pub struct WifiCommand {
     pub expected_response: Option<&'static [u8]>,
     pub error_response: Option<&'static [u8]>,
     pub delay: u64,
+
+    /// If this is present, the receive buffer is the input
+    /// and whatever you return goes into a register
+    /// that is stored at the WifiCommandSequence level
+    pub transform_output: Option<fn(&Vector::<u8>) -> Vector::<u8>>,
 }
 
 impl WifiCommand {
@@ -97,7 +126,14 @@ impl WifiCommand {
             expected_response: None,
             error_response: None,
             delay: 0,
+            transform_output: None,
         };
+    }
+
+    pub fn with_transform(&self, transform_method: fn(&Vector::<u8>) -> Vector::<u8>) -> Self {
+        let mut next = self.clone();
+        next.transform_output = Some(transform_method);
+        return next;
     }
 
     pub fn with_command(&self, command: &'static [u8]) -> Self {
@@ -125,29 +161,48 @@ impl WifiCommand {
     }
 }
 
+type Func = dyn Fn();
+
 #[derive(Copy, Clone)]
-pub struct WifiCommandSequence {
+pub struct WifiCommandSequence<'a> {
     commands: Vector<WifiCommand>,
+    outputs: Vector<Vector<u8>>,
     index: usize,
     command_sent: bool,
     time_target: u64,
     complete: bool,
     aborted: bool,
+    callback: Option<Box<&'a Func>>,
 }
 
 /// A WifiCommandSequence is a list of commands
 /// to process in order. Each command will only
 /// advance to the next one after a command criteria
 /// has been met.
-impl WifiCommandSequence {
-    pub fn new(commands: Vector<WifiCommand>) -> WifiCommandSequence {
+impl <'a> WifiCommandSequence<'a> {
+    pub fn new(commands: Vector<WifiCommand>) -> WifiCommandSequence<'a> {
         return WifiCommandSequence {
             commands: commands,
+            outputs: Vector::new(),
             command_sent: false,
             index: 0,
             time_target: 0,
             complete: false,
             aborted: false,
+            callback: None,
+        };
+    }
+
+    pub fn new_with_callback(commands: Vector<WifiCommand>, func: Box<&'a Func>) -> WifiCommandSequence<'a> {
+        return WifiCommandSequence {
+            commands: commands,
+            outputs: Vector::new(),
+            command_sent: false,
+            index: 0,
+            time_target: 0,
+            complete: false,
+            aborted: false,
+            callback: Some(func),
         };
     }
 
@@ -189,19 +244,27 @@ impl WifiCommandSequence {
                         None => {},
                         Some(expected_response) => {
                             if contains(rx_buffer, &expected_response) {
+
+                                // Check if there is transformation to happen
+                                if command.transform_output.is_some() {
+                                    let transform_method = command.transform_output.unwrap();
+                                    self.outputs.push(transform_method(rx_buffer));
+                                }
+
                                 self.advance(device);
                             }
                         }
                     }
         
-                    // match command.error_response {
-                    //     None => {},
-                    //     Some(error_response) => {
-                    //         if contains(serial_buffer(driver.device), error_response) {
-                    //             self.aborted = true;
-                    //         }
-                    //     }
-                    // }
+                    match command.error_response {
+                        None => {},
+                        Some(error_response) => {
+                            if contains(rx_buffer, &error_response) {
+                                self.reset(device);
+                                self.aborted = true;
+                            }
+                        }
+                    }
                 }
 
                 crate::irq::enable_interrupts();
@@ -214,6 +277,19 @@ impl WifiCommandSequence {
     fn advance(&mut self, device: SerioDevice) {
         self.index += 1;
         if self.index >= self.commands.size() {
+            if self.callback.is_some() {
+                
+                let method = self.callback.unwrap().reference;
+
+                blink_hardware(1);
+                unsafe {
+                    let m = method;
+                    (*m)();
+                }
+
+                blink_hardware(10);
+
+            }
             self.complete = true;
         } else {
             // Reset state
