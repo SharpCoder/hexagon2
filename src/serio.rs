@@ -146,7 +146,7 @@ impl Uart {
             sel_inp_reg: config.sel_inp_reg,
             sel_inp_val: config.sel_inp_val,
             irq: config.irq,
-            tx_count: UART_WATERMARK_SIZE,
+            tx_count: UART_WATERMARK_SIZE + 1,
         }
     }
 
