@@ -68,14 +68,23 @@ pub enum Irq {
     PeriodicTimer = 122,
 }
 
+static mut IRQ_DISABLE_COUNT: usize = 0;
+
 pub fn enable_interrupts() {
     unsafe {
-        asm!("CPSIE i");
+        if IRQ_DISABLE_COUNT > 0 {
+            IRQ_DISABLE_COUNT -= 1;
+        }
+
+        if IRQ_DISABLE_COUNT == 0 {
+            asm!("CPSIE i");
+        }
     }
 }
 
 pub fn disable_interrupts() {
     unsafe {
+        IRQ_DISABLE_COUNT += 1;
         asm!("CPSID i");
     }
 }

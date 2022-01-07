@@ -1,4 +1,5 @@
 use crate::debug::blink_hardware;
+use crate::debug::debug_str;
 /** 
  * This module represents the serial communication protocol
  * based on UART physical hardware. For simplicity, it is tightly
@@ -20,7 +21,7 @@ struct HardwareConfig {
 }
 
 const UART_WATERMARK_SIZE: u32 = 0x1;
-const UART_BUFFER_SIZE: usize = 256; // bytes
+const UART_BUFFER_SIZE: usize = 128; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
     device: Device::Uart1,
     tx_pin: 24,
@@ -188,14 +189,14 @@ impl Uart {
             framing_error_irq_en: false,
             parity_error_irq_en: false,
             tx_irq_en: false,
-            rx_irq_en: false,
-            tx_complete_irq_en: false, // true
+            rx_irq_en: true,
+            tx_complete_irq_en: true, // true
             idle_line_irq_en: false,
             tx_en: false,
             rx_en: false,
             match1_irq_en: false,
             match2_irq_en: false,
-            idle_config: IdleConfiguration::Idle4Char,
+            idle_config: IdleConfiguration::Idle32Char,
             doze_en: false,
             bit_mode: BitMode::EightBits,
             parity_en: false,
@@ -210,9 +211,9 @@ impl Uart {
             tx_fifo_overflow_irq_en: false,
             rx_fifo_underflow_irq_en: false,
             tx_fifo_en: true,
-            tx_fifo_depth: BufferDepth::Data128Words,
+            tx_fifo_depth: BufferDepth::Data256Words,
             rx_fifo_en: true,
-            rx_fifo_depth: BufferDepth::Data128Words,
+            rx_fifo_depth: BufferDepth::Data256Words,
         });
 
 
@@ -241,14 +242,36 @@ impl Uart {
         self.initialized = true;        
     }
 
-    pub fn available(&self) -> usize {        
-        return self.rx_buffer.size();
+    pub fn available(&self) -> usize {   
+        if self.rx_buffer.size() > 0 {
+            return self.rx_buffer.size();
+        } else if uart_has_data(self.device) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
     pub fn write(&mut self, bytes: &[u8]) {
         disable_interrupts();
         for byte_idx in 0 .. bytes.len() {
             self.tx_buffer.enqueue(bytes[byte_idx]);
+        }
+
+        pin_out(self.tx_pin, Power::High);
+        uart_set_reg(self.device, &CTRL_TCIE);
+        enable_interrupts();
+    }
+
+    pub fn write_vec(&mut self, bytes: Vector<u8>) {
+        disable_interrupts();
+        for byte_idx in 0 .. bytes.size() {
+            match bytes.get(byte_idx) {
+                None => { break; },
+                Some(byte) => {
+                    self.tx_buffer.enqueue(byte);
+                }
+            }
         }
 
         pin_out(self.tx_pin, Power::High);
@@ -265,30 +288,25 @@ impl Uart {
     }
 
     pub fn read(&mut self) -> Option<u8> {
-        return self.rx_buffer.dequeue();
+        if self.rx_buffer.size() > 0 {
+            return self.rx_buffer.dequeue();
+        } else if uart_has_data(self.device) {
+            return Some(uart_read_fifo(self.device));
+        } else {
+            return None;
+        }
     }
 
     fn handle_receive_irq(&mut self) {
         let irq_statuses = uart_get_irq_statuses(self.device);
         
-        if irq_statuses & (0x1 << 20) > 0 {
-            // Idle
-            uart_clear_idle(self.device);
-        }
         
         // If data register is full
-        if irq_statuses & (0x1 << 30) > 0 || irq_statuses & (0x1 << 24) > 0 || irq_statuses & (0x1 << 23) > 0 {
+        if irq_statuses & (0x1 << 21) > 0 || irq_statuses & (0x1 << 20) > 0 {
             // Read until it is empty
             while uart_has_data(self.device) {
                 let msg: u8 = uart_read_fifo(self.device);
                 self.rx_buffer.enqueue(msg);
-
-                // TODO: Make this work. Currently the system bricks when
-                // it receives too much data.
-                // Check for overrun
-                if (uart_get_irq_statuses(self.device) & (0x1 << 19)) > 0 {
-                    break;
-                }
             }
             
             uart_clear_irq(self.device, UartClearIrqConfig {
@@ -309,19 +327,19 @@ impl Uart {
         if uart_get_irq_statuses(self.device) & (0x1 << 23) > 0 {
             match self.tx_buffer.dequeue() {
                 None => {
+                    uart_sbk(self.device);
                     // Disengage, I guess?
                     uart_clear_reg(self.device, &CTRL_TCIE);
                 },
                 Some(byte) => {
-                    // Clear TSC
-                    // uart_disable(self.device);
-                    // uart_enable(self.device);
-                    // uart_sbk(self.device);
-
                     // Get the next byte to write and beam it
                     uart_write_fifo(self.device, byte);
                 }
             }
+
+            // Isn't timing the whole point of UART?
+            // I must be doing something wrong...
+            crate::wait_ns(crate::MS_TO_NANO * 1);
 
             uart_clear_irq(self.device, UartClearIrqConfig {
                 rx_data_full: false,
@@ -369,23 +387,6 @@ fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
     }
 }
 
-pub fn serio_init() {
-    let uart = get_uart_interface(SerioDevice::Default);
-    uart.initialize();
-}
-
-pub fn serio_write(bytes: &[u8]) {
-    serial_write(SerioDevice::Default, bytes);
-}
-
-pub fn serio_available() -> usize {
-    return serial_available(SerioDevice::Default);
-}
-
-pub fn serio_read() -> Option<u8> {
-    return serial_read(SerioDevice::Default);
-}
-
 pub fn serial_init(device: SerioDevice) {
     let uart = get_uart_interface(device);
     uart.initialize();
@@ -405,6 +406,12 @@ pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
     let uart = get_uart_interface(device);
     uart.initialize();
     uart.write(bytes);
+}
+
+pub fn serial_write_vec(device: SerioDevice, bytes: Vector<u8>) {
+    let uart = get_uart_interface(device);
+    uart.initialize();
+    uart.write_vec(bytes);
 }
 
 pub fn serial_buffer<'a>(device: SerioDevice) -> &'a [u8] {

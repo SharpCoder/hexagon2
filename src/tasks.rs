@@ -12,21 +12,28 @@ pub mod blink_task;
 
 use crate::Task;
 use crate::debug::*;
+
+use crate::drivers::wifi::*;
+use crate::serio::*;
+
 use crate::tasks::ws2812_task::*;
 use crate::tasks::blink_task::*;
 use crate::tasks::wifi_task::*;
 
 pub fn run_tasks() {
+    // Drivers and stateful things
+    let mut wifi_driver = WifiDriver::new(SerioDevice::Uart6, 5, 6);
+
     let mut rgb_task = WS2812Task::new();
     let mut blink_task = BlinkTask::new();
-    let mut wifi_task = WifiTask::new();
+    let mut wifi_task = WifiTask::new(&mut wifi_driver);
 
     rgb_task.init();
     blink_task.init();
     wifi_task.init();
 
     loop {
-        // blink(1, Speed::Fast);
+        blink(1, Speed::Fast);
 
         rgb_task.system_loop();
         blink_task.system_loop();

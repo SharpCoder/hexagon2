@@ -44,8 +44,10 @@ pub fn main() {
     clock::clock_init();
 
     // Setup serial
-    serio_init();
-    serio_baud(115200);
+    serial_init(SerioDevice::Default);
+    serial_init(debug::DEBUG_UART_DEVICE);
+
+    debug_str(b"Hello, world");
 
     // Enable interrupts across the system
     enable_interrupts();
@@ -113,7 +115,7 @@ pub fn err() {
 // my own implementation better.
 global_asm!("
     _ZN4core9panicking18panic_bounds_check17h9048f255eeb8dcc3E:
-        bl      err
+        bl err
         b hang
 
     hang:

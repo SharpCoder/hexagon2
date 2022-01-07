@@ -1,43 +1,32 @@
 use crate::Task;
 use crate::Gate;
+use crate::drivers::wifi;
 use crate::drivers::wifi::*;
 use crate::debug::*;
 use crate::serio::*;
 use crate::datastructures::*;
 
-static DRIVER: WifiDriver = WifiDriver::new(SerioDevice::Uart6, 5, 6);
-
-pub struct WifiTask { 
-    startup_sequence: WifiCommandSequence<'static>,
-    driver: &'static WifiDriver,
+pub struct WifiTask<'a> { 
+    // startup_sequence: WifiCommandSequence,
+    driver: &'a mut WifiDriver,
 }
 
-impl WifiTask {
-    pub fn new() -> WifiTask {
+impl <'a> WifiTask<'a> {
+    pub fn new(wifi_driver: &'a mut WifiDriver) -> WifiTask<'a> {
         return WifiTask {
-            driver: &DRIVER,
-            startup_sequence: WifiCommandSequence::new(
-                &DRIVER,
-                Vector::from_slice(&[
-                    WifiCommand::new_with_response(b"AT", b"OK"),
-                    WifiCommand::new_with_response(b"AT+CWMODE=1", b"OK"),
-                    WifiCommand::new_with_response(b"AT+CWJAP=\"Bird of Prey\",\"password\"", b"OK"),
-                    WifiCommand::new(b"AT+CIPDOMAIN=\"worldtimeapi.org\""),
-                    WifiCommand::new_with_response(b"AT+CIPSTART=\"TCP\",\"213.188.196.246\",80", b"OK"),
-                ])
-            ),
+            driver: wifi_driver,
         }
     }
 }
 
-impl Task for WifiTask {
+impl <'a> Task for WifiTask<'a> {
     fn init(&mut self) {
-        serio_init();
         self.driver.init();
+        self.driver.connect(b"Bird of Prey", b"password");
     }
 
     fn system_loop(&mut self) {
-        self.startup_sequence.process();
+        self.driver.process();
     }
 }
 

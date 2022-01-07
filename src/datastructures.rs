@@ -7,7 +7,6 @@
 #![allow(dead_code)]
 use crate::mem::{ kalloc, free };
 
-
 pub trait Stack <T> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
@@ -19,7 +18,9 @@ pub trait Queue <T> {
 }
 
 pub trait Array<T> {
-    fn get(&mut self, index: usize) -> Option<T>;
+    fn get(&self, index: usize) -> Option<T>;
+    fn get_mut(&mut self, index: usize) -> Option<&mut T>;
+    fn size(&self) -> usize;
 }
 
 /**
@@ -37,36 +38,94 @@ pub struct Vector<T : Clone + Copy> {
     pub size: usize,
 }
 
+impl <T: Clone + Copy> Clone for Vector<T> {
+    fn clone(&self) -> Self {
+        if self.head.is_none() {
+            return Vector::new();
+        }
+        
+        let mut result = Vector::new();
+        let mut ptr = self.head.unwrap();
+
+        loop {
+            let item = unsafe { (*ptr).item };
+            result.enqueue(item);
+
+            if unsafe { *ptr }.next.is_some() {
+                ptr = unsafe { *ptr }.next.unwrap();
+            } else {
+                break;
+            }
+        }
+
+        return result;
+    }
+}
+
+impl <T: Clone + Copy> Copy for Vector<T> {
+    
+}
+
 impl <T: Clone + Copy> Array<T> for Vector<T> {
-    fn get(&mut self, index: usize) -> Option<T> {
+    fn size(&self) -> usize {
+        return self.size;
+    }
+
+    fn get(&self, index: usize) -> Option<T> {
         if self.head.is_none() || index >= self.size {
             return None;
         } else {
             // Travel n times through the linked list
             let mut ptr = self.head.unwrap();
-            for _ in 0 .. (self.size - index - 1) {
+            for _ in 0 .. index {
                 ptr = unsafe { *ptr }.next.unwrap();
             }
             return unsafe { Some((*ptr).item) };
         }
     }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        if self.head.is_none() || index >= self.size {
+            return None;
+        } else {
+            // Travel n times through the linked list
+            let mut ptr = self.head.unwrap();
+            for _ in 0 .. index {
+                ptr = unsafe { *ptr }.next.unwrap();
+            }
+            return unsafe { Some(&mut (*ptr).item) };
+        }
+    }
 }
 
-impl <T: Clone + Copy> Stack<T> for Vector<T> {
-    fn push(&mut self, item: T) {
+impl <T: Clone + Copy> Queue<T> for Vector<T> {
+    fn enqueue(&mut self, item: T) {
+        // Add it to the end of the stack
         let ptr = kalloc();
         unsafe {
             (*ptr) = Node {
                 item: item,
-                next: self.head,
-            };
+                next: None,
+            }
         }
 
-        self.head = Some(ptr);
-        self.size = self.size + 1;
+        if self.head.is_none() {
+            self.head = Some(ptr);
+        } else {
+            let mut tail_ptr = self.head.unwrap();
+    
+            // Find the tail
+            while unsafe { *tail_ptr }.next.is_some() {
+                tail_ptr = unsafe { (*tail_ptr).next.unwrap() };
+            }
+    
+            unsafe { (*tail_ptr).next = Some(ptr) };
+        }
+        self.size += 1;
+
     }
 
-    fn pop(&mut self) -> Option<T> {
+    fn dequeue(&mut self) -> Option<T> {
         match self.head {
             None => {
                 return None;
@@ -84,7 +143,40 @@ impl <T: Clone + Copy> Stack<T> for Vector<T> {
                 self.size = self.size - 1;
                 return Some(result);
             },
-        };  
+        }; 
+    }
+}
+
+impl <T: Clone + Copy> Stack<T> for Vector<T> {
+    fn push(&mut self, item: T) {
+        self.enqueue(item);
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        if self.head.is_none() {
+            return None;
+        }
+
+        let node_item;
+
+        if self.size == 1 {
+            // Return head node
+            node_item = unsafe { *self.head.unwrap() }.item;
+            self.head = None;
+
+        } else {
+            // Travel to the correct node
+            let mut ptr = self.head.unwrap();
+            for _ in 0 .. (self.size() - 2) {
+                ptr = unsafe { (*ptr).next.unwrap() };
+            }
+            
+            node_item = unsafe { (*(*ptr).next.unwrap()).item };
+            unsafe { (*ptr).next = None };
+        }
+
+        self.size -= 1;
+        return Some(node_item);
     }
 }
 impl <T: Clone + Copy> Vector<T> {
@@ -95,13 +187,20 @@ impl <T: Clone + Copy> Vector<T> {
     pub fn from_slice(items: &[T]) -> Self {
         let mut result = Vector::new();
         for item in items {
-            result.push(item.clone());
+            result.enqueue(item.clone());
         }
         return result;
     }
 
     pub fn size(&self) -> usize {
         return self.size;
+    }
+
+    pub fn join(&mut self, vec_to_join: Vector<T>) -> &mut Self {
+        for index in 0 .. vec_to_join.size() {
+            self.enqueue(vec_to_join.get(index).unwrap());
+        }
+        return self;
     }
 }
 
@@ -158,7 +257,7 @@ impl <const SIZE: usize, T : Copy> Queue<T> for Buffer<SIZE, T> {
 
         // Shift everything to the left
         for idx in 0 .. self.tail {
-            self.data[idx] = self.data[idx + 1];
+            self.data[idx] = self.data[idx + 1].clone();
         }
 
         self.tail -= 1;
@@ -167,12 +266,45 @@ impl <const SIZE: usize, T : Copy> Queue<T> for Buffer<SIZE, T> {
     }
 }
 
+impl Array<u8> for &[u8] {
+    fn size(&self) -> usize {
+        return self.len();
+    }
+
+    fn get(&self, index: usize) -> Option<u8> {
+        if index >= self.len() {
+            return None;
+        }
+        return Some(self[index]);
+    }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut u8> {
+        if index >= self.len() {
+            return None;
+        }
+
+        panic!("Not implemented");
+    }
+}
+
 impl <const SIZE: usize, T : Copy> Array<T> for Buffer<SIZE, T> {
-    fn get(&mut self, index: usize) -> Option<T> {
+    fn size(&self) -> usize {
+        return self.tail;
+    }
+
+    fn get(&self, index: usize) -> Option<T> {
         if index >= self.tail {
             return None;
         } else {
             return Some(self.data[index]);
+        }
+    }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        if index >= self.tail {
+            return None;
+        } else {
+            return Some(&mut self.data[index]);
         }
     }
 }
@@ -190,7 +322,7 @@ impl <const SIZE: usize, T : Copy> Buffer<SIZE, T> {
     }
 
     pub fn as_array(&self) -> &[T] {
-        return &self.data[0..self.tail];
+        return &self.data[..];
     }
 
     pub fn clear(&mut self) {
@@ -203,6 +335,23 @@ impl <const SIZE: usize, T : Copy> Buffer<SIZE, T> {
 mod test { 
 
     use super::*;
+
+    #[derive(Copy, Clone)]
+    pub struct ShadowVec {
+        pub items: Vector::<u8>,
+        pub time: usize,
+    }
+
+    #[test]
+    fn advanced_copy() {
+        let shadow = ShadowVec {
+            items: Vector::from_slice(&[1,2,3,4,5]),
+            time: 1337,
+        };
+
+        let next = shadow.clone();
+        assert_eq!(next.items.size(), 5);
+    }
 
     #[test]
     fn stack() {
@@ -226,12 +375,12 @@ mod test {
 
     #[test]
     fn stack_get() {
-        let mut list = Vector::new();
-        list.push(32);
-        list.push(64);
-        list.push(128);
-        list.push(256);
-        list.push(512);
+        let mut list = Vector::<u32>::new();
+        list.enqueue(32);
+        list.enqueue(64);
+        list.enqueue(128);
+        list.enqueue(256);
+        list.enqueue(512);
 
         assert_eq!(list.get(0), Some(32));
         assert_eq!(list.get(1), Some(64));
@@ -241,9 +390,50 @@ mod test {
         assert_eq!(list.get(5), None);
         assert_eq!(list.get(100), None);
 
-        let mut list2 = Vector::<i32>::new();
+        let list2 = Vector::<i32>::new();
         assert_eq!(list2.get(0), None);
         assert_eq!(list2.get(100), None);
+    }
+
+    #[test]
+    fn test_stack_clone() {
+        let mut list = Vector::from_slice(&[32, 64, 128, 256, 512]);
+        let mut cloned_list = list.clone();
+        assert_eq!(cloned_list.pop(), Some(512));
+        assert_eq!(cloned_list.pop(), Some(256));
+        assert_eq!(cloned_list.pop(), Some(128));
+        assert_eq!(cloned_list.pop(), Some(64));
+        assert_eq!(cloned_list.pop(), Some(32));
+        assert_eq!(cloned_list.pop(), None);
+
+        cloned_list.join(Vector::from_slice(&[32,64]));
+        let mut list3 = cloned_list.clone();
+        list3.join(Vector::from_slice(&[128]));
+        assert_eq!(list3.get(0), Some(32));
+    }
+
+    #[test]
+    fn test_vector_queue() {
+        let mut list = Vector::new();
+        list.enqueue(32);
+        list.enqueue(64);
+        list.enqueue(128);
+        
+        assert_eq!(list.dequeue(), Some(32));
+        assert_eq!(list.dequeue(), Some(64));
+        assert_eq!(list.dequeue(), Some(128));
+        assert_eq!(list.dequeue(), None);
+    }
+
+    #[test]
+    fn test_vector_join() {
+        let mut list1 = Vector::from_slice(&[32,64,128]);
+        let list2 = Vector::from_slice(&[256,512]);
+        
+        list1.join(list2);
+
+        assert_eq!(list1.pop(), Some(512));
+        assert_eq!(list1.pop(), Some(256));
     }
 
     #[test]

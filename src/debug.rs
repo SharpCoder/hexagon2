@@ -3,6 +3,8 @@ use crate::phys::pins::*;
 use crate::serio::*;
 use crate::*;
 
+pub static DEBUG_UART_DEVICE: SerioDevice = SerioDevice::Uart4;
+
 #[derive(Copy, Clone)]
 pub struct BlinkConfig {
     pub speed: Speed,
@@ -47,9 +49,9 @@ pub fn blink(count: u8, speed: Speed) {
 pub fn blink_hardware(count: u8) {
     for _ in 0 .. count {
         blink_led_on();
-        wait_ns(MS_TO_NANO * 500);
+        wait_ns(MS_TO_NANO * 250);
         blink_led_off();
-        wait_ns(MS_TO_NANO * 500);
+        wait_ns(MS_TO_NANO * 150);
     }
 }
 
@@ -61,13 +63,13 @@ fn send_with_trim(message: &[u8]) {
         if i < message.len() - 1 && message[i+1] == b' ' && cur == b' ' {
             continue;
         } else {
-            serio_write(&[cur]);
+            serial_write(DEBUG_UART_DEVICE, &[cur]);
         }
     }
 }
 
 pub fn debug_hex(hex: u32, message: &[u8]) {
-    serio_write(b"0x");
+    serial_write(DEBUG_UART_DEVICE, b"0x");
     send_with_trim(&to_base(hex as u64, 16));
     debug_str(message);
 }
@@ -83,6 +85,6 @@ pub fn debug_u32(val: u32, message: &[u8]) {
 }
 
 pub fn debug_str(message: &[u8]) {
-    serio_write(message);
-    serio_write(b"\n");
+    serial_write(DEBUG_UART_DEVICE, message);
+    serial_write(DEBUG_UART_DEVICE, b"\n");
 }
