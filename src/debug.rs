@@ -62,32 +62,22 @@ pub fn blink_hardware(count: u8) {
     }
 }
 
-// Silly function to skip repeated spaces which
-// are common int he iota function I wrote.
-fn send_with_trim(message: &[u8]) {
-    for i in 0 .. message.len() {
-        let cur = message[i];
-        if i < message.len() - 1 && message[i+1] == b' ' && cur == b' ' {
-            continue;
-        } else {
-            serial_write(DEBUG_UART_DEVICE, &[cur]);
-        }
-    }
-}
-
 pub fn debug_hex(hex: u32, message: &[u8]) {
     serial_write(DEBUG_UART_DEVICE, b"0x");
-    send_with_trim(&to_base(hex as u64, 16));
+    serial_write_vec(DEBUG_UART_DEVICE, to_base(hex as u64, 16));
+    serial_write(DEBUG_UART_DEVICE, b" ");
     debug_str(message);
 }
 
 pub fn debug_u64(val: u64, message: &[u8]) {
-    send_with_trim(&itoa_u64(val));
+    serial_write_vec(DEBUG_UART_DEVICE, itoa_u64(val));
+    serial_write(DEBUG_UART_DEVICE, b" ");
     debug_str(message);
 }
 
 pub fn debug_u32(val: u32, message: &[u8]) {
-    send_with_trim(&to_base(val as u64, 10));
+    serial_write_vec(DEBUG_UART_DEVICE, to_base(val as u64, 10));
+    serial_write(DEBUG_UART_DEVICE, b" ");
     debug_str(message);
 }
 

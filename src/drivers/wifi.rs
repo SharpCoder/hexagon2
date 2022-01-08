@@ -5,6 +5,13 @@ use crate::serio::*;
 use crate::phys::pins::*;
 use crate::strings::*;
 use crate::datastructures::*;
+use crate::http_models::*;
+use crate::math::*;
+
+/// This is the standardized callback signature. The argument
+/// is a lits of strings. Each string represents an output
+/// artifact from the WifiCommandSequence.
+type Callback = &'static dyn Fn(Vector<String>);
 
 pub struct WifiDriver {
     device: SerioDevice,
@@ -43,9 +50,9 @@ impl WifiDriver {
         ));
     }
 
-    pub fn dns_lookup<'b>(&mut self, domain: &[u8], method: &'static dyn Fn(Vector<Vector<u8>>)) {
+    pub fn dns_lookup(&mut self, domain: &[u8], method: Callback) {
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
-            Vector::from_slice(&[
+            vec!(
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPDOMAIN=\"")
                     .join_vec(vec_str!(domain))
@@ -63,12 +70,25 @@ impl WifiDriver {
                         };
 
                         return rx_buffer.substr(0, space).unwrap().clone();
-                    })
-                    
-            ]),
+                    })  
+            ),
             Box::new(method)
         ));
+    }
 
+    pub fn http_request(&mut self, ip_addr: String, request: HttpRequest, method: Callback) {
+        let content = request.as_vec();
+        self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
+            vec!(
+                WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
+                WifiCommand::new().with_command(b"AT+CIPSTART=1,\"")
+                    .join_vec(ip_addr)
+                    .join_vec(vec_str!(b"\",80")),
+                WifiCommand::new().with_command(b"AT+CIPSEND=1,")
+                    .join_vec(itoa_u32(content.size() as u32)) 
+            ),
+            Box::new(method)
+        ));
     }
 
     pub fn init(&self) {

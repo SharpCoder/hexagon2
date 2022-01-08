@@ -235,6 +235,14 @@ impl <T: Clone + Copy> Vector<T> {
 
         return Some(result);
     }
+
+    pub fn reverse(&self) -> Vector::<T> {
+        let mut result = Vector::new();
+        for idx in 0 .. self.size() {
+            result.push(self.get(self.size() - idx - 1).unwrap());
+        }
+        return result;
+    }
 }
 
 /**
@@ -373,6 +381,24 @@ mod test {
     pub struct ShadowVec {
         pub items: Vector::<u8>,
         pub time: usize,
+    }
+
+    fn test_reverse() {
+        let vec = vec!(1u8, 2, 3, 4, 5);
+        let reversed = vec.reverse();
+
+        assert_eq!(reversed.get(0), Some(5));
+        assert_eq!(reversed.get(1), Some(4));
+        assert_eq!(reversed.get(2), Some(3));
+        assert_eq!(reversed.get(3), Some(2));
+        assert_eq!(reversed.get(4), Some(1));
+
+        let reversed2 = vec.reverse();
+        assert_eq!(reversed2.get(0), Some(1));
+        assert_eq!(reversed2.get(1), Some(2));
+        assert_eq!(reversed2.get(2), Some(3));
+        assert_eq!(reversed2.get(3), Some(4));
+
     }
 
     #[test]

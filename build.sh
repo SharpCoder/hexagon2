@@ -10,7 +10,7 @@ rustc --target thumbv7em-none-eabihf \
     --crate-type staticlib \
     -O --emit=link \
     -o out/kernel.o \
-    -C opt-level=3 \ # This can't be 0 or 1 otherewise things don't work
+    -C opt-level=3 \
     src/main.rs \
 
 
