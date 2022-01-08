@@ -11,6 +11,10 @@ pub mod ws2812_task;
 pub mod blink_task;
 pub mod periodic_task;
 
+use crate::vec;
+
+use crate::datastructures::*;
+
 use crate::Task;
 use crate::drivers::wifi::*;
 use crate::serio::*;
@@ -19,31 +23,35 @@ use crate::tasks::blink_task::*;
 use crate::tasks::wifi_task::*;
 use crate::tasks::periodic_task::*;
 
+
+macro_rules! procs {
+    ( $( $x:expr ),*, ) => {{
+        $($x.init();)*
+        loop {
+            unsafe {
+                $($x.system_loop();)*
+                asm!("nop");
+            }
+        }
+    }};
+}
+
+#[no_mangle]
 pub fn run_tasks() {
     // Drivers and stateful things
     let mut wifi_driver = WifiDriver::new(SerioDevice::Uart6, 5, 6);
+    crate::debug::blink(25, crate::debug::Speed::Fast);
 
-    let mut rgb_task = WS2812Task::new();
-    let mut blink_task = BlinkTask::new();
+    // The processes which run in this system
     let mut wifi_task = WifiTask::new(&mut wifi_driver);
+    let mut blink_task = BlinkTask::new();
     let mut periodic_task = PeriodicTask::new();
+    let mut led_task = WS2812Task::new();
 
-    rgb_task.init();
-    blink_task.init();
-    wifi_task.init();
-    periodic_task.init();
-
-    loop {
-        // crate::debug::blink(1, crate::debug::Speed::Fast);
-
-        periodic_task.system_loop();
-        rgb_task.system_loop();
-        blink_task.system_loop();
-        wifi_task.system_loop();
-
-        unsafe {
-            asm!("nop");
-        }
-    }
-    
+    procs!(
+        wifi_task,
+        blink_task,
+        periodic_task,
+        led_task,
+    );
 }

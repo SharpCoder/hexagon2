@@ -7,6 +7,7 @@ blink requests without tying up system resources.
 
 use crate::Task;
 use crate::Gate;
+use crate::debug::blink_hardware;
 
 pub struct PeriodicTask { 
     gate: Gate,
@@ -18,6 +19,7 @@ impl PeriodicTask {
             gate: Gate::new()
                 .when_nano(crate::S_TO_NANO * 2, || {
                     // serial_write(SerioDevice::Default, b"AT\r\n");
+                    // blink_hardware(1);
                 })
                 .compile()
         }

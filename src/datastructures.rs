@@ -7,6 +7,31 @@
 #![allow(dead_code)]
 use crate::mem::{ kalloc, free };
 
+/// This macro returns a vector of the items you pass to it.
+#[macro_export]
+macro_rules! vec {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vector::new();
+            $(
+                temp_vec.push($x);
+            )*
+            temp_vec
+        }
+    };
+}
+
+/// This macro takes a static string and returns
+/// a vector containing the sequence of characters.
+#[macro_export]
+macro_rules! vec_str {
+    ($arr:tt) => {
+        Vector::from_slice($arr)
+    };
+}
+
+
+
 pub trait Stack <T> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
@@ -201,6 +226,19 @@ impl <T: Clone + Copy> Vector<T> {
             self.enqueue(vec_to_join.get(index).unwrap());
         }
         return self;
+    }
+
+    pub fn substr(&self, start: usize, length: usize) -> Option<Self> {
+        let mut result = Vector::new();
+        if start + length > self.size() {
+            return None;
+        }
+
+        for idx in start .. (start + length) {
+            result.enqueue(self.get(idx).unwrap());
+        }
+
+        return Some(result);
     }
 }
 

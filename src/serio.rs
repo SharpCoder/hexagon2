@@ -282,7 +282,7 @@ impl Uart {
     }
 
     pub fn get_rx_buffer(&self) -> &[u8] {
-        return self.rx_buffer.as_array();
+        return &self.rx_buffer.as_array()[0..self.rx_buffer.tail];
     }
 
     pub fn clear_rx_buffer(&mut self) {
@@ -345,8 +345,6 @@ impl Uart {
     }
 
     fn handle_send_irq(&mut self) {
-        // blink_accumulate();
-
         // Transmission complete
         let irq_statuses = uart_get_irq_statuses(self.device);
         let tx_complete = irq_statuses & (0x1 << 22) > 0;

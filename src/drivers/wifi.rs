@@ -34,34 +34,46 @@ impl WifiDriver {
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWMODE=1").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWJAP=\"")
-                    .join_vec(Vector::from_slice(ssid))
-                    .join_vec(Vector::from_slice(b"\",\""))
-                    .join_vec(Vector::from_slice(pwd))
-                    .join_vec(Vector::from_slice(b"\""))
+                    .join_vec(vec_str!(ssid))
+                    .join_vec(vec_str!(b"\",\""))
+                    .join_vec(vec_str!(pwd))
+                    .join_vec(vec_str!(b"\""))
                     .with_expected_response(b"OK"),
             ])
         ));
     }
 
-    pub fn dns_lookup(&mut self, domain: &[u8], callback: fn(ip: [u8;4])) {
-
-
+    pub fn dns_lookup<'b>(&mut self, domain: &[u8], method: &'static Fn(Vector<Vector<u8>>)) {
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             Vector::from_slice(&[
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPDOMAIN=\"")
-                    .join_vec(Vector::from_slice(domain))
-                    .join_vec(Vector::from_slice(b"\""))
+                    .join_vec(vec_str!(domain))
+                    .join_vec(vec_str!(b"\""))
+                    .with_expected_response(b"OK")
                     .with_transform(|buffer| {
-                        // Take the 
-                        return Vector::new();
+                        // Holy smokes this is awful.
+                        // If I'm going to do this more than... once... it needs
+                        // some serios macro game or something.
+
+                        // Really I should have a standardized way to parse the responses
+                        // because they are pretty consistent I think.
+
+                        // Probably should just make a string class at this point.
+                        let start = index_of(buffer, &vec_str!(b":")).unwrap_or(0);
+                        let end = index_of(buffer, &vec_str!(b"OK")).unwrap_or(0);
+                        
+                        let mut rx_buffer = (&buffer).substr(start + 1, end - start).unwrap();
+                        let space = match index_of(&rx_buffer, &vec_str!(b"\r")) {
+                            None => 0,
+                            Some(val) => val,
+                        };
+
+                        return rx_buffer.substr(0, space).unwrap().clone();
                     })
                     
             ]),
-            Box::new(&move || {
-                blink_hardware(2);
-                debug_str(b"OMG WORLD");
-            })
+            Box::new(method)
         ));
 
     }
@@ -98,7 +110,7 @@ impl WifiDriver {
                 if command.is_complete() {
                     driver.active_command += 1;
                 } else {
-                    command.process(device, &Vector::from_slice(serial_buffer(device)));
+                    command.process(device, &Vector::from_slice(serial_buffer(device).clone()));
                 }
             }
         }
@@ -161,7 +173,7 @@ impl WifiCommand {
     }
 }
 
-type Func = dyn Fn();
+type Func = dyn Fn(Vector<Vector<u8>>);
 
 #[derive(Copy, Clone)]
 pub struct WifiCommandSequence<'a> {
@@ -236,6 +248,12 @@ impl <'a> WifiCommandSequence<'a> {
         
                     // Check if we care about the response
                     if command.expected_response.is_none() && command.error_response.is_none() {
+                        // Check if there is transformation to happen
+                        if command.transform_output.is_some() {
+                            let transform_method = command.transform_output.unwrap();
+                            self.outputs.push(transform_method(&Vector::from_slice(serial_buffer(device) )));
+                        }
+                        
                         self.advance(device);
                     }
                 } else if serial_available(device) > 0 {
@@ -278,19 +296,12 @@ impl <'a> WifiCommandSequence<'a> {
         self.index += 1;
         if self.index >= self.commands.size() {
             if self.callback.is_some() {
-                
                 let method = self.callback.unwrap().reference;
-
-                blink_hardware(1);
-                unsafe {
-                    let m = method;
-                    (*m)();
-                }
-
-                blink_hardware(10);
-
+                (*method)(self.outputs);
             }
             self.complete = true;
+            // Reset state
+            self.reset(device);
         } else {
             // Reset state
             self.reset(device);

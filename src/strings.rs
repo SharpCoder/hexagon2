@@ -11,13 +11,13 @@ pub fn concat(first: &'static [u8], second: &'static [u8]) -> Vector<u8> {
     return temp;
 }
 
-pub fn contains(buffer: &dyn Array<u8>, target: &dyn Array<u8>) -> bool {
+pub fn index_of(buffer: &dyn Array<u8>, target: &dyn Array<u8>) -> Option<usize> {
     if target.size() == 0 {
-        return true;
+        return None;
     } else if buffer.size() == 0 {
-        return false;
+        return None;
     } else if buffer.size() < target.size() {
-        return false;
+        return None;
     }
 
     for i in 0 .. buffer.size() - target.size() {
@@ -31,11 +31,16 @@ pub fn contains(buffer: &dyn Array<u8>, target: &dyn Array<u8>) -> bool {
             }
 
             if found {
-                return true;
+                return Some(i);
             }
         }
     }
-    return false;
+
+    return None;
+}
+
+pub fn contains(buffer: &dyn Array<u8>, target: &dyn Array<u8>) -> bool {
+    return index_of(buffer, target).is_some();
 }
 
 #[cfg(test)]
@@ -47,9 +52,16 @@ mod test {
         assert_eq!(contains(&Vector::from_slice(b"WIFI DISCONNECT"), &Vector::from_slice(b"WIFI GOT IP")), false);
         assert_eq!(contains(&Vector::from_slice(b"hello world"), &Vector::from_slice(b"wo")), true);
         assert_eq!(contains(&Vector::from_slice(b"hello world"), &Vector::from_slice(b"woldz")), false);
-        assert_eq!(contains(&Vector::from_slice(b"hello world"), &Vector::from_slice(b"")), true);
+        assert_eq!(contains(&Vector::from_slice(b"hello world"), &Vector::from_slice(b"")), false);
         assert_eq!(contains(&Vector::from_slice(b""), &Vector::from_slice(b"woldz")), false);
         assert_eq!(contains(&Vector::from_slice(b" "), &Vector::from_slice(b"woldz")), false);
         assert_eq!(contains(&Vector::from_slice(b"     "), &Vector::from_slice(b"woldz")), false);
+    }
+
+    #[test]
+    fn test_index_of() {
+        assert_eq!(index_of(&Vector::from_slice(b"+CIPSTATUS:23"), &Vector::from_slice(b":")), Some(10));
+        assert_eq!(index_of(&Vector::from_slice(b"+CIPSTATUS:23"), &Vector::from_slice(b"+")), Some(0));
+        assert_eq!(index_of(&Vector::from_slice(b"+CIPSTATUS:23"), &Vector::from_slice(b"234")), None);
     }
 }
