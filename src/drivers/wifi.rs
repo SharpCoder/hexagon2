@@ -43,7 +43,7 @@ impl WifiDriver {
         ));
     }
 
-    pub fn dns_lookup<'b>(&mut self, domain: &[u8], method: &'static Fn(Vector<Vector<u8>>)) {
+    pub fn dns_lookup<'b>(&mut self, domain: &[u8], method: &'static dyn Fn(Vector<Vector<u8>>)) {
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             Vector::from_slice(&[
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
@@ -52,18 +52,11 @@ impl WifiDriver {
                     .join_vec(vec_str!(b"\""))
                     .with_expected_response(b"OK")
                     .with_transform(|buffer| {
-                        // Holy smokes this is awful.
-                        // If I'm going to do this more than... once... it needs
-                        // some serios macro game or something.
-
-                        // Really I should have a standardized way to parse the responses
-                        // because they are pretty consistent I think.
-
-                        // Probably should just make a string class at this point.
+                        // Parse the resopnse to extract the ip address string...
+                        // This should be a normalized function probably
                         let start = index_of(buffer, &vec_str!(b":")).unwrap_or(0);
                         let end = index_of(buffer, &vec_str!(b"OK")).unwrap_or(0);
-                        
-                        let mut rx_buffer = (&buffer).substr(start + 1, end - start).unwrap();
+                        let rx_buffer = (&buffer).substr(start + 1, end - start).unwrap();
                         let space = match index_of(&rx_buffer, &vec_str!(b"\r")) {
                             None => 0,
                             Some(val) => val,

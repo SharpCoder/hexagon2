@@ -11,10 +11,6 @@ pub mod ws2812_task;
 pub mod blink_task;
 pub mod periodic_task;
 
-use crate::vec;
-
-use crate::datastructures::*;
-
 use crate::Task;
 use crate::drivers::wifi::*;
 use crate::serio::*;

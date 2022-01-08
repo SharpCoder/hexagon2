@@ -6,6 +6,7 @@ pub mod debug;
 pub mod drivers;
 pub mod gate;
 pub mod datastructures;
+pub mod http_models;
 pub mod math;
 pub mod mem;
 pub mod phys;
@@ -18,8 +19,6 @@ pub mod env;
 
 use core::arch::asm;
 use core::arch::global_asm;
-use datastructures::*;
-use mem::kalloc;
 use phys::*;
 use phys::irq::*;
 use phys::pins::*;

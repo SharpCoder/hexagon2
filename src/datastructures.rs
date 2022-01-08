@@ -1,9 +1,3 @@
-/*
-    Author: Josh Cole
-    
-    This is a rust implementation of a system level linked list. It supports
-    standard operations including pop, and get.
-*/
 #![allow(dead_code)]
 use crate::mem::{ kalloc, free };
 
@@ -30,7 +24,8 @@ macro_rules! vec_str {
     };
 }
 
-
+/// A string, also known as a collection of bytes.
+pub type String = Vector::<u8>;
 
 pub trait Stack <T> {
     fn push(&mut self, item: T);

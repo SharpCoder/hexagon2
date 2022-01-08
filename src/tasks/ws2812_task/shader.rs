@@ -171,7 +171,7 @@ impl <const SIZE: usize> Shader<SIZE> for AudioEqualizerShader {
     }
     
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
-        let mut next_context: ShaderContext = context;
+        let next_context: ShaderContext = context;
         return next_context;
     }
 }

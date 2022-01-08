@@ -7,7 +7,6 @@ blink requests without tying up system resources.
 
 use crate::Task;
 use crate::Gate;
-use crate::debug::blink_hardware;
 
 pub struct PeriodicTask { 
     gate: Gate,
