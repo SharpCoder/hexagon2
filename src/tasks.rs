@@ -36,7 +36,7 @@ macro_rules! procs {
 pub fn run_tasks() {
     // Drivers and stateful things
     let mut wifi_driver = WifiDriver::new(SerioDevice::Uart6, 5, 6);
-    crate::debug::blink(25, crate::debug::Speed::Fast);
+    crate::debug::blink(125, crate::debug::Speed::Fast);
 
     // The processes which run in this system
     let mut wifi_task = WifiTask::new(&mut wifi_driver);
