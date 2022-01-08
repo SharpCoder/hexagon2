@@ -4,8 +4,6 @@ firmware. It is incorporated into the kernel
 but exists on its own.
 */
 
-use core::arch::asm;
-
 pub mod wifi_task;
 pub mod ws2812_task;
 pub mod blink_task;
@@ -24,10 +22,7 @@ macro_rules! procs {
     ( $( $x:expr ),*, ) => {{
         $($x.init();)*
         loop {
-            unsafe {
-                $($x.system_loop();)*
-                asm!("nop");
-            }
+            $($x.system_loop();)*
         }
     }};
 }
@@ -36,7 +31,6 @@ macro_rules! procs {
 pub fn run_tasks() {
     // Drivers and stateful things
     let mut wifi_driver = WifiDriver::new(SerioDevice::Uart6, 5, 6);
-    crate::debug::blink(125, crate::debug::Speed::Fast);
 
     // The processes which run in this system
     let mut wifi_task = WifiTask::new(&mut wifi_driver);

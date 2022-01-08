@@ -20,7 +20,7 @@ impl PeriodicTask {
                 .when_nano(crate::S_TO_NANO * 2, || {
                     // serial_write(SerioDevice::Default, b"AT\r\n");
                     // blink_hardware(1);
-                    blink(1, Speed::Fast);
+                    // blink(1, Speed::Fast);
                 })
                 .compile()
         }

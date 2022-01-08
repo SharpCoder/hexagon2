@@ -8,12 +8,16 @@ use std::alloc::{alloc, Layout};
 use core::mem::{size_of};
 
 #[cfg(not(test))]
+use crate::*;
+#[cfg(not(test))]
+use crate::debug::*;
+#[cfg(not(test))]
 use crate::phys::*;
 
 #[cfg(not(test))]
 use crate::phys::addrs::OCRAM2;
 
-const MEMORY_MAXIMUM: u32 = 0x7_FFFF; // 512kb
+const MEMORY_MAXIMUM: u32 = 0x7D_FFFF; // 512kb
 const MEMORY_BEGIN_OFFSET: u32 = 0x0_FFC; // 4kb buffer (note: it should be word aligned)
 static mut MEMORY_OFFSET: u32 = MEMORY_BEGIN_OFFSET;
 
@@ -34,7 +38,11 @@ pub fn alloc(bytes: usize) -> *mut u32 {
     unsafe {
         if MEMORY_OFFSET + bytes as u32 > MEMORY_MAXIMUM {
             MEMORY_OFFSET = MEMORY_BEGIN_OFFSET;
-            crate::err();
+            // Custom blink pattern?
+            loop {
+                blink_custom(MS_TO_NANO * 50, MS_TO_NANO * 50);
+            }
+            // crate::err();
         }
 
         let ptr = (OCRAM2 + MEMORY_OFFSET) as *mut u32;

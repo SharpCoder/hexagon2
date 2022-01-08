@@ -6,7 +6,7 @@ use crate::clock::*;
 
 use self::shader::*;
 
-const LEDS: usize = 1;
+const LEDS: usize = 100;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();

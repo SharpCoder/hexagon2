@@ -46,13 +46,14 @@ pub fn main() {
 
     // Setup serial
     serial_init(SerioDevice::Default);
-    serial_init(debug::DEBUG_UART_DEVICE);
+    serial_init(SerioDevice::Debug);
 
     // Enable interrupts across the system
     enable_interrupts();
-    
-    debug_str(b"Hello, world!");
-    
+
+    // Run system tasks
+    // Go see tasks.rs to add more system tasks
+    // to the kernel.
     tasks::run_tasks();
     
     loop {
@@ -121,6 +122,10 @@ pub fn err() {
     pin_out(13, Power::High);
 
     loop {
+        pin_out(13, Power::High);
+        wait_ns(MS_TO_NANO * 50);
+        pin_out(13, Power::Low);
+        wait_ns(MS_TO_NANO * 500);
         unsafe { asm!("nop"); }
     }
 }

@@ -85,7 +85,11 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
         // We need to disable interrupts so things
         // don't interfere with the timing.
-        disable_interrupts();
+        // Buuuut that can cause lost packets
+        // on the uart which can entirely
+        // screw up the program. So... Maybe
+        // don't disable interrupts.
+        // disable_interrupts();
 
         while node_index < SIZE {
             let node = self.nodes[node_index];
@@ -104,9 +108,10 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
             }
             node_index += 1;
         }
+
+        // enable_interrupts();
         
         self.rest();
-        enable_interrupts();
     }
 }
 

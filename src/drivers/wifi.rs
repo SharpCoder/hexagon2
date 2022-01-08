@@ -50,6 +50,22 @@ impl WifiDriver {
         ));
     }
 
+    pub fn reset(&mut self) {
+        pin_out(self.reset_pin, Power::High);
+        crate::wait_ns(crate::MS_TO_NANO * 100);
+        pin_out(self.reset_pin, Power::Low);
+        crate::wait_ns(crate::MS_TO_NANO * 400);
+        
+        self.queued_commands.enqueue(WifiCommandSequence::new(
+            vec!(
+                WifiCommand::new()
+                    .with_command(b"ATE0")
+                    .with_expected_response(b"OK")
+                    .with_delay(crate::MS_TO_NANO * 1000)
+            )
+        ));
+    }
+
     pub fn dns_lookup(&mut self, domain: &[u8], method: Callback) {
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             vec!(
@@ -85,24 +101,21 @@ impl WifiDriver {
                     .join_vec(ip_addr)
                     .join_vec(vec_str!(b"\",80")),
                 WifiCommand::new().with_command(b"AT+CIPSEND=")
-                    .join_vec(itoa_u32(content.size() as u32)),
+                    .join_vec(itoa_u32(content.size() as u32))
+                    .with_expected_response(b"OK"),
                 WifiCommand::new()
                     .with_vec_command(content)
+                    .with_transform(|buffer| {
+                        return buffer.clone();
+                    })
+                    .with_expected_response(b"OK")
+                    .with_delay(crate::MS_TO_NANO * 250),
+                WifiCommand::new()
+                    .with_command(b"AT")
+                    .with_expected_response(b"OK")
             ),
             Box::new(method)
         ));
-    }
-
-    pub fn init(&self) {
-        // Enable peripheral
-        pin_mode(self.reset_pin, Mode::Output);
-        pin_mode(self.en_pin, Mode::Input);
-        disable_interrupts();
-        pin_out(self.reset_pin, Power::Low);
-        crate::wait_ns(crate::MS_TO_NANO * 50);
-        pin_out(self.reset_pin, Power::High);
-        crate::wait_ns(crate::MS_TO_NANO * 800);
-        enable_interrupts();
     }
 
     pub fn emit(device: SerioDevice, msg: Vector::<u8>) {
@@ -115,7 +128,7 @@ impl WifiDriver {
         if clock::nanos() < self.time_target {
             return;
         }
-        self.time_target = clock::nanos() + crate::MS_TO_NANO * 50;
+        self.time_target = clock::nanos() + crate::MS_TO_NANO * 150;
         let device = self.device;
         
         // Check if we have an active command

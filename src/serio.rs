@@ -107,6 +107,7 @@ pub enum SerioDevice {
     Uart7 = 0x6,
     Uart8 = 0x7,
     Default = 0x8,
+    Debug = 0x9,
 }
 
 /** 
@@ -141,7 +142,7 @@ impl Uart {
             sel_inp_reg: config.sel_inp_reg,
             sel_inp_val: config.sel_inp_val,
             irq: config.irq,
-            tx_count: UART_WATERMARK_SIZE + 1,
+            tx_count: 0,
         }
     }
 
@@ -182,19 +183,19 @@ impl Uart {
         uart_configure(self.device, UartConfig {
             r9t8: false,
             invert_transmission_polarity: false,
-            overrun_irq_en: false,
+            overrun_irq_en: true,
             noise_error_irq_en: false,
             framing_error_irq_en: false,
             parity_error_irq_en: false,
             tx_irq_en: false, // This gets set later
-            rx_irq_en: false,
+            rx_irq_en: true,
             tx_complete_irq_en: false,
             idle_line_irq_en: false,
             tx_en: false,
             rx_en: false,
             match1_irq_en: false,
             match2_irq_en: false,
-            idle_config: IdleConfiguration::Idle32Char,
+            idle_config: IdleConfiguration::Idle4Char,
             doze_en: false,
             bit_mode: BitMode::EightBits,
             parity_en: false,
@@ -209,9 +210,7 @@ impl Uart {
             tx_fifo_overflow_irq_en: false,
             rx_fifo_underflow_irq_en: false,
             tx_fifo_en: true,
-            tx_fifo_depth: BufferDepth::Data64Words,
             rx_fifo_en: true,
-            rx_fifo_depth: BufferDepth::Data64Words,
         });
 
 
@@ -301,9 +300,19 @@ impl Uart {
         let rx_overrun = irq_statuses & (0x1 << 19) > 0;
 
         // Read until it is empty
+        let mut temp = Vector::new();
         while uart_has_data(self.device) {
             let msg: u8 = uart_read_fifo(self.device);
             self.rx_buffer.enqueue(msg);
+            temp.enqueue(msg);
+        }
+
+        if rx_overrun {
+            crate::debug::blink_accumulate();
+        }
+
+        while temp.size() > 0 {
+            serial_write(SerioDevice::Debug, &[temp.dequeue().unwrap()]);
         }
             
         uart_clear_irq(self.device, UartClearIrqConfig {
@@ -341,13 +350,13 @@ impl Uart {
         let tx_empty = irq_statuses & (0x1 << 23) > 0;
         let pending_data = self.tx_buffer.size() > 0;
 
-        if tx_complete && self.tx_count > (UART_WATERMARK_SIZE + 1) {
+        if tx_complete && self.tx_count > 0 {
             self.tx_count -= 1;
         }
 
         // Check if there is space in the buffer
         if pending_data {
-            for _ in self.tx_count .. uart_get_tx_size(self.device) {
+            for _ in self.tx_count .. 1 {
                 self.transmit();
             }
         } else if !pending_data {
@@ -393,6 +402,9 @@ fn get_uart_interface (device: SerioDevice) -> &'static mut Uart {
             SerioDevice::Uart6 => &mut UART6,
             SerioDevice::Uart7 => &mut UART7,
             SerioDevice::Uart8 => &mut UART8,
+
+            // Specify debug output here
+            SerioDevice::Debug => &mut UART4,
 
             // Specify defaut here
             SerioDevice::Default => &mut UART6,

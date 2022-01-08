@@ -3,8 +3,6 @@ use crate::phys::pins::*;
 use crate::serio::*;
 use crate::*;
 
-pub static DEBUG_UART_DEVICE: SerioDevice = SerioDevice::Uart4;
-
 #[derive(Copy, Clone)]
 pub struct BlinkConfig {
     pub speed: Speed,
@@ -62,26 +60,33 @@ pub fn blink_hardware(count: u8) {
     }
 }
 
+pub fn blink_custom(on_time: u64, off_time: u64) {
+    blink_led_on();
+    wait_ns(on_time);
+    blink_led_off();
+    wait_ns(off_time);
+}
+
 pub fn debug_hex(hex: u32, message: &[u8]) {
-    serial_write(DEBUG_UART_DEVICE, b"0x");
-    serial_write_vec(DEBUG_UART_DEVICE, to_base(hex as u64, 16));
-    serial_write(DEBUG_UART_DEVICE, b" ");
+    serial_write(SerioDevice::Debug, b"0x");
+    serial_write_vec(SerioDevice::Debug, to_base(hex as u64, 16));
+    serial_write(SerioDevice::Debug, b" ");
     debug_str(message);
 }
 
 pub fn debug_u64(val: u64, message: &[u8]) {
-    serial_write_vec(DEBUG_UART_DEVICE, itoa_u64(val));
-    serial_write(DEBUG_UART_DEVICE, b" ");
+    serial_write_vec(SerioDevice::Debug, itoa_u64(val));
+    serial_write(SerioDevice::Debug, b" ");
     debug_str(message);
 }
 
 pub fn debug_u32(val: u32, message: &[u8]) {
-    serial_write_vec(DEBUG_UART_DEVICE, to_base(val as u64, 10));
-    serial_write(DEBUG_UART_DEVICE, b" ");
+    serial_write_vec(SerioDevice::Debug, to_base(val as u64, 10));
+    serial_write(SerioDevice::Debug, b" ");
     debug_str(message);
 }
 
 pub fn debug_str(message: &[u8]) {
-    serial_write(DEBUG_UART_DEVICE, message);
-    serial_write(DEBUG_UART_DEVICE, b"\n");
+    serial_write(SerioDevice::Debug, message);
+    serial_write(SerioDevice::Debug, b"\n");
 }

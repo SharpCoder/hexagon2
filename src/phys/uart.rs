@@ -75,18 +75,6 @@ pub enum BitMode {
 }
 
 #[derive(Clone, Copy)]
-pub enum BufferDepth {
-    Data1Word = 0x0,
-    Data4Words = 0x1,
-    Data8Words = 0x2,
-    Data16Words = 0x3,
-    Data32Words = 0x4,
-    Data64Words = 0x5,
-    Data128Words = 0x6,
-    Data256Words = 0x7,
-}
-
-#[derive(Clone, Copy)]
 pub enum IdleConfiguration {
     Idle1Char = 0x0,
     Idle2Char = 0x1,
@@ -119,9 +107,7 @@ pub struct FifoConfig {
     pub tx_fifo_overflow_irq_en: bool,
     pub rx_fifo_underflow_irq_en: bool,
     pub tx_fifo_en: bool,
-    pub tx_fifo_depth: BufferDepth,
     pub rx_fifo_en: bool,
-    pub rx_fifo_depth: BufferDepth,
 }
 
 pub fn uart_clear_idle(device: Device) {
@@ -428,7 +414,7 @@ pub fn uart_baud_rate(device: Device, rate: u32) {
     let sbr = baud_clock / (rate * 16);
     uart_disable(device);
     let addr = get_addr(device) + 0x10;
-    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | (0x0 << 24) | (0x1 << 14) | sbr;
+    let value = (read_word(addr) & !(0x1 << 13) & !(0x1FFF)) | (0x00 << 24) | (0x1 << 14) | (0x1 << 17)  | (0x1 << 18) | sbr;
     assign(addr, value);
     uart_enable(device);
 }
