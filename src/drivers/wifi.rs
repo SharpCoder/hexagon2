@@ -61,10 +61,10 @@ impl WifiDriver {
                     .with_transform(|buffer| {
                         // Parse the resopnse to extract the ip address string...
                         // This should be a normalized function probably
-                        let start = index_of(buffer, &vec_str!(b":")).unwrap_or(0);
-                        let end = index_of(buffer, &vec_str!(b"OK")).unwrap_or(0);
+                        let start = buffer.index_of(vec_str!(b":")).unwrap_or(0);
+                        let end = buffer.index_of(vec_str!(b"OK")).unwrap_or(0);
                         let rx_buffer = (&buffer).substr(start + 1, end - start).unwrap();
-                        let space = match index_of(&rx_buffer, &vec_str!(b"\r")) {
+                        let space = match rx_buffer.index_of(vec_str!(b"\r")) {
                             None => 0,
                             Some(val) => val,
                         };
@@ -125,7 +125,7 @@ impl WifiDriver {
             },
             Some(command) => {
                 let mut next_command = command.clone();
-                next_command.process(self, device, &Vector::from_slice(serial_buffer(device)));
+                next_command.process(self, device, &serial_buffer(device));
                 // Check if it's completed
                 if command.is_complete() {
                     self.active_command = self.queued_commands.dequeue();
@@ -283,7 +283,7 @@ impl  WifiCommandSequence {
                         // Check if there is transformation to happen
                         if command.transform_output.is_some() {
                             let transform_method = command.transform_output.unwrap();
-                            self.outputs.push(transform_method(&Vector::from_slice(serial_buffer(device) )));
+                            self.outputs.push(transform_method(&serial_buffer(device)));
                         }
                         
                         self.advance(driver, device);
@@ -293,7 +293,7 @@ impl  WifiCommandSequence {
                     match command.expected_response {
                         None => {},
                         Some(expected_response) => {
-                            if contains(rx_buffer, &expected_response) {
+                            if rx_buffer.contains(vec_str!(expected_response)) {
 
                                 // Check if there is transformation to happen
                                 if command.transform_output.is_some() {
@@ -309,7 +309,7 @@ impl  WifiCommandSequence {
                     match command.error_response {
                         None => {},
                         Some(error_response) => {
-                            if contains(rx_buffer, &error_response) {
+                            if rx_buffer.contains(vec_str!(error_response)) {
                                 self.reset(device);
                                 self.aborted = true;
                             }

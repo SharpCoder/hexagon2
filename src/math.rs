@@ -30,7 +30,7 @@ pub fn digits(number: u32) -> u8 {
 
 }
 
-pub fn to_base(number: u64, base: u64) -> String {
+pub fn to_base(number: u64, base: u64) -> Vector::<u8> {
     let mut result = Vector::new();
     let mut temp = number;
     loop {
@@ -45,19 +45,19 @@ pub fn to_base(number: u64, base: u64) -> String {
     return result.reverse();
 }
 
-pub fn itoa_u64(val: u64) -> String {
+pub fn itoa_u64(val: u64) -> Vector::<u8> {
     return to_base(val, 10);
 }
 
-pub fn itoa_u32(val: u32) -> String {
+pub fn itoa_u32(val: u32) -> Vector::<u8> {
     return to_base(val as u64, 10);
 }
 
-pub fn itoa_u16(val: u16) -> String {
+pub fn itoa_u16(val: u16) -> Vector::<u8> {
     return to_base(val as u64, 10);
 }
 
-pub fn itoa_u8(val: u8) -> String {
+pub fn itoa_u8(val: u8) -> Vector::<u8> {
     return to_base(val as u64, 10);
 }
 
@@ -89,7 +89,7 @@ mod test {
     use crate::*;
     use super::*;
 
-    fn vecs_eq(left: String, right: String) {
+    fn vecs_eq(left: Vector::<u8>, right: Vector::<u8>) {
         assert_eq!(left.size(), right.size());
         for idx in 0 .. left.size() {
             assert_eq!(left.get(idx), right.get(idx));

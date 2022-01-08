@@ -24,9 +24,6 @@ macro_rules! vec_str {
     };
 }
 
-/// A string, also known as a collection of bytes.
-pub type String = Vector::<u8>;
-
 pub trait Stack <T> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
@@ -242,6 +239,12 @@ impl <T: Clone + Copy> Vector<T> {
             result.push(self.get(self.size() - idx - 1).unwrap());
         }
         return result;
+    }
+
+    pub fn clear(&mut self) {
+        while self.size() > 0 {
+            self.pop();
+        }
     }
 }
 

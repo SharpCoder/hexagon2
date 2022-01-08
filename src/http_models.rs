@@ -4,6 +4,7 @@
 */
 use crate::*;
 use crate::datastructures::*;
+use crate::strings::*;
 
 #[derive(Copy, Clone)]
 pub struct HttpHeader {

@@ -120,8 +120,8 @@ struct Uart {
     rx_pin: usize,
     initialized: bool,
     irq: Irq,
-    tx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
-    rx_buffer: Buffer::<UART_BUFFER_SIZE, u8>,
+    tx_buffer: Vector::<u8>,
+    rx_buffer: Vector::<u8>,
     sel_inp_reg: Option<u32>,
     sel_inp_val: Option<u32>,
     buffer_head: usize,
@@ -132,14 +132,8 @@ impl Uart {
     pub const fn new(config: HardwareConfig) -> Uart {
         return Uart {
             device: config.device,
-            tx_buffer: Buffer::<UART_BUFFER_SIZE, u8> {
-                data: [0; UART_BUFFER_SIZE],
-                tail: 0,
-            },
-            rx_buffer: Buffer::<UART_BUFFER_SIZE, u8> {
-                data: [0; UART_BUFFER_SIZE],
-                tail: 0,
-            },
+            tx_buffer: Vector { head: None, size: 0 },
+            rx_buffer: Vector { head: None, size: 0 },
             buffer_head: 0,
             initialized: false,
             tx_pin: config.tx_pin,
@@ -247,11 +241,7 @@ impl Uart {
     }
 
     pub fn available(&self) -> usize {
-        if self.rx_buffer.size() > 0 {
-            return self.rx_buffer.size();
-        } else {
-            return 0;
-        }
+        return self.rx_buffer.size();
     }
 
     pub fn write(&mut self, bytes: &[u8]) {
@@ -281,8 +271,8 @@ impl Uart {
         enable_interrupts();
     }
 
-    pub fn get_rx_buffer(&self) -> &[u8] {
-        return &self.rx_buffer.as_array()[0..self.rx_buffer.tail];
+    pub fn get_rx_buffer(&self) -> Vector::<u8> {
+        return self.rx_buffer.clone();
     }
 
     pub fn clear_rx_buffer(&mut self) {
@@ -437,7 +427,7 @@ pub fn serial_write_vec(device: SerioDevice, bytes: Vector<u8>) {
     uart.write_vec(bytes);
 }
 
-pub fn serial_buffer<'a>(device: SerioDevice) -> &'a [u8] {
+pub fn serial_buffer(device: SerioDevice) -> Vector::<u8> {
     let uart = get_uart_interface(device);
     return uart.get_rx_buffer();
 }
