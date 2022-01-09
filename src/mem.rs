@@ -1,7 +1,3 @@
-/*
-    Author: Josh Cole
-    This library is dedicated to managing memory.
-*/
 #![allow(dead_code, unused_imports)]
 #[cfg(test)]
 use std::alloc::{alloc, Layout};
@@ -22,20 +18,9 @@ static mut MEMORY_OFFSET: u32 = MEMORY_BEGIN_OFFSET;
 static mut MEMORY_PAGES: Option<*mut Mempage> = None;
 pub static mut MEMORY_OVERFLOW: bool = false;
 
-#[cfg(test)]
-pub fn kalloc<T>() -> *mut T {
-    return unsafe { alloc(Layout::new::<T>()) as *mut T };
-}
-
-#[cfg(test)]
-pub fn free<T>(_ptr: *mut T) {
-    // Do nothing
-}
-
 /// A page of memory
 #[repr(C)]
 pub struct Mempage {
-    pub checksum: u16,
     pub size: usize,
     pub used: bool,
     pub next: Option<*mut Mempage>,
@@ -46,7 +31,6 @@ pub struct Mempage {
 impl Mempage {
     pub const fn new(size: usize, ptr: *mut u32) -> Self {
         return Mempage {
-            checksum: 1337,
             size: size,
             used: true,
             ptr: ptr,
@@ -101,7 +85,6 @@ impl Mempage {
             (*next_page) = Mempage {
                 size: page_bytes + bytes,
                 ptr: item_ptr as *mut u32,
-                checksum: 1337,
                 used: true,
                 next: None,
             };
@@ -165,4 +148,14 @@ pub fn kalloc<T>() -> *mut T {
 pub fn free<T>(ptr: *mut T) {
    let zero_ptr = ptr as u32;
     Mempage::free(zero_ptr);
+}
+
+#[cfg(test)]
+pub fn kalloc<T>() -> *mut T {
+    return unsafe { alloc(Layout::new::<T>()) as *mut T };
+}
+
+#[cfg(test)]
+pub fn free<T>(_ptr: *mut T) {
+    // Do nothing
 }
