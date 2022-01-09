@@ -64,7 +64,6 @@ pub fn main() {
             asm!("nop");
         }
     }
-    
 }
 
 #[derive(Copy, Clone)]
@@ -115,30 +114,57 @@ pub extern fn my_panic(_info: &core::panic::PanicInfo) -> ! {
     loop { }
 }
 
-#[no_mangle]
-#[inline]
-pub fn err() {
-    disable_interrupts();
-    
-    pin_mode(13, Mode::Output);
-    pin_out(13, Power::High);
 
+pub enum PanicType {
+    Hardfault,
+    Memfault,
+    Oob,
+}
+
+#[no_mangle]
+pub fn err(mode: PanicType) {
+    disable_interrupts();
     loop {
-        pin_out(13, Power::High);
-        wait_ns(MS_TO_NANO * 50);
-        pin_out(13, Power::Low);
-        wait_ns(MS_TO_NANO * 500);
-        unsafe { asm!("nop"); }
+        match mode {
+            PanicType::Hardfault => {
+                pin_out(13, Power::High);
+            },
+            PanicType::Oob => {
+                pin_out(13, Power::High);
+                wait_ns(MS_TO_NANO * 50);
+                pin_out(13, Power::Low);
+                wait_ns(MS_TO_NANO * 500);
+            },
+            PanicType::Memfault => {
+                pin_out(13, Power::High);
+                wait_ns(MS_TO_NANO * 1500);
+                pin_out(13, Power::Low);
+                wait_ns(MS_TO_NANO * 50);
+            }
+        }
     }
+}
+
+#[no_mangle]
+pub fn oob() {
+    err(PanicType::Oob);
+}
+
+extern "C" {
+    pub fn uuid() -> u32;
 }
 
 // Although I'm including the core library, I like
 // my own implementation better.
 global_asm!("
     _ZN4core9panicking18panic_bounds_check17h9048f255eeb8dcc3E:
-        bl err
+        bl oob
         b hang
 
     hang:
         b hang
+
+    uuid:
+        mov r0, lr
+        mov pc, lr
 ");

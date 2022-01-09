@@ -41,12 +41,11 @@ impl StringBuffer for Vector::<u8> {
     }
 
     fn split(&self, separator: u8) -> Vector::<String> {
-        let mut original = self.clone();
         let mut result = Vector::new();
         let mut temp = Vector::new();
 
-        for _ in 0 .. self.size() {
-            match original.dequeue() {
+        for idx in 0 .. self.size() {
+            match self.get(idx) {
                 None => {},
                 Some(byte) => {
                     if byte == separator {

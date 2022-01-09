@@ -84,7 +84,7 @@ impl WifiDriver {
                             Some(val) => val,
                         };
 
-                        return rx_buffer.substr(0, space).unwrap().clone();
+                        return rx_buffer.substr(0, space).unwrap();
                     })  
             ),
             Box::new(method)
@@ -135,14 +135,13 @@ impl WifiDriver {
             None => {
                 self.active_command = self.queued_commands.dequeue();
             },
-            Some(command) => {
-                let mut next_command = command.clone();
-                next_command.process(self, device, &serial_buffer(device));
+            Some(mut command) => {
+                command.process(self, device, &serial_buffer(device));
                 // Check if it's completed
                 if command.is_complete() {
                     self.active_command = self.queued_commands.dequeue();
                 } else {
-                    self.active_command = Some(next_command);
+                    self.active_command = Some(command);
                 }
             }
         }
@@ -277,7 +276,7 @@ impl  WifiCommandSequence {
         
         match self.commands.get(self.index) {
             None => {
-                crate::err();
+                // crate::err();
             },
             Some(command) => {
                 if clock::nanos() < (self.time_target + command.delay) {

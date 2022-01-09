@@ -54,7 +54,7 @@ impl Mempage {
         }
 
         loop {
-            crate::err();
+            crate::err(crate::PanicType::Memfault);
         }
     }
 
@@ -72,8 +72,14 @@ impl Mempage {
 
     pub fn add_page<T>(bytes: usize) -> *mut T {
         let page_bytes = size_of::<Mempage>();
+        let mut total_bytes = page_bytes + bytes;
 
-        let next_page = alloc(page_bytes + bytes) as *mut Mempage;
+        // Word align
+        while total_bytes % 4 != 0 {
+            total_bytes += 1;
+        }
+
+        let next_page = alloc(total_bytes) as *mut Mempage;
         let item_ptr = ((next_page as u32) + page_bytes as u32) as *mut T; 
 
         if unsafe { MEMORY_OVERFLOW } {
@@ -83,7 +89,7 @@ impl Mempage {
 
         unsafe {
             (*next_page) = Mempage {
-                size: page_bytes + bytes,
+                size: total_bytes,
                 ptr: item_ptr as *mut u32,
                 used: true,
                 next: None,
@@ -123,7 +129,7 @@ pub fn memtest() {
 pub fn alloc(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
-        if MEMORY_OFFSET + bytes as u32 >= (MEMORY_MAXIMUM - 0x5_0FFC) {
+        if MEMORY_OFFSET + bytes as u32 >= MEMORY_MAXIMUM {
             MEMORY_OVERFLOW = true;
             return Mempage::reclaim(bytes);
         }

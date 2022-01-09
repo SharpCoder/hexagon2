@@ -150,8 +150,7 @@ impl <T: Clone + Copy> Queue<T> for Vector<T> {
             },
             Some(node) => {
                 // Copy the reference
-                let indirect = node.clone();
-                let node_item = unsafe { *indirect };
+                let node_item = unsafe { *node };
                 
                 // Free the actual node.
                 free(node);
@@ -212,7 +211,7 @@ impl <T: Clone + Copy> Vector<T> {
     pub fn from_slice(items: &[T]) -> Self {
         let mut result = Vector::new();
         for item in items {
-            result.enqueue(item.clone());
+            result.enqueue(*item);
         }
         return result;
     }

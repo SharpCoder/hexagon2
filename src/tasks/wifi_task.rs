@@ -31,7 +31,7 @@ impl <'a> Task for WifiTask<'a> {
             // For this function, the first argument is the string
             // containing the ip address.
             if outputs.size() > 0 {
-                let ip_address = outputs.clone().pop().unwrap();
+                let ip_address = outputs.get(0).unwrap();
                 driver.http_request(ip_address, HttpRequest {
                     method: vec_str!(b"GET"),
                     request_uri: vec_str!(b"/api/timezone/America/Los_Angeles.txt"),

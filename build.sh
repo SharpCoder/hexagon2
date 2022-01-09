@@ -44,11 +44,11 @@ arm-none-eabi-ld \
 # Note: This actually takes a significant amount
 # of time, so it's commented out. Include if you
 # are debugging assembly-level optimizations.
-if false;
+if true;
 then
     echo Generating debug content...
     arm-none-eabi-objdump -S out/teensy.o > out/teensy.asm
-    arm-none-eabi-objdump -S out/kernel.o > out/kernel.asm
+    # arm-none-eabi-objdump -S out/kernel.o > out/kernel.asm
     arm-none-eabi-objdump -S out/kernel.elf > out/hex.asm
 fi
 

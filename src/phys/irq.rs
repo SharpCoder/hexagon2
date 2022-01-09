@@ -47,7 +47,7 @@ pub static mut VECTORS: IrqTable = IrqTable {
     svc_handler: noop,
     rsv4: 0x0,
     rsv5: 0x0,
-    pendsv_handler: crate::err,
+    pendsv_handler: noop,
     systick_handler: noop,    
     interrupts: [noop; MAX_SUPPORTED_IRQ],
 };
@@ -215,7 +215,7 @@ pub fn irq_attach(irq_number: Irq, func: Fn) {
 // this is a catastrophic function that hangs
 // the program.
 pub fn fault_handler() {
-    crate::err();
+    crate::err(crate::PanicType::Hardfault);
 }
 
 // An un-implemented interrupt
