@@ -18,8 +18,6 @@ pub struct OmgCats {
     pub catz: u128,
 }
 
-static mut COUNT: u32 = 0;
-
 impl PeriodicTask {
     pub fn new() -> PeriodicTask {
         return PeriodicTask {
