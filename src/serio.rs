@@ -270,8 +270,8 @@ impl Uart {
         enable_interrupts();
     }
 
-    pub fn get_rx_buffer(&self) -> Vector::<u8> {
-        return self.rx_buffer.clone();
+    pub fn get_rx_buffer(&self) -> &Vector::<u8> {
+        return &self.rx_buffer;
     }
 
     pub fn clear_rx_buffer(&mut self) {
@@ -439,7 +439,7 @@ pub fn serial_write_vec(device: SerioDevice, bytes: Vector<u8>) {
     uart.write_vec(bytes);
 }
 
-pub fn serial_buffer(device: SerioDevice) -> Vector::<u8> {
+pub fn serial_buffer(device: SerioDevice) -> &'static Vector::<u8> {
     let uart = get_uart_interface(device);
     return uart.get_rx_buffer();
 }

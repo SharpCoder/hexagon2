@@ -21,7 +21,7 @@ impl PeriodicTask {
     pub fn new() -> PeriodicTask {
         return PeriodicTask { };
     }
-}
+} 
 
 impl Task for PeriodicTask {
     fn init(&mut self) { }
@@ -31,9 +31,13 @@ impl Task for PeriodicTask {
             .when_nano(crate::MS_TO_NANO * 250, || { pin_out(13, Power::Low); })
             .compile();
 
-        gate_open!()
-            .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
-            .when_nano(crate::MS_TO_NANO * 400, || { debug_str(b"lolcatz"); })
-            .compile();
+        if crate::mem::is_overrun() {
+            debug_str(b"[erro] memory overflow");
+        }
+
+        // gate_open!()
+        //     .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
+        //     .when_nano(crate::MS_TO_NANO * 400, || { debug_str(b"lolcatz"); })
+        //     .compile();
     }
 }

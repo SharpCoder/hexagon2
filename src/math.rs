@@ -1,5 +1,41 @@
 use crate::system::vector::*;
 
+pub fn pow32(base: u32, power: u32) -> u32 {
+    if power == 0 {
+        return 1;
+    } else if power == 1{
+        return base;
+    }
+
+    let mut result = 1;
+    for _ in 0 .. power {
+        result *= base;
+    }
+
+    return result;
+}
+
+pub fn atoi_u32(input: Vector::<u8>) -> u32 {
+    let mut result: u32 = 0;
+    let mut digits: u32 = 0;
+
+    for character in input.reverse().into_iter() {
+        if character >= 48 && character <= 57 {
+            result += char_to_int(character) as u32 * pow32(10, digits);
+        } else {
+            continue;
+        }
+
+        digits += 1;
+
+    }
+    return result;
+}
+
+pub fn char_to_int(char: u8) -> u8 {
+    return char - 48;
+}
+
 // Technically this supports up-to base 26 :P
 pub fn int_to_hex(number: u8) -> u8 {
     if number < 10 {
@@ -120,5 +156,26 @@ mod test {
         vecs_eq(itoa_u64(1234567), vec_str!(b"1234567"));
         vecs_eq(to_base(255, 16), vec_str!(b"FF"));
         vecs_eq(to_base(2700230707, 16), vec_str!(b"A0F24033"));
+    }
+
+    #[test]
+    fn test_pow() {
+        assert_eq!(pow32(10002, 0), 1);
+        assert_eq!(pow32(1337, 1), 1337);
+        assert_eq!(pow32(2, 4), 16);
+    }
+
+    #[test]
+    fn test_atoi() {
+        assert_eq!(char_to_int(b'4'), 4);
+        assert_eq!(char_to_int(b'7'), 7);
+        assert_eq!(char_to_int(b'0'), 0);
+        assert_eq!(char_to_int(b'9'), 9);
+
+        assert_eq!(atoi_u32(vec_str!(b"45632190")), 45632190);
+        assert_eq!(atoi_u32(vec_str!(b"1")), 1);
+        assert_eq!(atoi_u32(vec_str!(b"12")), 12);
+        assert_eq!(atoi_u32(vec_str!(b"103")), 103);
+        assert_eq!(atoi_u32(vec_str!(b"     1990\n")), 1990);
     }
 }
