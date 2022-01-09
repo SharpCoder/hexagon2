@@ -4,13 +4,14 @@ use crate::serio::*;
 use crate::phys::pins::*;
 use crate::system::strings::*;
 use crate::system::vector::*;
+use crate::system::map::*;
 use crate::http_models::*;
 use crate::math::*;
 
 /// This is the standardized callback signature. The argument
 /// is a lits of strings. Each string represents an output
 /// artifact from the WifiCommandSequence.
-type Callback = &'static dyn Fn(&mut WifiDriver, Vector<String>);
+type Callback = &'static dyn Fn(&mut WifiDriver, BTreeMap<String, String>);
 
 pub struct WifiDriver {
     device: SerioDevice,
@@ -74,6 +75,8 @@ impl WifiDriver {
                     .join_vec(vec_str!(b"\""))
                     .with_expected_response(b"OK")
                     .with_transform(|buffer| {
+                        let mut result = BTreeMap::new();
+
                         // Parse the resopnse to extract the ip address string...
                         // This should be a normalized function probably
                         let start = buffer.index_of(vec_str!(b":")).unwrap_or(0);
@@ -84,7 +87,9 @@ impl WifiDriver {
                             Some(val) => val,
                         };
 
-                        return rx_buffer.substr(0, space).unwrap();
+                        result.insert(vec_str!(b"ip_address"), rx_buffer.substr(0, space).unwrap());
+
+                        return result;
                     })  
             ),
             Box::new(method)
@@ -104,9 +109,6 @@ impl WifiDriver {
                     .with_expected_response(b"OK"),
                 WifiCommand::new()
                     .with_vec_command(content)
-                    .with_transform(|buffer| {
-                        return buffer.clone();
-                    })
                     .with_expected_response(b"OK")
                     .with_delay(crate::MS_TO_NANO * 250),
                 WifiCommand::new()
@@ -159,7 +161,7 @@ pub struct WifiCommand {
     /// If this is present, the receive buffer is the input
     /// and whatever you return goes into a register
     /// that is stored at the WifiCommandSequence level
-    pub transform_output: Option<fn(&Vector::<u8>) -> Vector::<u8>>,
+    pub transform_output: Option<fn(&Vector::<u8>) -> BTreeMap<String, String>>,
 }
 
 impl WifiCommand {
@@ -187,7 +189,7 @@ impl WifiCommand {
         return next;
     }
 
-    pub fn with_transform(&self, transform_method: fn(&Vector::<u8>) -> Vector::<u8>) -> Self {
+    pub fn with_transform(&self, transform_method: fn(&Vector::<u8>) -> BTreeMap<String, String>) -> Self {
         let mut next = self.clone();
         next.transform_output = Some(transform_method);
         return next;
@@ -221,7 +223,8 @@ impl WifiCommand {
 #[derive(Copy, Clone)]
 pub struct WifiCommandSequence {
     commands: Vector<WifiCommand>,
-    outputs: Vector<Vector<u8>>,
+    outputs: BTreeMap<String, String>,
+    context: BTreeMap::<String, String>,
     index: usize,
     command_sent: bool,
     time_target: u64,
@@ -238,7 +241,8 @@ impl  WifiCommandSequence {
     pub fn new(commands: Vector<WifiCommand>) -> WifiCommandSequence {
         return WifiCommandSequence {
             commands: commands,
-            outputs: Vector::new(),
+            context: BTreeMap::new(),
+            outputs: BTreeMap::new(),
             command_sent: false,
             index: 0,
             time_target: 0,
@@ -251,7 +255,8 @@ impl  WifiCommandSequence {
     pub fn new_with_callback(commands: Vector<WifiCommand>, func: Box<Callback>) -> WifiCommandSequence {
         return WifiCommandSequence {
             commands: commands,
-            outputs: Vector::new(),
+            outputs: BTreeMap::new(),
+            context: BTreeMap::new(),
             command_sent: false,
             index: 0,
             time_target: 0,
@@ -294,7 +299,7 @@ impl  WifiCommandSequence {
                         // Check if there is transformation to happen
                         if command.transform_output.is_some() {
                             let transform_method = command.transform_output.unwrap();
-                            self.outputs.push(transform_method(&serial_buffer(device)));
+                            self.merge_artifacts(transform_method(&serial_buffer(device)));                            
                         }
                         
                         self.advance(driver, device);
@@ -309,7 +314,7 @@ impl  WifiCommandSequence {
                                 // Check if there is transformation to happen
                                 if command.transform_output.is_some() {
                                     let transform_method = command.transform_output.unwrap();
-                                    self.outputs.push(transform_method(rx_buffer));
+                                    self.merge_artifacts(transform_method(&serial_buffer(device)));
                                 }
 
                                 self.advance(driver, device);
@@ -333,6 +338,14 @@ impl  WifiCommandSequence {
         }
         
         self.update_time_target();
+    }
+
+    fn merge_artifacts(&mut self, artifacts: BTreeMap<String, String>) {
+        let result_keys = artifacts.keys();
+        for i in 0 .. result_keys.size() {
+            let key = result_keys.get(i).unwrap();
+            self.outputs.insert(key, artifacts.get(key).unwrap());
+        }
     }
 
     fn advance(&mut self, driver: &mut WifiDriver, device: SerioDevice) {

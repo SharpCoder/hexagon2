@@ -30,7 +30,7 @@ macro_rules! procs {
 #[no_mangle]
 pub fn run_tasks() {
     // Drivers and stateful things
-    let mut wifi_driver = WifiDriver::new(SerioDevice::Uart6, 5, 6);
+    let mut wifi_driver = WifiDriver::new(SerioDevice::Default, 5, 6);
 
     // The processes which run in this system
     let mut wifi_task = WifiTask::new(&mut wifi_driver);
@@ -39,9 +39,9 @@ pub fn run_tasks() {
     let mut led_task = WS2812Task::new();
 
     procs!(
-        // wifi_task,
-        // blink_task,
+        wifi_task,
+        blink_task,
         periodic_task,
-        // led_task,
+        led_task,
     );
 }

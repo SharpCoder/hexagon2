@@ -13,7 +13,7 @@ use crate::*;
 type CondFn = fn(&mut Gate) -> bool;
 type ExecFn = fn();
 
-const MAX_SUPPORTED_FUNCTIONS: usize = 128;
+const MAX_SUPPORTED_FUNCTIONS: usize = 32;
 
 #[derive(Copy, Clone)]
 pub struct Gate {
@@ -31,7 +31,7 @@ pub struct Gate {
 macro_rules! gate_open {
     ( $( $x:expr ),* ) => {
         {
-            let id = unsafe { code_hash() };
+            let id = code_hash();
             let current_node = unsafe { GATES.get(id) };
             let result: &mut Gate;
             
@@ -53,7 +53,6 @@ macro_rules! gate_open {
             }
 
             result
-
         }
     };
 }

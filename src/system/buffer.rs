@@ -81,6 +81,10 @@ impl Array<u8> for &[u8] {
 
         panic!("Not implemented");
     }
+
+    fn put(&mut self, index: usize, element: u8) {
+        panic!("Not implemented");
+    }
 }
 
 impl <const SIZE: usize, T : Copy> Array<T> for Buffer<SIZE, T> {
@@ -102,6 +106,10 @@ impl <const SIZE: usize, T : Copy> Array<T> for Buffer<SIZE, T> {
         } else {
             return Some(&mut self.data[index]);
         }
+    }
+
+    fn put(&mut self, index: usize, element: T) {
+        self.data.as_mut()[index] = element;
     }
 }
 

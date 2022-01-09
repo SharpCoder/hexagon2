@@ -38,6 +38,7 @@ pub trait Queue <T> {
 pub trait Array<T> {
     fn get(&self, index: usize) -> Option<T>;
     fn get_mut(&mut self, index: usize) -> Option<&mut T>;
+    fn put(&mut self, index: usize, element: T);
     fn size(&self) -> usize;
 }
 
@@ -87,6 +88,16 @@ impl <T: Clone + Copy> Copy for Vector<T> {
 impl <T: Clone + Copy> Array<T> for Vector<T> {
     fn size(&self) -> usize {
         return self.size;
+    }
+
+    fn put(&mut self, index: usize, element: T) {
+        let node = self.get_mut(index);
+        match node {
+            None => {},
+            Some(el) => {
+                (*el) = element;
+            }
+        }
     }
 
     fn get(&self, index: usize) -> Option<T> {
@@ -375,5 +386,19 @@ mod test {
 
         assert_eq!(list1.pop(), Some(512));
         assert_eq!(list1.pop(), Some(256));
+    }
+
+    #[test]
+    fn test_vector_insert() {
+        let mut vec = Vector::from_slice(&[1,2,3,4,5]);
+        vec.put(3, 100);
+
+        let mut found = false;
+        for idx in 0 .. vec.size() {
+            if vec.get(idx) == Some(100) {
+                found = true;
+            }
+        }
+        assert_eq!(found, true);
     }
 }
