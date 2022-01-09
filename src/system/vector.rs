@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use crate::mem::{ kalloc, free };
+use core::iter::{Iterator, IntoIterator};
 
 /// This macro returns a vector of the items you pass to it.
 #[macro_export]
@@ -55,6 +56,32 @@ pub struct Node<T : Clone + Copy> {
 pub struct Vector<T : Clone + Copy> {
     pub head: Option<*mut Node<T>>,
     pub size: usize,
+}
+
+pub struct NodeIter<T: Clone+Copy> {
+    current: Option<Node<T>>,
+}
+
+impl <T: Clone+Copy> Iterator for NodeIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.current {
+            None => {
+                return None;
+            },
+            Some(element) => {
+                let result = element.item;
+                // Check if we have next
+                if element.next.is_none() {
+                    self.current = None;
+                } else {
+                    self.current = Some(unsafe { *(element.next.unwrap()) });
+                }
+                return Some(result);
+            }
+        };
+    }
 }
 
 impl <T: Clone + Copy> Clone for Vector<T> {
@@ -217,6 +244,18 @@ impl <T: Clone + Copy> Stack<T> for Vector<T> {
 impl <T: Clone + Copy> Vector<T> {
     pub fn new() -> Self {
         return Vector { head: None, size: 0 };
+    }
+
+    pub fn into_iter(&self) -> NodeIter<T> {
+        if self.head.is_none() {
+            return NodeIter {
+                current: None,
+            };
+        } else {
+            return NodeIter {
+                current: Some(unsafe { *self.head.unwrap() })
+            };
+        }
     }
 
     pub fn from_slice(items: &[T]) -> Self {
@@ -400,5 +439,16 @@ mod test {
             }
         }
         assert_eq!(found, true);
+    }
+
+    #[test]
+    fn test_iterator() {
+        let vec = vector!(1,2,3,4);
+        let mut count = 0;
+        for _ in vec.into_iter() {
+            count += 1;
+        }
+
+        assert_eq!(count, vec.size());
     }
 }
