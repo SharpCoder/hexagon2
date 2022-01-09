@@ -110,7 +110,7 @@ impl Mempage {
                 None => {
                     MEMORY_PAGES = Some(next_page);
                 },
-                Some(mut head) => {
+                Some(head) => {
                     (*next_page).next = Some(head);
                     MEMORY_PAGES = Some(next_page);
                 }
@@ -141,7 +141,7 @@ pub fn alloc(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
         if MEMORY_OFFSET + bytes as u32 >= (MEMORY_MAXIMUM - 0x5_0FFC) {
-            unsafe { MEMORY_OVERFLOW = true };
+            MEMORY_OVERFLOW = true;
             return Mempage::reclaim(bytes);
         }
 

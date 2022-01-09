@@ -1,4 +1,4 @@
-use crate::datastructures::*;
+use crate::system::vector::*;
 
 pub type String = Vector::<u8>;
 

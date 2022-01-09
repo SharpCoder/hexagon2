@@ -13,14 +13,26 @@ pub struct PeriodicTask {
     gate: Gate,
 }
 
+pub struct OmgCats {
+    pub lolz: u128,
+    pub catz: u128,
+}
+
+static mut COUNT: u32 = 0;
+
 impl PeriodicTask {
     pub fn new() -> PeriodicTask {
         return PeriodicTask {
             gate: Gate::new()
-                .when_nano(crate::S_TO_NANO * 2, || {
-                    // serial_write(SerioDevice::Default, b"AT\r\n");
-                    // blink_hardware(1);
-                    // blink(1, Speed::Fast);
+                .when_nano(crate::MS_TO_NANO * 50, || {                    
+                    if unsafe { crate::mem::MEMORY_OVERFLOW } {
+                        debug_str(b"reclaimed");
+                    } else {
+                        debug_str(b"alloc");
+                    }
+
+                    let ptr = crate::mem::kalloc::<OmgCats>();
+                    crate::mem::free(ptr);
                 })
                 .compile()
         }

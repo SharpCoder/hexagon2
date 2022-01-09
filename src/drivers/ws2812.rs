@@ -1,6 +1,5 @@
 use crate::wait_ns;
 use crate::phys::pins::*;
-use crate::phys::irq::*;
 
 #[derive(Clone, Copy)]
 struct Node {

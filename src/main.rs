@@ -5,13 +5,11 @@ pub mod clock;
 pub mod debug;
 pub mod drivers;
 pub mod gate;
-pub mod datastructures;
 pub mod http_models;
 pub mod math;
 pub mod mem;
 pub mod phys;
 pub mod serio;
-pub mod strings;
 pub mod tasks;
 pub mod system;
 

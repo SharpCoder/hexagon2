@@ -1,4 +1,4 @@
-use crate::datastructures::*;
+use crate::system::vector::*;
 
 // Technically this supports up-to base 26 :P
 pub fn int_to_hex(number: u8) -> u8 {

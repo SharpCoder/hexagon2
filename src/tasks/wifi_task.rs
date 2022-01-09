@@ -1,7 +1,7 @@
 use crate::*;
 use crate::Task;
 use crate::drivers::wifi::*;
-use crate::datastructures::*;
+use crate::system::vector::*;
 use crate::http_models::*;
 
 pub struct WifiTask<'a> { 

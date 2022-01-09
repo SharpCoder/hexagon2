@@ -11,7 +11,7 @@ use crate::phys::uart::*;
 use crate::phys::irq::*;
 use crate::phys::pins::*;
 use crate::phys::addrs;
-use crate::datastructures::*;
+use crate::system::vector::*;
 
 struct HardwareConfig {
     device: Device,

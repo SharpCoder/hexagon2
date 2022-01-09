@@ -3,8 +3,8 @@
     It's a bunch of useful structs for http stuff.
 */
 use crate::*;
-use crate::datastructures::*;
-use crate::strings::*;
+use crate::system::vector::*;
+use crate::system::strings::*;
 
 #[derive(Copy, Clone)]
 pub struct HttpHeader {
