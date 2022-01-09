@@ -179,6 +179,8 @@ impl <T: Clone + Copy> Stack<T> for Vector<T> {
         if self.size == 1 {
             // Return head node
             node_item = unsafe { *self.head.unwrap() }.item;
+            // Free the head
+            free(self.head.unwrap());
             self.head = None;
 
         } else {
@@ -189,7 +191,12 @@ impl <T: Clone + Copy> Stack<T> for Vector<T> {
             }
             
             node_item = unsafe { (*(*ptr).next.unwrap()).item };
-            unsafe { (*ptr).next = None };
+            unsafe {
+                // Free the node
+                free((*ptr).next.unwrap());
+                // Update node parent to point at nothing 
+                (*ptr).next = None 
+            };
         }
 
         self.size -= 1;

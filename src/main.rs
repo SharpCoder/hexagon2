@@ -51,6 +51,10 @@ pub fn main() {
     // Enable interrupts across the system
     enable_interrupts();
 
+    debug_str(b"begin memtest...");
+    mem::memtest();
+    debug_str(b"memtest complete");
+
     // Run system tasks
     // Go see tasks.rs to add more system tasks
     // to the kernel.
