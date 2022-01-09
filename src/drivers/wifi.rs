@@ -178,6 +178,12 @@ impl WifiCommand {
         };
     }
 
+    pub fn with_termination(&self, func: fn(&Vector::<u8>) -> bool) -> Self {
+        let mut next = self.clone();
+        next.termination_condition = Some(func);
+        return next;
+    }
+
     pub fn with_timeout(&self, timeout: u64) -> Self {
         let mut next = self.clone();
         next.timeout = Some(timeout);
@@ -296,14 +302,8 @@ impl  WifiCommandSequence {
                     self.command_sent = true;
         
                     // Check if we care about the response
-                    if command.expected_response.is_none() && command.error_response.is_none() {
-                        // Check if there is transformation to happen
-                        if command.transform_output.is_some() {
-                            let transform_method = command.transform_output.unwrap();
-                            self.merge_artifacts(transform_method(&serial_buffer(device)));                            
-                        }
-                        
-                        self.advance(driver, device);
+                    if command.expected_response.is_none() && command.error_response.is_none() && command.termination_condition.is_none() {                        
+                        self.advance(command, driver, device);
                     }
                 } else if serial_available(device) > 0 {
                     // Scan for the things we care about
@@ -311,14 +311,7 @@ impl  WifiCommandSequence {
                         None => {},
                         Some(expected_response) => {
                             if rx_buffer.contains(vec_str!(expected_response)) {
-
-                                // Check if there is transformation to happen
-                                if command.transform_output.is_some() {
-                                    let transform_method = command.transform_output.unwrap();
-                                    self.merge_artifacts(transform_method(&serial_buffer(device)));
-                                }
-
-                                self.advance(driver, device);
+                                self.advance(command, driver, device);
                             }
                         }
                     }
@@ -330,6 +323,15 @@ impl  WifiCommandSequence {
                                 self.reset(device);
                                 self.aborted = true;
                             }
+                        }
+                    }
+                }
+
+                match command.termination_condition {
+                    None => {},
+                    Some(condition) => {
+                        if condition(&serial_buffer(device)) {
+                            self.advance(command, driver, device);
                         }
                     }
                 }
@@ -349,7 +351,15 @@ impl  WifiCommandSequence {
         }
     }
 
-    fn advance(&mut self, driver: &mut WifiDriver, device: SerioDevice) {
+    fn advance(&mut self, command: WifiCommand, driver: &mut WifiDriver, device: SerioDevice) {
+
+        // Check if there is transformation to happen
+        if command.transform_output.is_some() {
+            let transform_method = command.transform_output.unwrap();
+            self.merge_artifacts(transform_method(&serial_buffer(device)));
+        }
+
+                                
         self.index += 1;
         if self.index >= self.commands.size() {
             if self.callback.is_some() {
