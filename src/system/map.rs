@@ -1,12 +1,13 @@
-use core::cmp::*;
 use crate::*;
 use crate::mem::*;
 use crate::system::vector::*;
+use core::cmp::*;
 
 pub trait Map<K : PartialOrd + PartialEq + Copy, V : Copy> {
     fn insert(&mut self, key: K, value: V);
     fn remove(&mut self, key: K);
     fn get(&self, key: K) -> Option<V>;
+    fn get_mut(&mut self, key: K) -> Option<&mut V>;
     fn keys(&self) -> Vector::<K>;
 }
 
@@ -190,8 +191,8 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V>
         } else if left_matches || right_matches {
             // Check if left has children
             let node = match left_matches {
-                true => unsafe { *(self.left.as_mut().unwrap()) },
-                false => unsafe { *(self.right.as_mut().unwrap()) } 
+                true => *(self.left.as_mut().unwrap()),
+                false => *(self.right.as_mut().unwrap()), 
             };
             let descendants = unsafe { *node }.descendant_count();
 
@@ -228,7 +229,7 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V>
                 let replacement = right_node.min_value();
 
                 let right_left = unsafe { (node.as_mut().unwrap().left.unwrap()).as_mut().unwrap() };
-                let right_right = unsafe { (node.as_mut().unwrap().right.unwrap()).as_mut().unwrap() };;
+                let right_right = unsafe { (node.as_mut().unwrap().right.unwrap()).as_mut().unwrap() };
 
                 // Wire up replacement
                 if replacement.key != right_left.key {
@@ -322,6 +323,13 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> Map<K, V> for BTreeMap<K, V> 
         return match &self.root {
             None => None,
             Some(node) => node.get(key),
+        };
+    }
+
+    fn get_mut(&mut self, key: K) -> Option<&mut V> {
+        return match &self.root {
+            None => None,
+            Some(_) => self.root.as_mut().unwrap().get_mut(key),
         };
     }
 

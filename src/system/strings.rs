@@ -1,4 +1,6 @@
+
 use crate::system::vector::*;
+use core::cmp::{ *, Ordering };
 
 pub type String = Vector::<u8>;
 
@@ -8,7 +10,7 @@ pub trait StringBuffer {
     fn split(&self, separator: u8) -> Vector::<String>;
 }
 
-impl StringBuffer for Vector::<u8> {
+impl StringBuffer for String {
     fn index_of(&self, target: String) -> Option<usize> {
         if target.size() == 0 {
             return None;
@@ -67,6 +69,55 @@ impl StringBuffer for Vector::<u8> {
     }
 }
 
+impl PartialEq for String {
+    fn eq(&self, other: &Self) -> bool {
+        if self.size() != other.size() {
+            return false;
+        }
+
+        for idx in 0 .. self.size() {
+            let left = self.get(idx).unwrap();
+            let right = other.get(idx).unwrap();
+
+            if left != right {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+// This might be a bad idea... but it makes BTreeMap super useful
+impl PartialOrd for String {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let min_count;
+        if self.size() > other.size() {
+            min_count = other.size();
+        } else {
+            min_count = self.size();
+        }
+
+        for idx in 0 .. min_count {
+            let left = self.get(idx).unwrap();
+            let right = other.get(idx).unwrap();
+
+            if left == right {
+                continue;
+            } else {
+                return left.partial_cmp(&right);
+            }
+        }
+
+        // They are the same up to this point
+        if self.size() > other.size() {
+            return Some(Ordering::Greater);
+        } else {
+            return Some(Ordering::Less);
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -104,5 +155,13 @@ mod test {
         let words= text.split(b'\n');
         assert_eq!(words.size(), 4);
         vecs_eq(words.get(0).unwrap(), vec_str!(b"Hello"));
+    }
+
+    #[test]
+    fn test_string_comparison() {
+        assert_eq!(vec_str!(b"hello") == vec_str!(b"hello"), true);
+        assert_eq!(vec_str!(b"hello there") > vec_str!(b"hello"), true);
+        assert_eq!(vec_str!(b"howdy") > vec_str!(b"hello"), true);
+        assert_eq!(vec_str!(b"god") < vec_str!(b"zomg"), true);
     }
 }

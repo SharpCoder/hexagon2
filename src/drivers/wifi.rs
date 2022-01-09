@@ -56,7 +56,7 @@ impl WifiDriver {
         crate::wait_ns(crate::MS_TO_NANO * 400);
         
         self.queued_commands.enqueue(WifiCommandSequence::new(
-            vec!(
+            vector!(
                 WifiCommand::new()
                     .with_command(b"ATE0")
                     .with_expected_response(b"OK")
@@ -67,7 +67,7 @@ impl WifiDriver {
 
     pub fn dns_lookup(&mut self, domain: &[u8], method: Callback) {
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
-            vec!(
+            vector!(
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPDOMAIN=\"")
                     .join_vec(vec_str!(domain))
@@ -94,7 +94,7 @@ impl WifiDriver {
     pub fn http_request(&mut self, ip_addr: String, request: HttpRequest, method: Callback) {
         let content = request.as_vec();
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
-            vec!(
+            vector!(
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPSTART=\"TCP\",\"")
                     .join_vec(ip_addr)
