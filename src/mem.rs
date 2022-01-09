@@ -16,7 +16,6 @@ const MEMORY_MAXIMUM: u32 = 0x7_FFFF; // 512kb
 const MEMORY_BEGIN_OFFSET: u32 = 0x0_0FFC; // 4kb buffer (note: it should be word aligned)
 static mut MEMORY_OFFSET: u32 = MEMORY_BEGIN_OFFSET;
 static mut MEMORY_PAGES: Option<*mut Mempage> = None;
-pub static mut MEMORY_OVERFLOW: bool = false;
 
 /// A page of memory
 #[repr(C)]
@@ -39,17 +38,30 @@ impl Mempage {
     }
 
     pub fn reclaim(bytes: usize) -> *mut u32 {
-        // Iterate through mempage
+        // Iterate through mempage searching for the best candidate
+        // that is currently free.
         unsafe {
+            let mut best_ptr: Option<*mut Mempage> = None;
+            let mut best_size: usize = usize::MAX;
+
             let mut ptr = MEMORY_PAGES;
+
             while ptr.is_some() {
                 let node = ptr.unwrap();
-                if (*node).size >= bytes && (*node).used == false {
+                if (*node).size >= bytes && best_size > (*node).size && (*node).used == false {
+                    best_ptr = Some(node);
+                    best_size = (*node).size;
+                }
+                ptr = (*node).next;
+            }
+
+            // Process the best candidate
+            match best_ptr {
+                None => {},
+                Some(node) => {
                     (*node).used = true;
                     return node as *mut u32;
                 }
-                ptr = (*node).next;
-                
             }
         }
 
@@ -82,7 +94,7 @@ impl Mempage {
         let next_page = alloc(total_bytes) as *mut Mempage;
         let item_ptr = ((next_page as u32) + page_bytes as u32) as *mut T; 
 
-        if unsafe { MEMORY_OVERFLOW } {
+        if is_overrun(total_bytes) {
             // Don't allocate a new page
             return item_ptr;
         }
@@ -111,6 +123,10 @@ impl Mempage {
     }
 }
 
+pub fn is_overrun(bytes: usize) -> bool {
+    return unsafe { MEMORY_OFFSET } + bytes as u32 >= (MEMORY_MAXIMUM - 0x6_FFFF);  
+}
+
 /// zero out every piece of memory.
 /// if we encounter a bad sector,
 /// the device will throw an oob irq
@@ -129,8 +145,7 @@ pub fn memtest() {
 pub fn alloc(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
-        if MEMORY_OFFSET + bytes as u32 >= MEMORY_MAXIMUM {
-            MEMORY_OVERFLOW = true;
+        if is_overrun(bytes) {
             return Mempage::reclaim(bytes);
         }
 

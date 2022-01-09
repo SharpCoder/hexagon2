@@ -41,7 +41,7 @@ pub fn run_tasks() {
     procs!(
         wifi_task,
         blink_task,
-        periodic_task,
+        // periodic_task,
         led_task,
     );
 }

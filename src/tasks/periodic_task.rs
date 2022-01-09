@@ -25,14 +25,14 @@ impl PeriodicTask {
         return PeriodicTask {
             gate: Gate::new()
                 .when_nano(crate::MS_TO_NANO * 50, || {                    
-                    // if unsafe { crate::mem::MEMORY_OVERFLOW } {
-                    //     debug_str(b"reclaimed");
-                    // } else {
-                    //     debug_str(b"alloc");
-                    // }
+                    if crate::mem::is_overrun(core::mem::size_of::<OmgCats>()) {
+                        debug_str(b"reclaimed");
+                    } else {
+                        debug_str(b"alloc");
+                    }
 
-                    // let ptr = crate::mem::kalloc::<OmgCats>();
-                    // crate::mem::free(ptr);
+                    let ptr = crate::mem::kalloc::<OmgCats>();
+                    crate::mem::free(ptr);
                 })
                 .compile()
         }
