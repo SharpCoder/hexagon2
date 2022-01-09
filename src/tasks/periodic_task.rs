@@ -5,13 +5,12 @@ with system debug to properly gate the LED based on
 blink requests without tying up system resources.
 */
 
+use crate::*;
 use crate::Task;
-use crate::Gate;
 use crate::debug::*;
+use crate::phys::pins::*;
 
-pub struct PeriodicTask { 
-    gate: Gate,
-}
+pub struct PeriodicTask { }
 
 pub struct OmgCats {
     pub lolz: u128,
@@ -20,26 +19,21 @@ pub struct OmgCats {
 
 impl PeriodicTask {
     pub fn new() -> PeriodicTask {
-        return PeriodicTask {
-            gate: Gate::new()
-                .when_nano(crate::MS_TO_NANO * 50, || {                    
-                    if crate::mem::is_overrun(core::mem::size_of::<OmgCats>()) {
-                        debug_str(b"reclaimed");
-                    } else {
-                        debug_str(b"alloc");
-                    }
-
-                    let ptr = crate::mem::kalloc::<OmgCats>();
-                    crate::mem::free(ptr);
-                })
-                .compile()
-        }
+        return PeriodicTask { };
     }
 }
 
 impl Task for PeriodicTask {
     fn init(&mut self) { }
     fn system_loop(&mut self) {
-        self.gate.process();
+        gate_open!()
+            .when_nano(crate::MS_TO_NANO * 250, || { pin_out(13, Power::High )})
+            .when_nano(crate::MS_TO_NANO * 250, || { pin_out(13, Power::Low); })
+            .compile();
+
+        gate_open!()
+            .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
+            .when_nano(crate::MS_TO_NANO * 400, || { debug_str(b"lolcatz"); })
+            .compile();
     }
 }

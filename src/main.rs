@@ -24,9 +24,15 @@ use phys::pins::*;
 use debug::*;
 use serio::*;
 use gate::*;
+use system::map::*;
 
 pub const S_TO_NANO: u64 = 1000000000;
 pub const MS_TO_NANO: u64 = S_TO_NANO / 1000;
+
+// Support global gate array
+pub static mut GATES: BTreeMap::<u32, u32> = BTreeMap {
+    root: None,
+};
 
 #[no_mangle]
 pub fn main() {
@@ -58,7 +64,7 @@ pub fn main() {
     // Go see tasks.rs to add more system tasks
     // to the kernel.
     tasks::run_tasks();
-    
+
     loop {
         unsafe {
             asm!("nop");
@@ -150,12 +156,19 @@ pub fn oob() {
     err(PanicType::Oob);
 }
 
-extern "C" {
-    pub fn uuid() -> u32;
+#[no_mangle]
+/// This function returns a u32 containing the
+/// program counter of the line of code which
+/// invokes this function.
+pub fn code_hash() -> u32 {
+    let result = 0;
+    unsafe {
+        asm!("mov r0, lr");
+    }
+    return result;
 }
 
-// Although I'm including the core library, I like
-// my own implementation better.
+#[no_mangle]
 global_asm!("
     _ZN4core9panicking18panic_bounds_check17h9048f255eeb8dcc3E:
         bl oob
@@ -163,8 +176,4 @@ global_asm!("
 
     hang:
         b hang
-
-    uuid:
-        mov r0, lr
-        mov pc, lr
 ");

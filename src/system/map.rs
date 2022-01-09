@@ -20,7 +20,7 @@ pub trait BTree<K : PartialOrd + PartialEq + Copy, V : Copy> {
 }
 
 #[derive(Copy, Clone)]
-struct MapNode<K : PartialOrd + PartialEq + Copy, V : Copy> {
+pub struct MapNode<K : PartialOrd + PartialEq + Copy, V : Copy> {
     item: V,
     key: K,
     left: Option<*mut MapNode<K, V>>,
@@ -30,8 +30,10 @@ struct MapNode<K : PartialOrd + PartialEq + Copy, V : Copy> {
 
 #[derive(Copy, Clone)]
 pub struct BTreeMap<K : PartialOrd + PartialEq + Copy, V : Copy> {
-    root: Option<MapNode<K, V>>,
+    pub root: Option<MapNode<K, V>>,
 }
+
+unsafe impl<K : PartialOrd + PartialEq + Copy, V : Copy> Sync for BTreeMap<K, V> where V: Sync  {}
 
 impl <K : PartialOrd + PartialEq + Copy, V : Copy> PartialEq for MapNode<K, V> {
     fn eq(&self, other: &Self) -> bool {

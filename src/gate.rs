@@ -6,7 +6,9 @@ condition statemenet and then a function delegate.
 If the condition is not met, the gate will yield 
 until a later point.
 */
+use crate::mem::*;
 use crate::clock::*;
+use crate::*;
 
 type CondFn = fn(&mut Gate) -> bool;
 type ExecFn = fn();
@@ -15,14 +17,47 @@ const MAX_SUPPORTED_FUNCTIONS: usize = 128;
 
 #[derive(Copy, Clone)]
 pub struct Gate {
-    conditions: [CondFn; MAX_SUPPORTED_FUNCTIONS],
-    functions: [ExecFn; MAX_SUPPORTED_FUNCTIONS],
-    durations: [u64; MAX_SUPPORTED_FUNCTIONS],
-    target_times: [u64; MAX_SUPPORTED_FUNCTIONS],
-    current_index: usize,
-    tail: usize,
-    once: bool,
+    pub conditions: [CondFn; MAX_SUPPORTED_FUNCTIONS],
+    pub functions: [ExecFn; MAX_SUPPORTED_FUNCTIONS],
+    pub durations: [u64; MAX_SUPPORTED_FUNCTIONS],
+    pub target_times: [u64; MAX_SUPPORTED_FUNCTIONS],
+    pub current_index: usize,
+    pub tail: usize,
+    pub once: bool,
+    pub compiled: bool,
 }
+
+#[macro_export]
+macro_rules! gate_open {
+    ( $( $x:expr ),* ) => {
+        {
+            let id = unsafe { code_hash() };
+            let current_node = unsafe { GATES.get(id) };
+            let result: &mut Gate;
+            
+            match current_node {
+                None => {
+                    // Let's create a new gate.
+                    let new_gate = crate::mem::kalloc::<Gate>();
+                    unsafe { *new_gate = Gate::new(); }
+
+                    // This new gate is what we'l return
+                    result = unsafe { &mut (*new_gate) };
+
+                    // Insert the gate in the global gate register
+                    unsafe { GATES.insert(id, new_gate as u32) };
+                },
+                Some(gate) => {
+                    result = unsafe { (gate as *mut Gate).as_mut().unwrap() };
+                }
+            }
+
+            result
+
+        }
+    };
+}
+
 
 impl Gate {
     pub fn new() -> Gate {
@@ -34,10 +69,15 @@ impl Gate {
             current_index: 0usize,
             tail: 0usize,
             once: false,
+            compiled: false,
         };
-    }   
+    }
 
     pub fn when(&mut self, cond: CondFn, then: ExecFn) -> &mut Self {
+        if self.compiled {
+            return self;
+        }
+
         self.conditions[self.tail] = cond;
         self.functions[self.tail] = then;
         self.tail += 1;
@@ -45,6 +85,10 @@ impl Gate {
     }
 
     pub fn when_nano(&mut self, duration_nanos: u64, then: ExecFn) -> &mut Self {
+        if self.compiled {
+            return self;
+        }
+
         self.conditions[self.tail] = |this: &mut Gate| {
             return nanos() > this.target_times[this.current_index];
         };
@@ -62,6 +106,15 @@ impl Gate {
     
     /// Return the compiled gate, ready to be processed.
     pub fn compile(&mut self) -> Gate {
+
+        // debug_u32(unsafe { GATES.size() } as u32, b"gate size");
+        // debug_u64(self.id, b" working with gate");
+        if self.compiled {
+            self.process();
+        } else {
+            self.compiled = true;
+        }
+
         return *self;
     }
 
