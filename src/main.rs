@@ -156,7 +156,6 @@ pub fn oob() {
     err(PanicType::Oob);
 }
 
-#[no_mangle]
 /// This function returns a u32 containing the
 /// program counter of the line of code which
 /// invokes this function.
@@ -168,7 +167,6 @@ pub fn code_hash() -> u32 {
     return result;
 }
 
-#[no_mangle]
 global_asm!("
     _ZN4core9panicking18panic_bounds_check17h9048f255eeb8dcc3E:
         bl oob

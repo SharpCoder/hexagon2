@@ -6,9 +6,7 @@ condition statemenet and then a function delegate.
 If the condition is not met, the gate will yield 
 until a later point.
 */
-use crate::mem::*;
 use crate::clock::*;
-use crate::*;
 
 type CondFn = fn(&mut Gate) -> bool;
 type ExecFn = fn();

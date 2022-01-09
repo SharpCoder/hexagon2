@@ -82,7 +82,7 @@ impl Array<u8> for &[u8] {
         panic!("Not implemented");
     }
 
-    fn put(&mut self, index: usize, element: u8) {
+    fn put(&mut self, _index: usize, _element: u8) {
         panic!("Not implemented");
     }
 }

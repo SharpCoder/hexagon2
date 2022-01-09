@@ -88,7 +88,6 @@ impl WifiDriver {
                         };
 
                         result.insert(vec_str!(b"ip_address"), rx_buffer.substr(0, space).unwrap());
-
                         return result;
                     })  
             ),
@@ -157,6 +156,7 @@ pub struct WifiCommand {
     pub error_response: Option<&'static [u8]>,
     pub delay: u64,
     pub timeout: Option<u64>,
+    pub termination_condition: Option<fn(&Vector::<u8>) -> bool>,
 
     /// If this is present, the receive buffer is the input
     /// and whatever you return goes into a register
@@ -172,6 +172,7 @@ impl WifiCommand {
             expected_response: None,
             error_response: None,
             delay: 0,
+            termination_condition: None,
             transform_output: None,
             timeout: None,
         };

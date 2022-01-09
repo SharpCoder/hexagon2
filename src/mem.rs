@@ -1,14 +1,7 @@
-#![allow(dead_code, unused_imports)]
 #[cfg(test)]
 use std::alloc::{alloc, Layout};
 use core::mem::{size_of};
 
-#[cfg(not(test))]
-use crate::*;
-#[cfg(not(test))]
-use crate::debug::*;
-#[cfg(not(test))]
-use crate::phys::*;
 #[cfg(not(test))]
 use crate::phys::addrs::OCRAM2;
 
