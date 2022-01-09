@@ -3,7 +3,7 @@ use crate::mem::{ kalloc, free };
 
 /// This macro returns a vector of the items you pass to it.
 #[macro_export]
-macro_rules! vec {
+macro_rules! vector {
     ( $( $x:expr ),* ) => {
         {
             let mut temp_vec = Vector::new();
@@ -266,7 +266,7 @@ mod test {
     }
 
     fn test_reverse() {
-        let vec = vec!(1u8, 2, 3, 4, 5);
+        let vec = vector!(1u8, 2, 3, 4, 5);
         let reversed = vec.reverse();
 
         assert_eq!(reversed.get(0), Some(5));

@@ -1,15 +1,20 @@
 use core::cmp::*;
+use crate::*;
 use crate::mem::*;
+use crate::system::vector::*;
 
 pub trait Map<K : PartialOrd + PartialEq + Copy, V : Copy> {
     fn insert(&mut self, key: K, value: V);
     fn remove(&mut self, key: K);
-    fn find(&self, key: K) -> Option<V>;
+    fn get(&self, key: K) -> Option<V>;
+    fn keys(&self) -> Vector::<K>;
 }
 
 pub trait BTree<K : PartialOrd + PartialEq + Copy, V : Copy> {
-    fn find(&self, target: K) -> Option<V>;
+    fn get_mut(&mut self, target: K) -> Option<&mut V>;
+    fn get(&self, target: K) -> Option<V>;
     fn insert(&mut self, target: K, value: V);
+    fn keys(&self) -> Vector::<K>;
 }
 
 // #[derive(Copy, Clone)]
@@ -62,20 +67,38 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> MapNode<K, V> {
 }
 
 impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V> {
-    fn find(&self, target: K) -> Option<V> {
+    fn get(&self, target: K) -> Option<V> {
         if self.key == target {
             return Some(self.item);
         } else if self.key > target {
             // Go left
             return match self.left {
                 None => None,
-                Some(node) => unsafe { node.as_ref().unwrap() }.find(target) 
+                Some(node) => unsafe { node.as_ref().unwrap() }.get(target) 
             };
         } else {
             // Go right
             return match self.right {
                 None => None,
-                Some(node) => unsafe { node.as_ref().unwrap() }.find(target)
+                Some(node) => unsafe { node.as_ref().unwrap() }.get(target)
+            };
+        }
+    }
+
+    fn get_mut(&mut self, target: K) -> Option<&mut V> {
+        if self.key == target {
+            return Some(&mut self.item);
+        } else if self.key > target {
+            // Go left
+            return match self.left {
+                None => None,
+                Some(node) => unsafe { node.as_mut().unwrap() }.get_mut(target) 
+            };
+        } else {
+            // Go right
+            return match self.right {
+                None => None,
+                Some(node) => unsafe { node.as_mut().unwrap() }.get_mut(target)
             };
         }
     }
@@ -104,6 +127,23 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V>
                 }
             }
         }
+    }
+
+    fn keys(&self) -> Vector::<K> {
+        let mut result = vector!(self.key);
+        match self.left {
+            None => {},
+            Some(node) => {
+                result.join(unsafe { node.as_ref().unwrap() }.keys());
+            }
+        }
+        match self.right {
+            None => {},
+            Some(node) => {
+                result.join(unsafe { node.as_ref().unwrap() }.keys());
+            }
+        }
+        return result;
     }
 }
 
@@ -141,10 +181,17 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> Map<K, V> for BTreeMap<K, V> 
         
     }
 
-    fn find(&self, key: K) -> Option<V> {
+    fn get(&self, key: K) -> Option<V> {
         return match &self.root {
             None => None,
-            Some(node) => node.find(key),
+            Some(node) => node.get(key),
+        };
+    }
+
+    fn keys(&self) -> Vector::<K> {
+        return match &self.root {
+            None => Vector::new(),
+            Some(head) => head.keys(),
         };
     }
 }
@@ -154,6 +201,7 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> Map<K, V> for BTreeMap<K, V> 
 #[cfg(test)]
 mod test { 
     use super::*;
+    use crate::system::strings::*;
 
     #[test]
     fn test_map_node() {
@@ -166,10 +214,10 @@ mod test {
         node.insert(80, 15);
         assert_eq!(node.size(), 3);
 
-        assert_eq!(node.find(80).unwrap(), 15);
-        assert_eq!(node.find(125).unwrap(), 25);
-        assert_eq!(node.find(100).unwrap(), 50);
-        assert_eq!(node.find(374), None);
+        assert_eq!(node.get(80).unwrap(), 15);
+        assert_eq!(node.get(125).unwrap(), 25);
+        assert_eq!(node.get(100).unwrap(), 50);
+        assert_eq!(node.get(374), None);
 
     }
 
@@ -182,7 +230,21 @@ mod test {
         map.insert(17, 3);
         
         assert_eq!(map.size(), 3);
-        assert_eq!(map.find(10), Some(1));
-        assert_eq!(map.find(15), Some(2));
+        assert_eq!(map.get(10), Some(1));
+        assert_eq!(map.get(15), Some(2));
+    }
+
+    #[test]
+    fn test_btree_keys() {
+        let mut map = BTreeMap::new();
+        map.insert(10u8, 1u8);
+        map.insert(20u8, 2u8);
+        map.insert(30u8, 3u8);
+
+        let keys = map.keys();
+        assert_eq!(keys.size(), 3);
+        assert_eq!(keys.get(0).unwrap(), 10u8);
+        assert_eq!(keys.get(1).unwrap(), 20u8);
+        assert_eq!(keys.get(2).unwrap(), 30u8);
     }
 }
