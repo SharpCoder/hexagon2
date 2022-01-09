@@ -110,43 +110,6 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> MapNode<K, V> {
             return self;
         }
     }
-
-    // This is just a convenience method
-    // to simplify delete logic. But
-    // it's terribly inefficient.
-    //
-    // Another interview no-hire. :P
-    pub fn parent <'a> (&mut self, target_key: K) -> Option<&mut Self> {
-        if self.key.eq(&target_key) {
-            return None;
-        } 
-        
-        match self.left {
-            None => { },
-            Some(el) => {
-                let left_node = unsafe { el.as_mut().unwrap() };
-                if left_node.key == target_key {
-                    return Some(self);
-                } else if self.key > target_key {
-                    return left_node.parent(target_key);
-                }
-            }
-        }
-
-        match self.right {
-            None => {},
-            Some(el) => {
-                let right_node = unsafe { el.as_mut().unwrap() };
-                if right_node.key == target_key {
-                    return Some(self);
-                } else if self.key < target_key {
-                    return right_node.parent(target_key);
-                }
-            }
-        }
-
-        return None;
-    }
 }
 
 impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V> {
