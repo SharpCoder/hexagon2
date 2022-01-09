@@ -124,7 +124,7 @@ impl Mempage {
 }
 
 pub fn is_overrun(bytes: usize) -> bool {
-    return unsafe { MEMORY_OFFSET } + bytes as u32 >= (MEMORY_MAXIMUM - 0x6_FFFF);  
+    return unsafe { MEMORY_OFFSET } + bytes as u32 >= MEMORY_MAXIMUM;  
 }
 
 /// zero out every piece of memory.
