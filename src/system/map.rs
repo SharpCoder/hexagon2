@@ -15,9 +15,10 @@ pub trait BTree<K : PartialOrd + PartialEq + Copy, V : Copy> {
     fn get(&self, target: K) -> Option<V>;
     fn insert(&mut self, target: K, value: V);
     fn keys(&self) -> Vector::<K>;
+    fn remove(&mut self, target: K);
 }
 
-// #[derive(Copy, Clone)]
+#[derive(Copy, Clone)]
 struct MapNode<K : PartialOrd + PartialEq + Copy, V : Copy> {
     item: V,
     key: K,
@@ -26,9 +27,27 @@ struct MapNode<K : PartialOrd + PartialEq + Copy, V : Copy> {
 }
 
 
-// #[derive(Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct BTreeMap<K : PartialOrd + PartialEq + Copy, V : Copy> {
     root: Option<MapNode<K, V>>,
+}
+
+impl <K : PartialOrd + PartialEq + Copy, V : Copy> PartialEq for MapNode<K, V> {
+    fn eq(&self, other: &Self) -> bool {
+        return self.key == other.key;
+    }
+}
+
+impl <K : PartialOrd + PartialEq + Copy, V : Copy> PartialOrd for MapNode<K, V> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.key > other.key {
+            return Some(Ordering::Greater);
+        } else if self.key < other.key {
+            return Some(Ordering::Less);
+        } else {
+            return Some(Ordering::Equal);
+        }
+    }
 }
 
 impl <K : PartialOrd + PartialEq + Copy, V : Copy> MapNode<K, V> {
@@ -63,6 +82,70 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> MapNode<K, V> {
         }
 
         return result;
+    }
+
+    pub fn put_left(&mut self, left: Option<*mut MapNode<K, V>>) {
+        self.left = left;
+    }
+
+    pub fn put_right(&mut self, right: Option<*mut MapNode<K, V>>) {
+        self.right = right;
+    }
+
+    pub fn descendant_count(&self) -> u32 {
+        return match self.left.is_some() {
+            false => 0,
+            true => 1,
+        } + match self.right.is_some(){
+            false => 0,
+            true => 1,
+        };
+    }
+
+    pub fn min_value(&mut self) -> &mut Self {
+        if self.left.is_some() {
+            let left_node = self.left.unwrap();
+            return unsafe { left_node.as_mut().unwrap() }.min_value();
+        } else {
+            return self;
+        }
+    }
+
+    // This is just a convenience method
+    // to simplify delete logic. But
+    // it's terribly inefficient.
+    //
+    // Another interview no-hire. :P
+    pub fn parent <'a> (&mut self, target_key: K) -> Option<&mut Self> {
+        if self.key.eq(&target_key) {
+            return None;
+        } 
+        
+        match self.left {
+            None => { },
+            Some(el) => {
+                let left_node = unsafe { el.as_mut().unwrap() };
+                if left_node.key == target_key {
+                    return Some(self);
+                } else if self.key > target_key {
+                    return left_node.parent(target_key);
+                }
+            }
+        }
+
+        match self.right {
+            None => {},
+            Some(el) => {
+                let right_node = unsafe { el.as_mut().unwrap() };
+                if right_node.key == target_key {
+                    return Some(self);
+                } else if self.key < target_key {
+                    return right_node.parent(target_key);
+                }
+            }
+        }
+
+        return None;
     }
 }
 
@@ -129,6 +212,90 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V>
         }
     }
 
+    fn remove(&mut self, target: K) {
+        let self_key = self.key;
+
+
+        let has_left_child = self.left.is_some();
+        let has_right_child = self.right.is_some();
+        let left_matches = has_left_child && unsafe { *(self.left.unwrap()) }.key == target;
+        let right_matches = has_right_child && unsafe { *(self.right.unwrap()) }.key == target;        
+
+        if self_key == target {
+            // Oops, this is the root node, nothing to remove.
+
+        } else if left_matches || right_matches {
+            // Check if left has children
+            let node = match left_matches {
+                true => unsafe { *(self.left.as_mut().unwrap()) },
+                false => unsafe { *(self.right.as_mut().unwrap()) } 
+            };
+            let descendants = unsafe { *node }.descendant_count();
+
+            if descendants == 0 {
+                // Snip it
+                if left_matches {
+                    self.put_left(None);
+                } else {
+                    self.put_right(None);
+                }
+
+                free(node);
+            } else if descendants == 1 {
+                // Get the single child of the matched node
+                // and replace the current node with it
+                let replacement;
+                if unsafe { *node }.left.is_some() {
+                    replacement = unsafe { *node }.left;
+                } else {
+                    replacement = unsafe { *node }.right;
+                }
+
+                if left_matches {
+                    self.put_left(replacement);
+                } else {
+                    self.put_right(replacement);
+                }
+
+                free(node);
+            } else if descendants == 2 {
+                // The hardest case
+                // Select the minimum value of the right subtree
+                let right_node = unsafe { node.as_mut().unwrap().right.unwrap().as_mut().unwrap() };
+                let replacement = right_node.min_value();
+
+                let right_left = unsafe { (node.as_mut().unwrap().left.unwrap()).as_mut().unwrap() };
+                let right_right = unsafe { (node.as_mut().unwrap().right.unwrap()).as_mut().unwrap() };;
+
+                // Wire up replacement
+                if replacement.key != right_left.key {
+                    replacement.put_left(Some(right_left));
+                }
+
+                if replacement.key != right_right.key {
+                    replacement.put_right(Some(right_right));
+                }
+
+                if left_matches {
+                    self.put_left(Some(replacement));
+                } else {
+                    self.put_right(Some(replacement));
+                }
+
+                free(node);
+            }
+        } else {
+            // Finally, binary search
+            if self.key > target && has_left_child {
+                let left_node = unsafe { self.left.unwrap().as_mut().unwrap() };
+                left_node.remove(target);
+            } else if self.key < target && has_right_child {
+                let right_node = unsafe { self.right.unwrap().as_mut().unwrap() };
+                right_node.remove(target);
+            }
+        } 
+    }
+
     fn keys(&self) -> Vector::<K> {
         let mut result = vector!(self.key);
         match self.left {
@@ -178,7 +345,14 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> Map<K, V> for BTreeMap<K, V> 
     }
 
     fn remove(&mut self, key: K) {
-        
+        if self.root.is_none() {
+            return;
+        } else if self.root.unwrap().key == key {
+            // NOTE: Nothing to free because root is not on the heap
+            self.root = None;
+        } else {
+            self.root.as_mut().unwrap().remove(key);
+        }
     }
 
     fn get(&self, key: K) -> Option<V> {
@@ -246,5 +420,56 @@ mod test {
         assert_eq!(keys.get(0).unwrap(), 10u8);
         assert_eq!(keys.get(1).unwrap(), 20u8);
         assert_eq!(keys.get(2).unwrap(), 30u8);
+    }
+
+    fn print_keys(vec: Vector::<u8>) {
+        for idx in 0 .. vec.size() {
+            println!("{}", vec.get(idx).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_btree_remove() {
+        let mut map = BTreeMap::new();
+        map.insert(10u8, 1u8);
+        map.insert(20u8, 2u8);
+        map.insert(8u8, 3u8);
+        map.insert(4u8, 4u8);
+        map.insert(9u8, 5u8);
+
+        // This will test each primary edge case
+        assert_eq!(map.size(), 5);
+        map.remove(8);
+        assert_eq!(map.size(), 4);
+        assert_eq!(map.get(8), None);
+        map.remove(9);
+        assert_eq!(map.size(), 3);
+        assert_eq!(map.get(9), None);
+        map.remove(4);
+        assert_eq!(map.size(), 2);
+        assert_eq!(map.get(4), None);
+
+        // This will test deeply nested deletes
+        map.insert(8, 1);
+        map.insert(9, 1);
+        map.insert(4, 1);
+        map.insert(2, 1);
+        map.insert(1, 1);
+        assert_eq!(map.size(), 7);
+        map.remove(2);
+
+        // Test deeply nested left tree
+        print_keys(map.keys());
+        assert_eq!(map.size(), 6);
+
+        // Test deeply nested right tree
+        map.insert(30, 1);
+        map.insert(40, 1);
+        map.insert(28, 1);
+        map.insert(27, 1);
+        map.insert(60, 3);
+        assert_eq!(map.size(), 11);
+        map.remove(60);
+        assert_eq!(map.size(), 10);
     }
 }
