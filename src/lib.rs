@@ -6,3 +6,7 @@ pub mod math;
 pub mod datastructures;
 pub mod strings;
 pub mod http_models;
+pub mod system;
+
+#[cfg(test)]
+pub fn err() {}

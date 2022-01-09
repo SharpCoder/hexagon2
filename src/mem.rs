@@ -28,7 +28,7 @@ pub fn kalloc<T>() -> *mut T {
 }
 
 #[cfg(test)]
-pub fn free<T>(ptr: *mut T) {
+pub fn free<T>(_ptr: *mut T) {
     // Do nothing
 }
 
@@ -42,6 +42,7 @@ pub struct Mempage {
     pub ptr: *mut u32,
 }
 
+#[cfg(not(test))]
 impl Mempage {
     pub const fn new(size: usize, ptr: *mut u32) -> Self {
         return Mempage {
@@ -68,13 +69,8 @@ impl Mempage {
             }
         }
 
-
         loop {
-            pin_out(13, Power::High);
-            wait_ns(MS_TO_NANO * 500);
-            pin_out(13, Power::Low);
-            wait_ns(MS_TO_NANO * 50);
-            unsafe { asm!("nop"); }
+            crate::err();
         }
     }
 
@@ -130,6 +126,7 @@ impl Mempage {
 /// if we encounter a bad sector,
 /// the device will throw an oob irq
 /// and enter error mode.
+#[cfg(not(test))]
 pub fn memtest() {
     for addr in MEMORY_BEGIN_OFFSET .. MEMORY_MAXIMUM / 4 {
         unsafe {

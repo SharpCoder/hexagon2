@@ -13,6 +13,7 @@ pub mod phys;
 pub mod serio;
 pub mod strings;
 pub mod tasks;
+pub mod system;
 
 // NOTE: remove this if you have trouble building
 pub mod env;
@@ -75,7 +76,6 @@ pub struct Box<T : Clone + Copy> {
 
 impl <T : Clone + Copy> Box<T> {
     pub fn new(reference: T) -> Self {
-        // let ptr = kalloc();
         return Box { reference: reference };
     }
 }
