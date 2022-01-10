@@ -34,9 +34,9 @@ impl WifiDriver {
         };
     }
 
-    pub fn connect(&mut self, ssid: &[u8], pwd: &[u8]) {
+    pub fn connect(&mut self, ssid: &[u8], pwd: &[u8], callback: Callback) {
         // Generate the command sequence
-        self.queued_commands.enqueue( WifiCommandSequence::new(
+        self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             Vector::from_slice(&[
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPSTATUS").with_expected_response(b"OK"),
@@ -47,7 +47,8 @@ impl WifiDriver {
                     .join_vec(vec_str!(pwd))
                     .join_vec(vec_str!(b"\""))
                     .with_expected_response(b"OK"),
-            ])
+            ]),
+            Box::new(callback)
         ));
     }
 
@@ -175,13 +176,17 @@ impl WifiDriver {
     }
 
     pub fn process(&mut self) {
+        // Check if we have an active command
+        if self.active_command.is_none() && self.queued_commands.size() == 0 {
+            return;
+        }
+        
         if clock::nanos() < self.time_target {
             return;
         }
-        self.time_target = clock::nanos() + crate::MS_TO_NANO * 150;
+        self.time_target = clock::nanos() + crate::MS_TO_NANO * 1000;
         let device = self.device;
         
-        // Check if we have an active command
         match self.active_command {
             None => {
                 self.active_command = self.queued_commands.dequeue();

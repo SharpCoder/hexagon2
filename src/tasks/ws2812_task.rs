@@ -3,6 +3,7 @@ mod shader;
 use crate::Task;
 use crate::drivers::ws2812::*;
 use crate::clock::*;
+use crate::phys::irq::{disable_interrupts, enable_interrupts};
 use crate::system::strings::*;
 
 use self::shader::*;
@@ -53,7 +54,7 @@ impl ActiveShader {
 impl WS2812Task {
     pub fn new() -> WS2812Task {
         return WS2812Task { 
-            shader: ActiveShader::Constrained,
+            shader: ActiveShader::Xmas,
             target: 0,
             contexts: [ShaderContext::new(0, LEDS); LEDS],
             driver: WS2812Driver::<LEDS>::new(
@@ -76,7 +77,6 @@ impl Task for WS2812Task {
         for idx in 0 .. LEDS {
             self.contexts[idx].node_id = idx;
         }
-        self.driver.set_color(0, 0xFF0000);
         self.set_shader(self.shader);
     }
 

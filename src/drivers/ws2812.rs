@@ -1,4 +1,5 @@
 use crate::wait_ns;
+use crate::irq::*;
 use crate::phys::pins::*;
 
 #[derive(Clone, Copy)]
@@ -29,14 +30,14 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         // Configure the pin
         pin_mode(pin, Mode::Output);
         pin_pad_config(pin, PadConfig {
-            hysterisis: false,               // HYS
+            hysterisis: true,               // HYS
             resistance: PullUpDown::PullDown100k, // PUS
             pull_keep: PullKeep::Pull,            // PUE
-            pull_keep_en: false,             // PKE
+            pull_keep_en: true,             // PKE
             open_drain: false,               // ODE
-            speed: PinSpeed::Medium100MHz,                // SPEED
+            speed: PinSpeed::Fast150MHz,                // SPEED
             drive_strength: DriveStrength::Disabled,  // DSE
-            fast_slew_rate: false,           // SRE
+            fast_slew_rate: true,           // SRE
         });
 
         pin_out(pin, Power::Low);
@@ -60,14 +61,14 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(600);
+        wait_ns(900);
         pin_out(self.pin, Power::Low);
-        wait_ns(600);
+        wait_ns(350);
     }
 
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(300);
+        wait_ns(350);
         pin_out(self.pin, Power::Low);
         wait_ns(900);
 
@@ -75,7 +76,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(8_000_000);
+        wait_ns(    50_000);
     }
 
     pub fn flush(&self) {
@@ -92,7 +93,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
         while node_index < SIZE {
             let node = self.nodes[node_index];
-            let color: u32 = rgb_to_hex(node.red, node.green, node.blue);
+            let color: u32 = rgb_to_hex(node.red / 5, node.green / 5, node.blue / 5);
 
             // Now we need to process each bit
             bit_index = 23;
@@ -108,9 +109,9 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
             node_index += 1;
         }
 
+        self.rest();
         // enable_interrupts();
         
-        self.rest();
     }
 }
 
