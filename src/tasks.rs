@@ -16,13 +16,18 @@ use crate::tasks::ws2812_task::*;
 use crate::tasks::blink_task::*;
 use crate::tasks::wifi_task::*;
 use crate::tasks::periodic_task::*;
-
+use crate::system::vector::*;
 
 macro_rules! procs {
     ( $( $x:expr ),*, ) => {{
         $($x.init();)*
         loop {
             $($x.system_loop();)*
+
+            while unsafe { crate::MESSAGES.size() } > 0 {
+                let message = unsafe { crate::MESSAGES.dequeue().unwrap() };
+                $($x.handle_message(message.topic, message.content);)*
+            }
         }
     }};
 }

@@ -3,6 +3,7 @@ mod shader;
 use crate::Task;
 use crate::drivers::ws2812::*;
 use crate::clock::*;
+use crate::system::strings::*;
 
 use self::shader::*;
 
@@ -91,5 +92,9 @@ impl Task for WS2812Task {
             self.driver.flush();
             self.target = nanos() + crate::MS_TO_NANO * 28;
         }
+    }
+
+    fn handle_message(&mut self, _topic: String, _content: String) {
+        
     }
 }

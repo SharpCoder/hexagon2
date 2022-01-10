@@ -8,6 +8,7 @@ blink requests without tying up system resources.
 use crate::Task;
 use crate::Gate;
 use crate::debug;
+use crate::system::strings::*;
 
 pub struct BlinkTask { 
     gate: Gate,
@@ -50,5 +51,8 @@ impl Task for BlinkTask {
     fn init(&mut self) { }
     fn system_loop(&mut self) {
         self.gate.process();
+    }
+    fn handle_message(&mut self, _topic: String, _content: String) {
+        
     }
 }

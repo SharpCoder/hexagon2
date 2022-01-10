@@ -25,11 +25,17 @@ use debug::*;
 use serio::*;
 use gate::*;
 use system::map::*;
+use system::strings::*;
+use system::vector::*;
 
 pub const S_TO_NANO: u64 = 1000000000;
 pub const MS_TO_NANO: u64 = S_TO_NANO / 1000;
 
 // Support global gate array
+pub static mut MESSAGES: Vector<SystemMessage> = Vector {
+    head: None,
+    size: 0,
+};
 pub static mut GATES: BTreeMap::<u32, u32> = BTreeMap {
     root: None,
 };
@@ -83,10 +89,25 @@ impl <T : Clone + Copy> Box<T> {
     }
 }
 
+pub fn proc_emit(topic: String, content: String) {
+    unsafe {
+        MESSAGES.push(SystemMessage {
+            topic: topic,
+            content: content,
+        });
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct SystemMessage {
+    pub topic: String,
+    pub content: String,
+}
 
 pub trait Task {
     fn init(&mut self);
     fn system_loop(&mut self);
+    fn handle_message(&mut self, topic: String, content: String);
 }
 
 pub fn wait_ns(nano: u64) {

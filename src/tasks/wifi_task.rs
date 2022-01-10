@@ -20,10 +20,8 @@ impl <'a> WifiTask<'a> {
 
 impl <'a> Task for WifiTask<'a> {
     fn init(&mut self) {
-        // self.driver.init();
-
         debug_str(b"Resetting ESP8266");
-        // self.driver.reset();
+        self.driver.reset();
         debug_str(b"Connecting to Wifi");
         self.driver.connect(b"Bird of Prey", b"password");
         self.driver.dns_lookup(b"worldtimeapi.org", &|driver, outputs: BTreeMap<String, String>| {
@@ -50,6 +48,10 @@ impl <'a> Task for WifiTask<'a> {
         });
     }
 
+    fn handle_message(&mut self, _topic: String, _content: String) {
+        
+    }
+    
     fn system_loop(&mut self) {
         self.driver.process();
     }

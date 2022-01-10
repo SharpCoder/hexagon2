@@ -111,7 +111,7 @@ impl WifiDriver {
                     .with_vec_command(content)
                     .with_transform(|buffer| {
                         let mut result = BTreeMap::new();
-                        let mut lines = buffer.split(b'\n');
+                        let lines = buffer.split(b'\n');
                         let mut output = Vector::new();
                         let mut begin = false;
                         let mut found_header = false;
@@ -132,7 +132,7 @@ impl WifiDriver {
                     })
                     .with_termination_condition(|buffer| {
                         // See if we can find the start of the http request
-                        let mut lines = buffer.split(b'\n');
+                        let lines = buffer.split(b'\n');
                         let mut packet_size = 0u32;
                         let mut content_length = 0u32;
                         let mut count_line = false;
@@ -281,7 +281,6 @@ impl WifiCommand {
 pub struct WifiCommandSequence {
     commands: Vector<WifiCommand>,
     outputs: BTreeMap<String, String>,
-    context: BTreeMap::<String, String>,
     index: usize,
     command_sent: bool,
     time_target: u64,
@@ -298,7 +297,6 @@ impl  WifiCommandSequence {
     pub fn new(commands: Vector<WifiCommand>) -> WifiCommandSequence {
         return WifiCommandSequence {
             commands: commands,
-            context: BTreeMap::new(),
             outputs: BTreeMap::new(),
             command_sent: false,
             index: 0,
@@ -313,7 +311,6 @@ impl  WifiCommandSequence {
         return WifiCommandSequence {
             commands: commands,
             outputs: BTreeMap::new(),
-            context: BTreeMap::new(),
             command_sent: false,
             index: 0,
             time_target: 0,

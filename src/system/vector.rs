@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::mem::{ kalloc, free };
-use core::iter::{Iterator, IntoIterator};
+use core::iter::{Iterator};
 
 /// This macro returns a vector of the items you pass to it.
 #[macro_export]

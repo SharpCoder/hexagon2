@@ -10,11 +10,6 @@ pub trait StringBuffer {
     fn split(&mut self, separator: u8) -> Vector::<String>;
 }
 
-pub struct StringIter<T: Clone + Copy> {
-    target: u8,
-    current: Option<Node<T>>,
-}
-
 impl String {
     pub fn push_node(&mut self, node: *mut Node<u8>) {
         if self.head.is_none() {

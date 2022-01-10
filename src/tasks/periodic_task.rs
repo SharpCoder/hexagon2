@@ -9,6 +9,7 @@ use crate::*;
 use crate::Task;
 use crate::debug::*;
 use crate::phys::pins::*;
+use crate::system::strings::*;
 
 pub struct PeriodicTask { }
 
@@ -35,9 +36,13 @@ impl Task for PeriodicTask {
             debug_str(b"[erro] memory overflow");
         }
 
-        // gate_open!()
-        //     .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
-        //     .when_nano(crate::MS_TO_NANO * 400, || { debug_str(b"lolcatz"); })
-        //     .compile();
+        gate_open!()
+            .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
+            .when_nano(crate::MS_TO_NANO * 400, || { debug_str(b"lolcatz"); })
+            .compile();
+    }
+
+    fn handle_message(&mut self, _topic: String, _content: String) {
+        
     }
 }

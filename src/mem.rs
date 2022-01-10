@@ -139,8 +139,8 @@ pub fn memtest() {
 pub fn alloc(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
-        if unsafe { MEMORY_OFFSET } + bytes as u32 >= MEMORY_MAXIMUM {
-            unsafe { IS_OVERRUN = true };
+        if MEMORY_OFFSET + bytes as u32 >= MEMORY_MAXIMUM {
+            IS_OVERRUN = true;
             return Mempage::reclaim(bytes);
         }
 
