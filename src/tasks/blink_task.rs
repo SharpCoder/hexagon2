@@ -5,53 +5,44 @@ with system debug to properly gate the LED based on
 blink requests without tying up system resources.
 */
 
+use crate::*;
 use crate::Task;
 use crate::Gate;
-use crate::debug;
 use crate::system::strings::*;
-
-pub struct BlinkTask { 
-    gate: Gate,
-}
 
 static mut NEXT_BLINK_EVENT: u64 = 0x0;
 
+pub struct BlinkTask { }
 impl BlinkTask {
     pub fn new() -> BlinkTask {
-        return BlinkTask {
-            gate: Gate::new()
-                .when(|_this: &mut Gate| {
-                    return unsafe { debug::BLINK_CONFIG.remaining_count } > 0;
-                }, || {
-                    unsafe {
-                        NEXT_BLINK_EVENT =
-                            crate::clock::nanos() + 
-                            debug::BLINK_CONFIG.speed as u64;
-                    }
-                })
-                .when(|_this: &mut Gate| {
-                    return crate::clock::nanos() > unsafe { NEXT_BLINK_EVENT };
-                }, || {
-                    if unsafe { debug::BLINK_CONFIG.remaining_count } % 2 == 0 {
-                        debug::blink_led_on();
-                    } else {
-                        debug::blink_led_off();
-                    }
-    
-                    unsafe {
-                        debug::BLINK_CONFIG.remaining_count -= 1;
-                    }
-                })
-                .compile()
-        }
+        return BlinkTask { };
     }
 }
 
 impl Task for BlinkTask {
     fn init(&mut self) { }
+    
     fn system_loop(&mut self) {
-        self.gate.process();
+        gate_open!()
+            .when(|_| unsafe { BLINK_CONFIG.remaining_count } > 0, || {
+                unsafe {
+                    NEXT_BLINK_EVENT = clock::nanos() + BLINK_CONFIG.speed as u64;
+                }
+            })
+            .when(|_| clock::nanos() > unsafe { NEXT_BLINK_EVENT }, || {
+                unsafe {
+                    if BLINK_CONFIG.remaining_count % 2 == 0 {
+                        blink_led_on();
+                    } else {
+                        blink_led_off();
+                    }
+
+                    BLINK_CONFIG.remaining_count -= 1;
+                }
+            })
+            .compile();
     }
+
     fn handle_message(&mut self, _topic: String, _content: String) {
         
     }

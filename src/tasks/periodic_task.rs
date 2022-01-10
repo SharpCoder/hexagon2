@@ -7,8 +7,6 @@ blink requests without tying up system resources.
 
 use crate::*;
 use crate::Task;
-use crate::debug::*;
-use crate::phys::pins::*;
 use crate::system::strings::*;
 
 pub struct PeriodicTask { }
@@ -27,14 +25,6 @@ impl PeriodicTask {
 impl Task for PeriodicTask {
     fn init(&mut self) { }
     fn system_loop(&mut self) {
-        gate_open!()
-            .when_nano(crate::MS_TO_NANO * 250, || { pin_out(13, Power::High )})
-            .when_nano(crate::MS_TO_NANO * 250, || { pin_out(13, Power::Low); })
-            .compile();
-
-        if crate::mem::is_overrun() {
-            debug_str(b"[erro] memory overflow");
-        }
 
         gate_open!()
             .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
