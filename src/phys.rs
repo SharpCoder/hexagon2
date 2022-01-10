@@ -25,6 +25,7 @@ pub fn phys_clocks_en() {
     uart::uart_start_clock();
     dma::dma_start_clock();
     xbar::xbar_start_clock();
+    periodic_timers::pit_start_clock();
 }
 
 pub fn write_byte(address: u32, value: u8) {

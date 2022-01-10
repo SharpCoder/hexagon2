@@ -18,10 +18,20 @@ impl <'a> WifiTask<'a> {
     }
 }
 
+pub static mut HTTP_COMPLETE: bool = false;
+
 impl <'a> Task for WifiTask<'a> {
     fn init(&mut self) {
+        // Configure our baud rate
+        serial_baud(self.driver.device, 115200);
+
         debug_str(b"Resetting ESP8266");
         self.driver.reset();
+        debug_str(b"Reconfiguring baud rate");
+        self.driver.set_baud(9600, &|driver, _outputs| {
+            serial_baud(driver.device, 9600);
+        });
+
         debug_str(b"Connecting to Wifi");
         self.driver.connect(b"Bird of Prey", b"password", &|_,_| {
             debug_str(b"Wifi Connected!");
@@ -42,10 +52,9 @@ impl <'a> Task for WifiTask<'a> {
                 }, &|_driver, artifacts| {
                     debug_str(b"HTTP Request complete");
                     serial_write_vec(SerioDevice::Debug, artifacts.get(vec_str!(b"content")).unwrap());
-                    debug::blink(100, debug::Speed::Fast);
-                    // let content = _outputs.get(0).unwrap();
-                    // debug_u32(content.size() as u32, b"Received size");
-                    // serial_write_vec(SerioDevice::Debug, content);
+                    unsafe {
+                        HTTP_COMPLETE = true;
+                    }
                 });
             }
         });

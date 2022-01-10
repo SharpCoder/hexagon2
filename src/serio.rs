@@ -2,6 +2,7 @@
 // for the future when this package gets fuller.
 #![allow(unused)]
 
+use crate::debug::blink_accumulate;
 /** 
  * This module represents the serial communication protocol
  * based on UART physical hardware. For simplicity, it is tightly
@@ -12,6 +13,7 @@ use crate::phys::irq::*;
 use crate::phys::pins::*;
 use crate::phys::addrs;
 use crate::system::vector::*;
+use crate::tasks::wifi_task::HTTP_COMPLETE;
 
 struct HardwareConfig {
     device: Device,
@@ -188,12 +190,12 @@ impl Uart {
         uart_configure(self.device, UartConfig {
             r9t8: false,
             invert_transmission_polarity: false,
-            overrun_irq_en: true,
+            overrun_irq_en: false,
             noise_error_irq_en: false,
             framing_error_irq_en: false,
             parity_error_irq_en: false,
             tx_irq_en: false, // This gets set later
-            rx_irq_en: true,
+            rx_irq_en: false,
             tx_complete_irq_en: false,
             idle_line_irq_en: false,
             tx_en: false,
@@ -287,15 +289,15 @@ impl Uart {
     }
 
     fn handle_receive_irq(&mut self) {
-        let irq_statuses = uart_get_irq_statuses(self.device);
+        // let irq_statuses = uart_get_irq_statuses(self.device);
         
         // TODO: Implement some logic for these edge cases
         // but it's really not needed for just simply
         // receiving messages.
-        let rx_active = irq_statuses & (0x1 << 24) > 0;
-        let rx_buffer_full = irq_statuses & (0x1 << 21) > 0;
-        let rx_idle = irq_statuses & (0x1 << 20) > 0;
-        let rx_overrun = irq_statuses & (0x1 << 19) > 0;
+        // let rx_active = irq_statuses & (0x1 << 24) > 0;
+        // let rx_buffer_full = irq_statuses & (0x1 << 21) > 0;
+        // let rx_idle = irq_statuses & (0x1 << 20) > 0;
+        // let rx_overrun = irq_statuses & (0x1 << 19) > 0;
 
         // Read until it is empty
         let mut count = 0;
@@ -312,9 +314,9 @@ impl Uart {
             }
         }
 
-        if rx_overrun {
-            crate::debug::blink_accumulate();
-        }
+        // if rx_overrun {
+        //     // crate::debug::blink_accumulate();
+        // }
             
         uart_clear_irq(self.device, UartClearIrqConfig {
             rx_data_full: true,
@@ -449,12 +451,19 @@ pub fn serial_clear_rx(device: SerioDevice) {
     let uart = get_uart_interface(device);
     uart.clear_rx_buffer();
 }
+pub fn serial_baud(device: SerioDevice, rate: u32) {
+    let uart = get_uart_interface(device);
+    uart_baud_rate(uart.device, rate);
+}
 
 pub fn serio_baud(rate: u32) {
     uart_baud_rate(Device::Uart6, rate);
 }
 
 pub fn serio_handle_irq() {
+    if unsafe { HTTP_COMPLETE } {
+        blink_accumulate();
+    }
     disable_interrupts();
     get_uart_interface(SerioDevice::Uart1).handle_irq();
     get_uart_interface(SerioDevice::Uart2).handle_irq();

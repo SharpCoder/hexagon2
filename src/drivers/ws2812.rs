@@ -1,6 +1,7 @@
 use crate::wait_ns;
 use crate::irq::*;
 use crate::phys::pins::*;
+use crate::debug::*;
 
 #[derive(Clone, Copy)]
 struct Node {
@@ -61,14 +62,14 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(900);
+        wait_ns(600);
         pin_out(self.pin, Power::Low);
-        wait_ns(350);
+        wait_ns(600);
     }
 
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(350);
+        wait_ns(300);
         pin_out(self.pin, Power::Low);
         wait_ns(900);
 
@@ -76,7 +77,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(    50_000);
+        wait_ns(    85_000);
     }
 
     pub fn flush(&self) {

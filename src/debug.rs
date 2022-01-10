@@ -60,6 +60,8 @@ pub fn blink_hardware(count: u8) {
     }
 }
 
+const DEBUG_SERIAL_ENABLED: bool = false;
+
 pub fn blink_custom(on_time: u64, off_time: u64) {
     blink_led_on();
     wait_ns(on_time);
@@ -68,25 +70,33 @@ pub fn blink_custom(on_time: u64, off_time: u64) {
 }
 
 pub fn debug_hex(hex: u32, message: &[u8]) {
-    serial_write(SerioDevice::Debug, b"0x");
-    serial_write_vec(SerioDevice::Debug, to_base(hex as u64, 16));
-    serial_write(SerioDevice::Debug, b" ");
-    debug_str(message);
+    if DEBUG_SERIAL_ENABLED {
+        serial_write(SerioDevice::Debug, b"0x");
+        serial_write_vec(SerioDevice::Debug, to_base(hex as u64, 16));
+        serial_write(SerioDevice::Debug, b" ");
+        debug_str(message);
+    }
 }
 
 pub fn debug_u64(val: u64, message: &[u8]) {
-    serial_write_vec(SerioDevice::Debug, itoa_u64(val));
-    serial_write(SerioDevice::Debug, b" ");
-    debug_str(message);
+    if DEBUG_SERIAL_ENABLED {
+        serial_write_vec(SerioDevice::Debug, itoa_u64(val));
+        serial_write(SerioDevice::Debug, b" ");
+        debug_str(message);
+    }
 }
 
 pub fn debug_u32(val: u32, message: &[u8]) {
-    serial_write_vec(SerioDevice::Debug, to_base(val as u64, 10));
-    serial_write(SerioDevice::Debug, b" ");
-    debug_str(message);
+    if DEBUG_SERIAL_ENABLED {
+        serial_write_vec(SerioDevice::Debug, to_base(val as u64, 10));
+        serial_write(SerioDevice::Debug, b" ");
+        debug_str(message);
+    }
 }
 
 pub fn debug_str(message: &[u8]) {
-    serial_write(SerioDevice::Debug, message);
-    serial_write(SerioDevice::Debug, b"\n");
+    if DEBUG_SERIAL_ENABLED {
+        serial_write(SerioDevice::Debug, message);
+        serial_write(SerioDevice::Debug, b"\n");
+    }
 }

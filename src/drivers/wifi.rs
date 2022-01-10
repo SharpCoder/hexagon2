@@ -14,7 +14,7 @@ use crate::math::*;
 type Callback = &'static dyn Fn(&mut WifiDriver, BTreeMap<String, String>);
 
 pub struct WifiDriver {
-    device: SerioDevice,
+    pub device: SerioDevice,
     en_pin: usize,
     reset_pin: usize,
     queued_commands: Vector<WifiCommandSequence>,
@@ -38,8 +38,6 @@ impl WifiDriver {
         // Generate the command sequence
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             Vector::from_slice(&[
-                WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
-                WifiCommand::new().with_command(b"AT+CIPSTATUS").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWMODE=1").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWJAP=\"")
                     .join_vec(vec_str!(ssid))
@@ -56,7 +54,7 @@ impl WifiDriver {
         pin_out(self.reset_pin, Power::High);
         crate::wait_ns(crate::MS_TO_NANO * 100);
         pin_out(self.reset_pin, Power::Low);
-        crate::wait_ns(crate::MS_TO_NANO * 400);
+        crate::wait_ns(crate::MS_TO_NANO * 1200);
         
         self.queued_commands.enqueue(WifiCommandSequence::new(
             vector!(
@@ -68,10 +66,21 @@ impl WifiDriver {
         ));
     }
 
+    pub fn set_baud(&mut self, rate: u32, method: Callback) {
+        self.queued_commands.enqueue(WifiCommandSequence::new_with_callback(
+            vector!(
+                WifiCommand::new()
+                    .with_command(b"AT+CIOBAUD=")
+                    .join_vec(itoa_u32(rate))
+                    .with_expected_response(b"OK")
+            ),
+            Box::new(method),
+        ))
+    }
+
     pub fn dns_lookup(&mut self, domain: &[u8], method: Callback) {
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             vector!(
-                WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPDOMAIN=\"")
                     .join_vec(vec_str!(domain))
                     .join_vec(vec_str!(b"\""))
@@ -105,11 +114,13 @@ impl WifiDriver {
                 WifiCommand::new().with_command(b"AT+CIPSTART=\"TCP\",\"")
                     .join_vec(ip_addr)
                     .join_vec(vec_str!(b"\",80")),
+                WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPSEND=")
                     .join_vec(itoa_u32(content.size() as u32))
                     .with_expected_response(b"OK"),
                 WifiCommand::new()
                     .with_vec_command(content)
+                    .with_delay(MS_TO_NANO * 50)
                     .with_transform(|buffer| {
                         let mut result = BTreeMap::new();
                         let lines = buffer.split(b'\n');

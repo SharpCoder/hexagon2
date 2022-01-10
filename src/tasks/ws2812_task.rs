@@ -8,7 +8,7 @@ use crate::system::strings::*;
 
 use self::shader::*;
 
-const LEDS: usize = 100;
+const LEDS: usize = 50;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
@@ -78,6 +78,7 @@ impl Task for WS2812Task {
             self.contexts[idx].node_id = idx;
         }
         self.set_shader(self.shader);
+        self.system_loop();
     }
 
     fn system_loop(&mut self) {
@@ -89,8 +90,10 @@ impl Task for WS2812Task {
                 self.driver.set_color(i, self.contexts[i].color);
             }
 
+            disable_interrupts();
             self.driver.flush();
-            self.target = nanos() + crate::MS_TO_NANO * 28;
+            enable_interrupts();
+            self.target = nanos() + crate::MS_TO_NANO * 45;
         }
     }
 

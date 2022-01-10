@@ -44,9 +44,9 @@ pub fn run_tasks() {
     let mut led_task = WS2812Task::new();
 
     procs!(
-        wifi_task,
-        // blink_task,
-        // periodic_task,
         led_task,
+        blink_task,
+        wifi_task,
+        // periodic_task,
     );
 }

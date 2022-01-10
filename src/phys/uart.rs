@@ -411,6 +411,7 @@ pub fn uart_has_data(device: Device) -> bool {
 pub fn uart_baud_rate(device: Device, rate: u32) {
     // TODO: Explain why this works (if it works)
     let baud_clock = 80000000; // MHz
+    
     let sbr = baud_clock / (rate * 16);
     uart_disable(device);
     let addr = get_addr(device) + 0x10;

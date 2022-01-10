@@ -9,6 +9,7 @@ use crate::phys::{
     read_word,
 };
 
+#[derive(Copy, Clone)]
 pub enum PeriodicTimerSource {
     Timer0,
     Timer1,
@@ -47,6 +48,10 @@ pub fn pit_configure(source: &PeriodicTimerSource, config: PITConfig) {
     
     let addr = pit_config_addr(&source);
     assign(addr, value);
+}
+
+pub fn pit_start_clock() {
+    assign(0x400F_C01C, read_word(0x400F_C01C) & !0x7F);
 }
 
 pub fn pit_restart(source: &PeriodicTimerSource) {
