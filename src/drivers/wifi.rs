@@ -110,7 +110,7 @@ impl WifiDriver {
                     .with_vec_command(content)
                     .with_termination_condition(|buffer| {
                         // See if we can find the start of the http request
-                        let lines = buffer.split(b'\n');
+                        let mut lines = buffer.split(b'\n');
                         let mut packet_size = 0u32;
                         let mut content_length = 0u32;
                         let mut count_line = false;
@@ -119,25 +119,19 @@ impl WifiDriver {
                             if line.contains(vec_str!(b"HTTP/")) {
                                 // This is the start
                             } else if line.contains(vec_str!(b"content-length:")) {
-                                debug_str(b"found content-length");
                                 // Parse out content length
-                                match line.split(b' ').get(1) {
-                                    None => {},
-                                    Some(content) => {
-                                        content_length = crate::math::atoi_u32(content);
-                                    }
-                                }
-                                debug_u32(content_length, b"content length");
+                                let slice = line.slice(16, 100);
+                                content_length = crate::math::atoi_u32(slice);
                             }
 
-                            if line.size() == 0 && content_length > 0 {
+                            if line.size() == 2 && content_length > 0 {
                                 count_line = true;
                             } else if count_line {
+
+                                serial_write_vec(SerioDevice::Debug, line);
                                 packet_size += line.size() as u32;
                             }
                         }
-
-                        debug_u32(packet_size, b"packet_size");
 
                         if content_length > 0 && packet_size >= content_length {
                             return true;
@@ -192,7 +186,7 @@ pub struct WifiCommand {
     pub error_response: Option<&'static [u8]>,
     pub delay: u64,
     pub timeout: Option<u64>,
-    pub termination_condition: Option<fn(&Vector::<u8>) -> bool>,
+    pub termination_condition: Option<fn(&mut Vector::<u8>) -> bool>,
 
     /// If this is present, the receive buffer is the input
     /// and whatever you return goes into a register
@@ -214,7 +208,7 @@ impl WifiCommand {
         };
     }
 
-    pub fn with_termination_condition(&self, func: fn(&Vector::<u8>) -> bool) -> Self {
+    pub fn with_termination_condition(&self, func: fn(&mut Vector::<u8>) -> bool) -> Self {
         let mut next = self.clone();
         next.termination_condition = Some(func);
         return next;
@@ -364,12 +358,8 @@ impl  WifiCommandSequence {
                 match command.termination_condition {
                     None => {},
                     Some(condition) => {
-                        debug_str(b"found termination condition");
-                        if condition(&serial_buffer(device)) {
-                            debug_str(b"termination condition met");
+                        if condition(serial_buffer(device)) {
                             self.advance(command, driver, device);
-                        } else {
-                            debug_str(b"termination condition not met");
                         }
                     }
                 }
@@ -388,7 +378,6 @@ impl  WifiCommandSequence {
     }
 
     fn advance(&mut self, command: WifiCommand, driver: &mut WifiDriver, device: SerioDevice) {
-        debug_str(b"advancing...");
         // Check if there is transformation to happen
         if command.transform_output.is_some() {
             let transform_method = command.transform_output.unwrap();

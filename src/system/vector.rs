@@ -49,8 +49,8 @@ which allocates dynamic memory and implements Stack.
 */
 #[derive(Copy, Clone)]
 pub struct Node<T : Clone + Copy> {
-    item: T,
-    next: Option<*mut Node<T>>,
+    pub item: T,
+    pub next: Option<*mut Node<T>>,
 }
 
 pub struct Vector<T : Clone + Copy> {
@@ -60,6 +60,8 @@ pub struct Vector<T : Clone + Copy> {
 
 pub struct NodeIter<T: Clone+Copy> {
     current: Option<Node<T>>,
+    index: usize,
+    size: usize,
 }
 
 impl <T: Clone+Copy> Iterator for NodeIter<T> {
@@ -72,12 +74,21 @@ impl <T: Clone+Copy> Iterator for NodeIter<T> {
             },
             Some(element) => {
                 let result = element.item;
+                
                 // Check if we have next
                 if element.next.is_none() {
                     self.current = None;
                 } else {
                     self.current = Some(unsafe { *(element.next.unwrap()) });
                 }
+
+                self.index += 1;
+
+                // Check if we are technically beyond the size
+                if self.index > self.size {
+                    return None;
+                }
+
                 return Some(result);
             }
         };
@@ -250,10 +261,14 @@ impl <T: Clone + Copy> Vector<T> {
         if self.head.is_none() {
             return NodeIter {
                 current: None,
+                size: 0,
+                index: 0,
             };
         } else {
             return NodeIter {
-                current: Some(unsafe { *self.head.unwrap() })
+                current: Some(unsafe { *self.head.unwrap() }),
+                size: self.size(),
+                index: 0,
             };
         }
     }
@@ -302,6 +317,12 @@ impl <T: Clone + Copy> Vector<T> {
         while self.size() > 0 {
             self.pop();
         }
+    }
+
+    // Alias method for clear
+    // just to make it obvious whats happening.
+    pub fn free(&mut self) {
+        self.clear();
     }
 }
 

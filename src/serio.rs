@@ -22,6 +22,10 @@ struct HardwareConfig {
     sel_inp_val: Option<u32>,
 }
 
+/// Enable this to mirror all bytes received
+/// to the Debug UART peripherla.
+const DEBUG_SPY: bool = true;
+
 const UART_WATERMARK_SIZE: u32 = 0x2;
 const UART_BUFFER_SIZE: usize = 128; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
@@ -256,22 +260,15 @@ impl Uart {
 
     pub fn write_vec(&mut self, bytes: Vector<u8>) {
         disable_interrupts();
-        for byte_idx in 0 .. bytes.size() {
-            match bytes.get(byte_idx) {
-                None => { break; },
-                Some(byte) => {
-                    self.tx_buffer.enqueue(byte);
-                }
-            }
-        }
+        self.tx_buffer.join(bytes);
 
         pin_out(self.tx_pin, Power::High);
         uart_set_reg(self.device, &CTRL_TIE);
         enable_interrupts();
     }
 
-    pub fn get_rx_buffer(&self) -> &Vector::<u8> {
-        return &self.rx_buffer;
+    pub fn get_rx_buffer(&mut self) -> &mut Vector::<u8> {
+        return &mut self.rx_buffer;
     }
 
     pub fn clear_rx_buffer(&mut self) {
@@ -300,19 +297,13 @@ impl Uart {
         let rx_overrun = irq_statuses & (0x1 << 19) > 0;
 
         // Read until it is empty
-        let mut temp = Vector::new();
         while uart_has_data(self.device) {
             let msg: u8 = uart_read_fifo(self.device);
             self.rx_buffer.enqueue(msg);
-            temp.enqueue(msg);
         }
 
         if rx_overrun {
             crate::debug::blink_accumulate();
-        }
-
-        while temp.size() > 0 {
-            serial_write(SerioDevice::Debug, &[temp.dequeue().unwrap()]);
         }
             
         uart_clear_irq(self.device, UartClearIrqConfig {
@@ -439,7 +430,7 @@ pub fn serial_write_vec(device: SerioDevice, bytes: Vector<u8>) {
     uart.write_vec(bytes);
 }
 
-pub fn serial_buffer(device: SerioDevice) -> &'static Vector::<u8> {
+pub fn serial_buffer(device: SerioDevice) -> &'static mut Vector::<u8> {
     let uart = get_uart_interface(device);
     return uart.get_rx_buffer();
 }

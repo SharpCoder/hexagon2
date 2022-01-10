@@ -7,7 +7,51 @@ pub type String = Vector::<u8>;
 pub trait StringBuffer {
     fn index_of(&self, target: String) -> Option<usize>;
     fn contains(&self, target: String) -> bool;
-    fn split(&self, separator: u8) -> Vector::<String>;
+    fn split(&mut self, separator: u8) -> Vector::<String>;
+}
+
+pub struct StringIter<T: Clone + Copy> {
+    target: u8,
+    current: Option<Node<T>>,
+}
+
+impl String {
+    pub fn push_node(&mut self, node: *mut Node<u8>) {
+        if self.head.is_none() {
+            self.head = Some(node);
+        } else {
+            let mut tail_ptr = self.head.unwrap();
+            while unsafe { *tail_ptr }.next.is_some() {
+                tail_ptr = unsafe { (*tail_ptr).next.unwrap() };
+            }
+
+            unsafe { (*tail_ptr).next = Some(node) };
+        }
+
+        self.size += 1;
+    }
+
+    /// Returns a /mutable/ slice of the original string where
+    /// each element is a pointer to the same element
+    /// of the original.
+    pub fn slice(&self, start: usize, end: usize) -> String {
+        let mut result = String::new();
+
+        if start > self.size() {
+            return result;
+        }
+
+        if self.head.is_some() {
+            let mut ptr = self.head.unwrap();
+            for _ in 0 .. start {
+                ptr = unsafe { *ptr }.next.unwrap();
+            }
+
+            result.push_node(ptr);
+            result.size = crate::math::min(end, self.size()) - start;
+        }
+        return result;
+    }
 }
 
 impl StringBuffer for String {
@@ -42,28 +86,24 @@ impl StringBuffer for String {
         return self.index_of(target).is_some();
     }
 
-    fn split(&self, separator: u8) -> Vector::<String> {
+    /// Split the string into slices
+    fn split(&mut self, separator: u8) -> Vector::<String> {
         let mut result = Vector::new();
-        let mut temp = Vector::new();
+        let mut start = 0;
 
         for idx in 0 .. self.size() {
             match self.get(idx) {
                 None => {},
                 Some(byte) => {
                     if byte == separator {
-                        result.push(temp.clone());
-                        temp.clear();
-                    } else {
-                        temp.push(byte);
+                        result.push(self.slice(start, idx));
+                        start = idx;
                     }
                 }
             }            
         }
 
-        if temp.size() > 0 {
-            result.push(temp.clone());
-        }
-
+        result.push(self.slice(start, self.size()));
 
         return result;
     }
@@ -151,7 +191,7 @@ mod test {
 
     #[test]
     fn test_split() {
-        let text = vec_str!(b"Hello\nHow\nAre\nYou?");
+        let mut text = vec_str!(b"Hello\nHow\nAre\nYou?");
         let words= text.split(b'\n');
         assert_eq!(words.size(), 4);
         vecs_eq(words.get(0).unwrap(), vec_str!(b"Hello"));
@@ -163,5 +203,19 @@ mod test {
         assert_eq!(vec_str!(b"hello there") > vec_str!(b"hello"), true);
         assert_eq!(vec_str!(b"howdy") > vec_str!(b"hello"), true);
         assert_eq!(vec_str!(b"god") < vec_str!(b"zomg"), true);
+    }
+
+    #[test]
+    fn test_string_slice() {
+        let mut list = vector!(1,2,3,4,5);
+        let slice = list.slice(1, 3);
+        assert_eq!(slice.size(), 2);
+        assert_eq!(slice.get(0), Some(2));
+        assert_eq!(slice.get(1), Some(3));
+        assert_eq!(slice.get(2), None);
+
+        // Slices that go beyond the index
+        let slice2 = list.slice(3, 100);
+        assert_eq!(slice2.size(), 2);
     }
 }
