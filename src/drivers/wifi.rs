@@ -39,6 +39,7 @@ impl WifiDriver {
         self.queued_commands.enqueue( WifiCommandSequence::new(
             Vector::from_slice(&[
                 WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
+                WifiCommand::new().with_command(b"AT+CIPSTATUS").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWMODE=1").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWJAP=\"")
                     .join_vec(vec_str!(ssid))
@@ -59,7 +60,7 @@ impl WifiDriver {
         self.queued_commands.enqueue(WifiCommandSequence::new(
             vector!(
                 WifiCommand::new()
-                    .with_command(b"ATE0")
+                    .with_command(b"ATE1")
                     .with_expected_response(b"OK")
                     .with_delay(crate::MS_TO_NANO * 1000)
             )
@@ -108,6 +109,27 @@ impl WifiDriver {
                     .with_expected_response(b"OK"),
                 WifiCommand::new()
                     .with_vec_command(content)
+                    .with_transform(|buffer| {
+                        let mut result = BTreeMap::new();
+                        let mut lines = buffer.split(b'\n');
+                        let mut output = Vector::new();
+                        let mut begin = false;
+                        let mut found_header = false;
+
+                        for line in lines.into_iter() {
+                            if line.contains(vec_str!(b"HTTP/")) {
+                                found_header = true;
+                            } else if found_header && line.size() == 2 {
+                                begin = true;
+                            } else if begin {
+                                output.join(line);
+                            }
+                        }
+
+
+                        result.insert(vec_str!(b"content"), output);
+                        return result;
+                    })
                     .with_termination_condition(|buffer| {
                         // See if we can find the start of the http request
                         let mut lines = buffer.split(b'\n');
@@ -127,8 +149,6 @@ impl WifiDriver {
                             if line.size() == 2 && content_length > 0 {
                                 count_line = true;
                             } else if count_line {
-
-                                serial_write_vec(SerioDevice::Debug, line);
                                 packet_size += line.size() as u32;
                             }
                         }
@@ -191,7 +211,7 @@ pub struct WifiCommand {
     /// If this is present, the receive buffer is the input
     /// and whatever you return goes into a register
     /// that is stored at the WifiCommandSequence level
-    pub transform_output: Option<fn(&Vector::<u8>) -> BTreeMap<String, String>>,
+    pub transform_output: Option<fn(&mut Vector::<u8>) -> BTreeMap<String, String>>,
 }
 
 impl WifiCommand {
@@ -226,7 +246,7 @@ impl WifiCommand {
         return next;
     }
 
-    pub fn with_transform(&self, transform_method: fn(&Vector::<u8>) -> BTreeMap<String, String>) -> Self {
+    pub fn with_transform(&self, transform_method: fn(&mut Vector::<u8>) -> BTreeMap<String, String>) -> Self {
         let mut next = self.clone();
         next.transform_output = Some(transform_method);
         return next;
@@ -381,7 +401,7 @@ impl  WifiCommandSequence {
         // Check if there is transformation to happen
         if command.transform_output.is_some() {
             let transform_method = command.transform_output.unwrap();
-            self.merge_artifacts(transform_method(&serial_buffer(device)));
+            self.merge_artifacts(transform_method(&mut serial_buffer(device)));
         }
 
                                 

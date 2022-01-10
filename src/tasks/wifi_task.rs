@@ -23,7 +23,7 @@ impl <'a> Task for WifiTask<'a> {
         // self.driver.init();
 
         debug_str(b"Resetting ESP8266");
-        self.driver.reset();
+        // self.driver.reset();
         debug_str(b"Connecting to Wifi");
         self.driver.connect(b"Bird of Prey", b"password");
         self.driver.dns_lookup(b"worldtimeapi.org", &|driver, outputs: BTreeMap<String, String>| {
@@ -39,9 +39,9 @@ impl <'a> Task for WifiTask<'a> {
                     host: vec_str!(b"worldtimeapi.org"),
                     headers: None,
                     content: None,
-                }, &|_driver, _outputs| {
+                }, &|_driver, artifacts| {
                     debug_str(b"HTTP Request complete");
-
+                    serial_write_vec(SerioDevice::Debug, artifacts.get(vec_str!(b"content")).unwrap());
                     // let content = _outputs.get(0).unwrap();
                     // debug_u32(content.size() as u32, b"Received size");
                     // serial_write_vec(SerioDevice::Debug, content);

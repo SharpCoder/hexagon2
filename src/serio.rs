@@ -24,8 +24,9 @@ struct HardwareConfig {
 
 /// Enable this to mirror all bytes received
 /// to the Debug UART peripherla.
-const DEBUG_SPY: bool = true;
+const DEBUG_SPY: bool = false;
 
+static mut TEMP_BUF: [u8; 128] = [0; 128];
 const UART_WATERMARK_SIZE: u32 = 0x2;
 const UART_BUFFER_SIZE: usize = 128; // bytes
 static mut UART1: Uart = Uart::new(HardwareConfig {
@@ -297,9 +298,18 @@ impl Uart {
         let rx_overrun = irq_statuses & (0x1 << 19) > 0;
 
         // Read until it is empty
+        let mut count = 0;
         while uart_has_data(self.device) {
             let msg: u8 = uart_read_fifo(self.device);
             self.rx_buffer.enqueue(msg);
+            unsafe { TEMP_BUF[count] = msg };
+            count += 1;
+        }
+
+        if DEBUG_SPY {
+            for idx in 0 .. count {
+                serial_write(SerioDevice::Debug, &[unsafe { TEMP_BUF[idx] }]);
+            }
         }
 
         if rx_overrun {
