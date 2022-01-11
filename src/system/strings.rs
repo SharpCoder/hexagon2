@@ -39,7 +39,7 @@ impl String {
         if self.head.is_some() {
             let mut ptr = self.head.unwrap();
             for _ in 0 .. start {
-                ptr = unsafe { *ptr }.next.unwrap();
+                ptr = unsafe { ptr.as_mut().unwrap() }.next.unwrap();
             }
 
             result.push_node(ptr);

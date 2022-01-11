@@ -108,8 +108,8 @@ impl <T: Clone + Copy> Clone for Vector<T> {
             let item = unsafe { (*ptr).item };
             result.enqueue(item);
 
-            if unsafe { *ptr }.next.is_some() {
-                ptr = unsafe { *ptr }.next.unwrap();
+            if unsafe { ptr.as_mut().unwrap() }.next.is_some() {
+                ptr = unsafe { ptr.as_mut().unwrap() }.next.unwrap();
             } else {
                 break;
             }
@@ -145,7 +145,7 @@ impl <T: Clone + Copy> Array<T> for Vector<T> {
             // Travel n times through the linked list
             let mut ptr = self.head.unwrap();
             for _ in 0 .. index {
-                ptr = unsafe { *ptr }.next.unwrap();
+                ptr = unsafe { ptr.as_mut().unwrap() }.next.unwrap();
             }
             return unsafe { Some((*ptr).item) };
         }
@@ -158,7 +158,7 @@ impl <T: Clone + Copy> Array<T> for Vector<T> {
             // Travel n times through the linked list
             let mut ptr = self.head.unwrap();
             for _ in 0 .. index {
-                ptr = unsafe { *ptr }.next.unwrap();
+                ptr = unsafe { ptr.as_mut().unwrap() }.next.unwrap();
             }
             return unsafe { Some(&mut (*ptr).item) };
         }
@@ -182,7 +182,7 @@ impl <T: Clone + Copy> Queue<T> for Vector<T> {
             let mut tail_ptr = self.head.unwrap();
     
             // Find the tail
-            while unsafe { *tail_ptr }.next.is_some() {
+            while unsafe { tail_ptr.as_mut().unwrap() }.next.is_some() {
                 tail_ptr = unsafe { (*tail_ptr).next.unwrap() };
             }
     
@@ -199,7 +199,7 @@ impl <T: Clone + Copy> Queue<T> for Vector<T> {
             },
             Some(node) => {
                 // Copy the reference
-                let node_item = unsafe { *node };
+                let node_item = unsafe { node.as_mut().unwrap() };
                 
                 // Free the actual node.
                 free(node);
@@ -227,7 +227,7 @@ impl <T: Clone + Copy> Stack<T> for Vector<T> {
 
         if self.size == 1 {
             // Return head node
-            node_item = unsafe { *self.head.unwrap() }.item;
+            node_item = unsafe { (*(self.head.unwrap())).item };
             // Free the head
             free(self.head.unwrap());
             self.head = None;
@@ -286,9 +286,11 @@ impl <T: Clone + Copy> Vector<T> {
     }
 
     pub fn join(&mut self, vec_to_join: Vector<T>) -> &mut Self {
+        let mut copy = vec_to_join.clone();
         for index in 0 .. vec_to_join.size() {
-            self.enqueue(vec_to_join.get(index).unwrap());
+            self.enqueue(copy.dequeue().unwrap());
         }
+        copy.clear();
         return self;
     }
 
