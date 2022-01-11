@@ -8,7 +8,7 @@ use crate::system::strings::*;
 
 use self::shader::*;
 
-const LEDS: usize = 50;
+const LEDS: usize = 1;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
@@ -54,7 +54,7 @@ impl ActiveShader {
 impl WS2812Task {
     pub fn new() -> WS2812Task {
         return WS2812Task { 
-            shader: ActiveShader::Xmas,
+            shader: ActiveShader:: Basic,
             target: 0,
             contexts: [ShaderContext::new(0, LEDS); LEDS],
             driver: WS2812Driver::<LEDS>::new(

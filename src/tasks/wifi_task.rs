@@ -22,12 +22,20 @@ pub static mut HTTP_COMPLETE: bool = false;
 
 impl <'a> Task for WifiTask<'a> {
     fn init(&mut self) {
-        // Configure our baud rate
-        serial_baud(self.driver.device, 115200);
-
         debug_str(b"Resetting ESP8266");
         self.driver.reset();
         debug_str(b"Reconfiguring baud rate");
+
+        // Set baud using both bauds in case it's stuck
+
+        // Configure our baud rate
+        // Set baud in 115200
+        serial_baud(self.driver.device, 115200);
+        self.driver.set_baud(9600, &|driver, _outputs| {
+            serial_baud(driver.device, 9600);
+        });
+
+        // Set baud in 9600
         self.driver.set_baud(9600, &|driver, _outputs| {
             serial_baud(driver.device, 9600);
         });

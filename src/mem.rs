@@ -1,5 +1,3 @@
-#[cfg(test)]
-use std::alloc::{alloc, Layout};
 use core::mem::{size_of};
 
 #[cfg(not(test))]
@@ -85,7 +83,7 @@ impl Mempage {
             total_bytes += 1;
         }
 
-        let next_page = alloc(total_bytes) as *mut Mempage;
+        let next_page = alloc_bytes(total_bytes) as *mut Mempage;
         let item_ptr = ((next_page as u32) + page_bytes as u32) as *mut T; 
 
         if is_overrun() {
@@ -136,7 +134,7 @@ pub fn memtest() {
 }
 
 #[cfg(not(test))]
-pub fn alloc(bytes: usize) -> *mut u32 {
+pub fn alloc_bytes(bytes: usize) -> *mut u32 {
     // Check for boundaries and reset if applicable.
     unsafe {
         if MEMORY_OFFSET + bytes as u32 >= MEMORY_MAXIMUM {
@@ -150,11 +148,8 @@ pub fn alloc(bytes: usize) -> *mut u32 {
     }
 }
 
-/// This is kernal alloc and it implements what I call a "cyclical mempage strategy".
-/// Memory is constantly allocated in RAM and eventually will loop back around
-/// if all memory is used up. Clearly, this is a bad idea. Will be improved over time.
 #[cfg(not(test))]
-pub fn kalloc<T>() -> *mut T {
+pub fn alloc<T>() -> *mut T {
     let bytes = size_of::<T>();
     return Mempage::add_page(bytes);
 }
@@ -167,8 +162,8 @@ pub fn free<T>(ptr: *mut T) {
 }
 
 #[cfg(test)]
-pub fn kalloc<T>() -> *mut T {
-    return unsafe { alloc(Layout::new::<T>()) as *mut T };
+pub fn alloc<T>() -> *mut T {
+    return unsafe { std::alloc::alloc(std::alloc::Layout::new::<T>()) as *mut T };
 }
 
 #[cfg(test)]

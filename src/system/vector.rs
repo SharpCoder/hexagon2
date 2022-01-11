@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::mem::{ kalloc, free };
+use crate::mem::{ alloc, free };
 use core::iter::{Iterator};
 
 /// This macro returns a vector of the items you pass to it.
@@ -168,7 +168,7 @@ impl <T: Clone + Copy> Array<T> for Vector<T> {
 impl <T: Clone + Copy> Queue<T> for Vector<T> {
     fn enqueue(&mut self, item: T) {
         // Add it to the end of the stack
-        let ptr = kalloc();
+        let ptr = alloc();
         unsafe {
             (*ptr) = Node {
                 item: item,

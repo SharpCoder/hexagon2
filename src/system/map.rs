@@ -55,7 +55,7 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> PartialOrd for MapNode<K, V> 
 
 impl <K : PartialOrd + PartialEq + Copy, V : Copy> MapNode<K, V> {
     pub fn new(key: K, val: V) -> *mut Self {
-        let ptr = kalloc();
+        let ptr = alloc();
         unsafe {
             (*ptr) = MapNode {
                 item: val,

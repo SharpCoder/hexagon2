@@ -36,7 +36,7 @@ macro_rules! gate_open {
             match current_node {
                 None => {
                     // Let's create a new gate.
-                    let new_gate = crate::mem::kalloc::<Gate>();
+                    let new_gate = crate::mem::alloc::<Gate>();
                     unsafe { *new_gate = Gate::new(); }
 
                     // This new gate is what we'l return
