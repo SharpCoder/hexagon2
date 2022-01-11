@@ -2,7 +2,7 @@
 // for the future when this package gets fuller.
 #![allow(unused)]
 
-use crate::debug::blink_accumulate;
+use crate::debug::*;
 /** 
  * This module represents the serial communication protocol
  * based on UART physical hardware. For simplicity, it is tightly
@@ -202,7 +202,7 @@ impl Uart {
             rx_en: false,
             match1_irq_en: false,
             match2_irq_en: false,
-            idle_config: IdleConfiguration::Idle4Char,
+            idle_config: IdleConfiguration::Idle16Char,
             doze_en: false,
             bit_mode: BitMode::EightBits,
             parity_en: false,
@@ -289,15 +289,15 @@ impl Uart {
     }
 
     fn handle_receive_irq(&mut self) {
-        // let irq_statuses = uart_get_irq_statuses(self.device);
+        let irq_statuses = uart_get_irq_statuses(self.device);
         
         // TODO: Implement some logic for these edge cases
         // but it's really not needed for just simply
         // receiving messages.
+        let rx_overrun = irq_statuses & (0x1 << 19) > 0;
         // let rx_active = irq_statuses & (0x1 << 24) > 0;
         // let rx_buffer_full = irq_statuses & (0x1 << 21) > 0;
         // let rx_idle = irq_statuses & (0x1 << 20) > 0;
-        // let rx_overrun = irq_statuses & (0x1 << 19) > 0;
 
         // Read until it is empty
         let mut count = 0;
@@ -314,9 +314,9 @@ impl Uart {
             }
         }
 
-        // if rx_overrun {
-        //     // crate::debug::blink_accumulate();
-        // }
+        if rx_overrun {
+            crate::debug::blink_accumulate();
+        }
             
         uart_clear_irq(self.device, UartClearIrqConfig {
             rx_data_full: true,
@@ -362,7 +362,8 @@ impl Uart {
             for _ in self.tx_count .. 1 {
                 self.transmit();
             }
-        } else if !pending_data {
+        } else if !pending_data && tx_empty {
+            uart_sbk(self.device);
             // Disengage, I guess?
             uart_clear_reg(self.device, &CTRL_TIE);
             uart_clear_reg(self.device, &CTRL_TCIE);
@@ -384,6 +385,14 @@ impl Uart {
         // been used
         if !self.initialized {
             return;
+        }
+
+
+        if unsafe { HTTP_COMPLETE } {
+            if crate::math::rand() % 1000 == 0 {
+                let irq = uart_get_irq_statuses(self.device);
+                debug_hex(irq, b"Serial IRQ statuses");
+            }
         }
 
         // This prevents circular calls
