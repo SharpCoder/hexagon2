@@ -239,7 +239,7 @@ impl Uart {
         
         irq_attach(self.irq, serio_handle_irq);
         irq_enable(self.irq);
-
+        irq_priority(self.irq, 254);
         uart_baud_rate(self.device, 115200);
 
 

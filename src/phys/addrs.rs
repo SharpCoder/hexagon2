@@ -2,6 +2,7 @@
 pub const NVIC_IRQ_ENABLE_REG: u32 = 0xE000E100;
 pub const NVIC_IRQ_CLEAR_REG: u32 = 0xE000E180;
 pub const NVIC_IRQ_CLEAR_PENDING_REG: u32 = 0xE000E280;
+pub const NVIC_IRQ_PRIORITY_REG: u32 = 0xE000E400;
 /** UART */
 pub const UART1: u32 = 0x4018_4000;
 pub const UART2: u32 = 0x4018_8000;

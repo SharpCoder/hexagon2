@@ -5,6 +5,7 @@ use core::arch::asm;
 use crate::phys::{ 
     addrs,
     assign,
+    assign_8,
     read_word,
     set_bit,
  };
@@ -127,6 +128,11 @@ pub fn irq_disable(irq_number: Irq) {
     assign(addr, next_value);
 }
 
+pub fn irq_priority(irq_number: Irq, priority: u8) {
+    let num = irq_number as u32;
+    put_irq_priority(num, priority);
+}
+
 pub fn irq_clear_pending() {
     assign(addrs::NVIC_IRQ_CLEAR_PENDING_REG + 0x0, 0x0);
     assign(addrs::NVIC_IRQ_CLEAR_PENDING_REG + 0x4, 0x0);
@@ -190,6 +196,11 @@ fn put_irq(irq_number: usize, ptr: Fn) {
     }
     // Copy shadow to actual NVIC
     update_ivt();
+}
+
+fn put_irq_priority(irq_number: u32, priority: u8) {
+    let addr = addrs::NVIC_IRQ_PRIORITY_REG + irq_number;
+    assign_8(addr, priority);
 }
 
 // DO NOT USE!!!

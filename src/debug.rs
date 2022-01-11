@@ -60,7 +60,7 @@ pub fn blink_hardware(count: u8) {
     }
 }
 
-const DEBUG_SERIAL_ENABLED: bool = false;
+const DEBUG_SERIAL_ENABLED: bool = true;
 
 pub fn blink_custom(on_time: u64, off_time: u64) {
     blink_led_on();

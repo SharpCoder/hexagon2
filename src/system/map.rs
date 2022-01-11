@@ -227,19 +227,19 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V>
             } else if descendants == 2 {
                 // The hardest case
                 // Select the minimum value of the right subtree
+                // This is because... I need to learn better borrow checker habits.
+                let left_node = unsafe { (node.as_mut().unwrap().left.unwrap()).as_mut().unwrap() };
                 let right_node = unsafe { node.as_mut().unwrap().right.unwrap().as_mut().unwrap() };
-                let replacement = right_node.min_value();
+                let replacement = unsafe { node.as_mut().unwrap().right.unwrap().as_mut().unwrap() }.min_value();
 
-                let right_left = unsafe { (node.as_mut().unwrap().left.unwrap()).as_mut().unwrap() };
-                let right_right = unsafe { (node.as_mut().unwrap().right.unwrap()).as_mut().unwrap() };
 
                 // Wire up replacement
-                if replacement.key != right_left.key {
-                    replacement.put_left(Some(right_left));
+                if replacement.key != left_node.key {
+                    replacement.put_left(Some(left_node));
                 }
 
-                if replacement.key != right_right.key {
-                    replacement.put_right(Some(right_right));
+                if replacement.key != right_node.key {
+                    replacement.put_right(Some(right_node));
                 }
 
                 if left_matches {
