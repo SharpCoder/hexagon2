@@ -114,7 +114,6 @@ impl WifiDriver {
                 WifiCommand::new().with_command(b"AT+CIPSTART=\"TCP\",\"")
                     .join_vec(ip_addr)
                     .join_vec(vec_str!(b"\",80")),
-                WifiCommand::new().with_command(b"AT").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CIPSEND=")
                     .join_vec(itoa_u32(content.size() as u32))
                     .with_expected_response(b"OK"),
@@ -195,7 +194,7 @@ impl WifiDriver {
         if clock::nanos() < self.time_target {
             return;
         }
-        self.time_target = clock::nanos() + crate::MS_TO_NANO * 1000;
+        self.time_target = clock::nanos() + crate::MS_TO_NANO * 15;
         let device = self.device;
         
         match self.active_command {

@@ -26,7 +26,7 @@ struct HardwareConfig {
 
 /// Enable this to mirror all bytes received
 /// to the Debug UART peripherla.
-const DEBUG_SPY: bool = false;
+const DEBUG_SPY: bool = true;
 
 static mut TEMP_BUF: [u8; 128] = [0; 128];
 const UART_WATERMARK_SIZE: u32 = 0x2;
@@ -190,7 +190,7 @@ impl Uart {
         uart_configure(self.device, UartConfig {
             r9t8: false,
             invert_transmission_polarity: false,
-            overrun_irq_en: false,
+            overrun_irq_en: true,
             noise_error_irq_en: false,
             framing_error_irq_en: false,
             parity_error_irq_en: false,
@@ -202,7 +202,7 @@ impl Uart {
             rx_en: false,
             match1_irq_en: false,
             match2_irq_en: false,
-            idle_config: IdleConfiguration::Idle16Char,
+            idle_config: IdleConfiguration::Idle4Char,
             doze_en: false,
             bit_mode: BitMode::EightBits,
             parity_en: false,
@@ -362,8 +362,7 @@ impl Uart {
             for _ in self.tx_count .. 1 {
                 self.transmit();
             }
-        } else if !pending_data && tx_empty {
-            uart_sbk(self.device);
+        } else if !pending_data {
             // Disengage, I guess?
             uart_clear_reg(self.device, &CTRL_TIE);
             uart_clear_reg(self.device, &CTRL_TCIE);
@@ -385,14 +384,6 @@ impl Uart {
         // been used
         if !self.initialized {
             return;
-        }
-
-
-        if unsafe { HTTP_COMPLETE } {
-            if crate::math::rand() % 1000 == 0 {
-                let irq = uart_get_irq_statuses(self.device);
-                debug_hex(irq, b"Serial IRQ statuses");
-            }
         }
 
         // This prevents circular calls

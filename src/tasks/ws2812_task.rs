@@ -90,9 +90,9 @@ impl Task for WS2812Task {
                 self.driver.set_color(i, self.contexts[i].color);
             }
 
-            disable_interrupts();
+            // disable_interrupts();
             self.driver.flush();
-            enable_interrupts();
+            // enable_interrupts();
             self.target = nanos() + crate::MS_TO_NANO * 45;
         }
     }
