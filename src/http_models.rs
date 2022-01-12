@@ -27,14 +27,14 @@ impl HttpRequest {
         let mut result = Vector::new();
         
         // Request line
-        result.join(self.method);
+        result.join(&self.method);
         result.push(b' ');
-        result.join(self.request_uri);
-        result.join(vec_str!(b" HTTP/1.1\r\n"));
+        result.join(&self.request_uri);
+        result.join(&vec_str!(b" HTTP/1.1\r\n"));
 
         // Host line
-        result.join(vec_str!(b"Host: "));
-        result.join(self.host);
+        result.join(&vec_str!(b"Host: "));
+        result.join(&self.host);
         result.push(b'\r');
         result.push(b'\n');
 
@@ -44,10 +44,10 @@ impl HttpRequest {
             Some(headers) => {
                 for idx in 0 .. headers.size() {
                     let header = headers.get(idx).unwrap();
-                    result.join(header.key);
-                    result.join(vec_str!(b": "));
-                    result.join(header.value);
-                    result.join(vec_str!(b"\r\n"));
+                    result.join(&header.key);
+                    result.join(&vec_str!(b": "));
+                    result.join(&header.value);
+                    result.join(&vec_str!(b"\r\n"));
                 }
             }
         }
@@ -60,7 +60,7 @@ impl HttpRequest {
         match self.content {
             None => {},
             Some(content) => {
-                result.join(content);
+                result.join(&content);
             }
         }
 

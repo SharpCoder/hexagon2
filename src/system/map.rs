@@ -267,13 +267,13 @@ impl <K : PartialOrd + PartialEq + Copy, V : Copy> BTree<K, V> for MapNode<K, V>
         match self.left {
             None => {},
             Some(node) => {
-                result.join(unsafe { node.as_ref().unwrap() }.keys());
+                result.join(&unsafe { node.as_ref().unwrap() }.keys());
             }
         }
         match self.right {
             None => {},
             Some(node) => {
-                result.join(unsafe { node.as_ref().unwrap() }.keys());
+                result.join(&unsafe { node.as_ref().unwrap() }.keys());
             }
         }
         return result;

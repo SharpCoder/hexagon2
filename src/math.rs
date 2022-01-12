@@ -1,5 +1,10 @@
 use crate::system::vector::*;
 
+/// Low pass filter
+pub fn lpf(alpha: f32, original: f32, updated: f32) -> f32 {
+    return (alpha * original) + (1.0 - alpha) * updated;
+}
+
 pub fn pow32(base: u32, power: u32) -> u32 {
     if power == 0 {
         return 1;

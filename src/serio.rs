@@ -195,14 +195,14 @@ impl Uart {
             framing_error_irq_en: false,
             parity_error_irq_en: false,
             tx_irq_en: false, // This gets set later
-            rx_irq_en: false,
+            rx_irq_en: true,
             tx_complete_irq_en: false,
-            idle_line_irq_en: false,
+            idle_line_irq_en: true,
             tx_en: false,
             rx_en: false,
             match1_irq_en: false,
             match2_irq_en: false,
-            idle_config: IdleConfiguration::Idle4Char,
+            idle_config: IdleConfiguration::Idle64Char,
             doze_en: false,
             bit_mode: BitMode::EightBits,
             parity_en: false,
@@ -215,7 +215,7 @@ impl Uart {
             tx_flush: false,
             rx_flush: false,
             tx_fifo_overflow_irq_en: false,
-            rx_fifo_underflow_irq_en: false,
+            rx_fifo_underflow_irq_en: true,
             tx_fifo_en: true,
             rx_fifo_en: true,
         });
@@ -239,7 +239,7 @@ impl Uart {
         
         irq_attach(self.irq, serio_handle_irq);
         irq_enable(self.irq);
-        irq_priority(self.irq, 254);
+        irq_priority(self.irq, 128);
         uart_baud_rate(self.device, 115200);
 
 
@@ -251,23 +251,19 @@ impl Uart {
     }
 
     pub fn write(&mut self, bytes: &[u8]) {
-        disable_interrupts();
         for byte_idx in 0 .. bytes.len() {
             self.tx_buffer.enqueue(bytes[byte_idx]);
         }
 
         pin_out(self.tx_pin, Power::High);
         uart_set_reg(self.device, &CTRL_TIE);
-        enable_interrupts();
     }
 
-    pub fn write_vec(&mut self, bytes: Vector<u8>) {
-        disable_interrupts();
+    pub fn write_vec(&mut self, bytes: &Vector<u8>) {
         self.tx_buffer.join(bytes);
 
         pin_out(self.tx_pin, Power::High);
         uart_set_reg(self.device, &CTRL_TIE);
-        enable_interrupts();
     }
 
     pub fn get_rx_buffer(&mut self) -> &mut Vector::<u8> {
@@ -300,19 +296,19 @@ impl Uart {
         // let rx_idle = irq_statuses & (0x1 << 20) > 0;
 
         // Read until it is empty
-        let mut count = 0;
+        // let mut count = 0;
         while uart_has_data(self.device) {
             let msg: u8 = uart_read_fifo(self.device);
             self.rx_buffer.enqueue(msg);
-            unsafe { TEMP_BUF[count] = msg };
-            count += 1;
+            // unsafe { TEMP_BUF[count] = msg };
+            // count += 1;
         }
 
-        if DEBUG_SPY {
-            for idx in 0 .. count {
-                serial_write(SerioDevice::Debug, &[unsafe { TEMP_BUF[idx] }]);
-            }
-        }
+        // if DEBUG_SPY {
+        //     for idx in 0 .. count {
+        //         serial_write(SerioDevice::Debug, &[unsafe { TEMP_BUF[idx] }]);
+        //     }
+        // }
 
         if rx_overrun {
             crate::debug::blink_accumulate();
@@ -387,10 +383,8 @@ impl Uart {
         }
 
         // This prevents circular calls
-        disable_interrupts();
         self.handle_receive_irq();
         self.handle_send_irq();
-        enable_interrupts();
     }
 }
 
@@ -436,7 +430,7 @@ pub fn serial_write(device: SerioDevice, bytes: &[u8]) {
     uart.write(bytes);
 }
 
-pub fn serial_write_vec(device: SerioDevice, bytes: Vector<u8>) {
+pub fn serial_write_vec(device: SerioDevice, bytes: &Vector<u8>) {
     let uart = get_uart_interface(device);
     uart.initialize();
     uart.write_vec(bytes);
@@ -461,9 +455,6 @@ pub fn serio_baud(rate: u32) {
 }
 
 pub fn serio_handle_irq() {
-    if unsafe { HTTP_COMPLETE } {
-        blink_accumulate();
-    }
     disable_interrupts();
     get_uart_interface(SerioDevice::Uart1).handle_irq();
     get_uart_interface(SerioDevice::Uart2).handle_irq();

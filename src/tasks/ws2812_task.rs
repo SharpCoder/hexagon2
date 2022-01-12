@@ -8,7 +8,7 @@ use crate::system::strings::*;
 
 use self::shader::*;
 
-const LEDS: usize = 1;
+const LEDS: usize = 3;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
@@ -54,7 +54,7 @@ impl ActiveShader {
 impl WS2812Task {
     pub fn new() -> WS2812Task {
         return WS2812Task { 
-            shader: ActiveShader:: Basic,
+            shader: ActiveShader::Basic,
             target: 0,
             contexts: [ShaderContext::new(0, LEDS); LEDS],
             driver: WS2812Driver::<LEDS>::new(
@@ -64,7 +64,6 @@ impl WS2812Task {
     }
 
     pub fn set_shader(&mut self, shader: ActiveShader) {
-        self.shader = shader;
         let active_shader = get_shader(shader);
         for i in 0 .. LEDS {
             self.contexts[i] = active_shader.init(self.contexts[i]);
@@ -76,6 +75,7 @@ impl Task for WS2812Task {
     fn init(&mut self) {
         for idx in 0 .. LEDS {
             self.contexts[idx].node_id = idx;
+            self.contexts[idx].total_nodes = LEDS;
         }
         self.set_shader(self.shader);
         self.system_loop();
@@ -84,16 +84,13 @@ impl Task for WS2812Task {
     fn system_loop(&mut self) {
         if nanos() > self.target {
             let active_shader = get_shader(self.shader);
-
             for i in 0 .. LEDS {
                 self.contexts[i] = active_shader.update(self.contexts[i]);
                 self.driver.set_color(i, self.contexts[i].color);
             }
 
-            // disable_interrupts();
             self.driver.flush();
-            // enable_interrupts();
-            self.target = nanos() + crate::MS_TO_NANO * 45;
+            self.target = nanos() + crate::MS_TO_NANO * 18;
         }
     }
 

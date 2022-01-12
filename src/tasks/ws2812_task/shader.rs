@@ -1,4 +1,4 @@
-use crate::drivers::ws2812::*;
+use crate::{drivers::ws2812::*, debug::{debug_u32, debug_str}};
 
 #[derive(Copy, Clone)]
 pub struct ShaderContext {
@@ -39,12 +39,15 @@ impl <const SIZE: usize> Shader<SIZE> for BasicShader {
     fn name(&self) -> &[u8] { return b"Basic"; }
 
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
-        return context;
+        let mut next_context = context;
+        next_context.registers[0] = 25i32 * context.node_id as i32;
+        return next_context;
     }
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context: ShaderContext = context;
         let count = context.registers[0] as u8;
-        next_context.color = wheel(count + (context.node_id / context.total_nodes) as u8 );
+
+        next_context.color = wheel(count);
         next_context.registers[0] += 1;
         if next_context.registers[0] > 255 {
             next_context.registers[0] = 0;

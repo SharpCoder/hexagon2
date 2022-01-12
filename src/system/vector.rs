@@ -285,7 +285,7 @@ impl <T: Clone + Copy> Vector<T> {
         return self.size;
     }
 
-    pub fn join(&mut self, vec_to_join: Vector<T>) -> &mut Self {
+    pub fn join(&mut self, vec_to_join: &Vector<T>) -> &mut Self {
         let mut copy = vec_to_join.clone();
         for index in 0 .. vec_to_join.size() {
             self.enqueue(copy.dequeue().unwrap());
@@ -420,9 +420,9 @@ mod test {
         assert_eq!(cloned_list.pop(), Some(32));
         assert_eq!(cloned_list.pop(), None);
 
-        cloned_list.join(Vector::from_slice(&[32,64]));
+        cloned_list.join(&Vector::from_slice(&[32,64]));
         let mut list3 = cloned_list.clone();
-        list3.join(Vector::from_slice(&[128]));
+        list3.join(&Vector::from_slice(&[128]));
         assert_eq!(list3.get(0), Some(32));
     }
 
@@ -444,7 +444,7 @@ mod test {
         let mut list1 = Vector::from_slice(&[32,64,128]);
         let list2 = Vector::from_slice(&[256,512]);
         
-        list1.join(list2);
+        list1.join(&list2);
 
         assert_eq!(list1.pop(), Some(512));
         assert_eq!(list1.pop(), Some(256));

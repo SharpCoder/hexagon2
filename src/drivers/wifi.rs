@@ -34,11 +34,22 @@ impl WifiDriver {
         };
     }
 
+    pub fn get_ip(&mut self, callback: Callback) {
+        self.queued_commands.enqueue(WifiCommandSequence::new_with_callback(
+            Vector::from_slice(&[
+                WifiCommand::new().with_command(b"AT+CIFSR")
+                    .with_expected_response(b"OK")
+            ]),
+            Box::new(callback),
+        ));
+    }
+
     pub fn connect(&mut self, ssid: &[u8], pwd: &[u8], callback: Callback) {
         // Generate the command sequence
         self.queued_commands.enqueue( WifiCommandSequence::new_with_callback(
             Vector::from_slice(&[
                 WifiCommand::new().with_command(b"AT+CWMODE=1").with_expected_response(b"OK"),
+                WifiCommand::new().with_command(b"AT+CWQAP").with_expected_response(b"OK"),
                 WifiCommand::new().with_command(b"AT+CWJAP=\"")
                     .join_vec(vec_str!(ssid))
                     .join_vec(vec_str!(b"\",\""))
@@ -133,7 +144,7 @@ impl WifiDriver {
                             } else if found_header && line.size() == 2 {
                                 begin = true;
                             } else if begin {
-                                output.join(line);
+                                output.join(&line);
                             }
                         }
 
@@ -143,34 +154,46 @@ impl WifiDriver {
                     })
                     .with_termination_condition(|buffer| {
                         // See if we can find the start of the http request
-                        let lines = buffer.split(b'\n');
+
+                        let CL = vec_str!(b"content-length:");
                         let mut packet_size = 0u32;
                         let mut content_length = 0u32;
                         let mut count_line = false;
+                        let mut start = 0;
+                        let mut end = 0;
+                        let mut line;
 
-                        for line in lines.into_iter() {
-                            if line.contains(vec_str!(b"HTTP/")) {
-                                // This is the start
-                            } else if line.contains(vec_str!(b"content-length:")) {
-                                // Parse out content length
-                                let slice = line.slice(16, 100);
-                                content_length = crate::math::atoi_u32(slice);
-                            }
+                        for i in 0 .. buffer.size() {
+                            let c = buffer.get(i).unwrap();
+                            if c == b'\n' {
+                                end = i;
+                                line = buffer.slice(start, end);
+                                start = i;
 
-                            if line.size() == 2 && content_length > 0 {
-                                count_line = true;
-                            } else if count_line {
-                                packet_size += line.size() as u32;
+                                if line.contains(CL) {
+                                    // Parse out content length
+                                    content_length = crate::math::atoi_u32(line.slice(16, 100));
+                                }
+    
+                                if line.size() == 2 && content_length > 0 {
+                                    count_line = true;
+                                } else if count_line {
+                                    packet_size += 1 + line.size() as u32;
+                                }
                             }
                         }
 
                         if content_length > 0 && packet_size >= content_length {
                             return true;
                         } else {
+                            debug_str(b"\n");
+                            debug_u32(packet_size, b"found packets");
+                            serial_write_vec(SerioDevice::Debug, &buffer);
+                            debug_str(b"\n");
+
                             return false;
                         }
-                    })
-                    .with_delay(crate::MS_TO_NANO * 250),
+                    }),
                 WifiCommand::new()
                     .with_command(b"AT+CIPCLOSE")
                     .with_expected_response(b"OK")
@@ -181,8 +204,8 @@ impl WifiDriver {
 
     pub fn emit(device: SerioDevice, msg: Vector::<u8>) {
         let mut message = msg.clone();
-        message.join(Vector::from_slice(b"\r\n"));
-        serial_write_vec(device, message);
+        message.join(&Vector::from_slice(b"\r\n"));
+        serial_write_vec(device, &message);
     }
 
     pub fn process(&mut self) {
@@ -257,7 +280,7 @@ impl WifiCommand {
 
     pub fn with_vec_command(&self, command: String) -> Self {
         let mut next = self.clone();
-        next.command.join(command);
+        next.command.join(&command);
         return next;
     }
 
@@ -269,13 +292,13 @@ impl WifiCommand {
 
     pub fn with_command(&self, command: &'static [u8]) -> Self {
         let mut next = self.clone();
-        next.command.join( Vector::from_slice(command));
+        next.command.join( &Vector::from_slice(command));
         return next;
     }
 
     pub fn join_vec(&self, vec_to_join: Vector::<u8>) -> Self {
         let mut next = self.clone();
-        next.command.join(vec_to_join);
+        next.command.join(&vec_to_join);
         return next;
     }
 
