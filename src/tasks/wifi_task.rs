@@ -24,34 +24,37 @@ impl <'a> Task for WifiTask<'a> {
     fn init(&mut self) {
         debug_str(b"Resetting ESP8266");
         self.driver.reset();
-        debug_str(b"Reconfiguring baud rate");
         // Set baud using both bauds in case it's stuck
-        debug_str(b"Connecting to Wifi");
-        self.driver.connect(b"Bird of Prey", b"password", &|_,_| {
-            debug_str(b"Wifi Connected!");
-        });
-        self.driver.dns_lookup(b"worldtimeapi.org", &|driver, outputs: BTreeMap<String, String>| {
-            debug_str(b"DNS lookup complete");
+        self.driver.get_ip(&|driver, _| {
+            debug_str(b"Connecting to Wifi");
+            driver.connect(b"NCC-1701D", b"password_here", &|driver,_| {
+                debug_str(b"Wifi Connected!");
 
-            // For this function, the first argument is the string
-            // containing the ip address.
-            if outputs.size() > 0 {
-                let ip_address = outputs.get(vec_str!(b"ip_address")).unwrap();
-                driver.http_request(ip_address, HttpRequest {
-                    method: vec_str!(b"GET"),
-                    request_uri: vec_str!(b"/api/timezone/America/Los_Angeles.txt"),
-                    host: vec_str!(b"worldtimeapi.org"),
-                    headers: None,
-                    content: None,
-                }, &|_driver, artifacts| {
-                    debug_str(b"HTTP Request complete");
-                    serial_write_vec(SerioDevice::Debug, artifacts.get(vec_str!(b"content")).unwrap());
-                    unsafe {
-                        HTTP_COMPLETE = true;
+                driver.dns_lookup(b"worldtimeapi.org", &|driver, outputs: BTreeMap<String, String>| {
+                    debug_str(b"DNS lookup complete");
+                    // For this function, the first argument is the string
+                    // containing the ip address.
+                    if outputs.size() > 0 {
+                        let ip_address = outputs.get(vec_str!(b"ip_address")).unwrap();
+                        driver.http_request(ip_address, HttpRequest {
+                            method: vec_str!(b"GET"),
+                            request_uri: vec_str!(b"/api/timezone/America/Los_Angeles.txt"),
+                            host: vec_str!(b"worldtimeapi.org"),
+                            headers: None,
+                            content: None,
+                        }, &|_driver, artifacts| {
+                            debug_str(b"HTTP Request complete");
+                            serial_write_vec(SerioDevice::Debug, &artifacts.get(vec_str!(b"content")).unwrap());
+                            unsafe {
+                                HTTP_COMPLETE = true;
+                            }
+                        });
                     }
                 });
-            }
+            });
+            
         });
+
     }
 
     fn handle_message(&mut self, _topic: String, _content: String) {
