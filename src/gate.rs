@@ -7,18 +7,17 @@ If the condition is not met, the gate will yield
 until a later point.
 */
 use crate::clock::*;
+use crate::system::{ boxed::*, vector::* };
 
 type CondFn = fn(&mut Gate) -> bool;
 type ExecFn = fn();
 
-const MAX_SUPPORTED_FUNCTIONS: usize = 32;
-
 #[derive(Copy, Clone)]
 pub struct Gate {
-    pub conditions: [CondFn; MAX_SUPPORTED_FUNCTIONS],
-    pub functions: [ExecFn; MAX_SUPPORTED_FUNCTIONS],
-    pub durations: [u64; MAX_SUPPORTED_FUNCTIONS],
-    pub target_times: [u64; MAX_SUPPORTED_FUNCTIONS],
+    pub conditions: Vector::<CondFn>,
+    pub functions: Vector::<ExecFn>,
+    pub durations: Vector::<u64>,
+    pub target_times: Vector::<u64>,
     pub current_index: usize,
     pub tail: usize,
     pub once: bool,
@@ -59,10 +58,10 @@ macro_rules! gate_open {
 impl Gate {
     pub fn new() -> Gate {
         return Gate {
-            conditions: [base_cond_fn; MAX_SUPPORTED_FUNCTIONS],
-            functions: [base_fn; MAX_SUPPORTED_FUNCTIONS],
-            durations: [0u64; MAX_SUPPORTED_FUNCTIONS],
-            target_times: [0u64; MAX_SUPPORTED_FUNCTIONS],
+            conditions: Vector::new(),
+            functions: Vector::new(),
+            durations: Vector::new(),
+            target_times: Vector::new(),
             current_index: 0usize,
             tail: 0usize,
             once: false,
@@ -75,8 +74,10 @@ impl Gate {
             return self;
         }
 
-        self.conditions[self.tail] = cond;
-        self.functions[self.tail] = then;
+        self.target_times.push(0);
+        self.durations.push(0);
+        self.conditions.push(cond);
+        self.functions.push(then);
         self.tail += 1;
         return self;
     }
@@ -86,11 +87,12 @@ impl Gate {
             return self;
         }
 
-        self.conditions[self.tail] = |this: &mut Gate| {
-            return nanos() > this.target_times[this.current_index];
-        };
-        self.functions[self.tail] = then;
-        self.durations[self.tail] = duration_nanos;
+        self.target_times.push(0);
+        self.durations.push(duration_nanos);
+        self.conditions.push(|&mut gate| {
+            return nanos() > gate.target_times.get(gate.current_index).unwrap();
+        });
+        self.functions.push(then);
         self.tail += 1;
         return self;
     }
@@ -119,15 +121,18 @@ impl Gate {
     // gate condition and, if true, execute
     // the underlying block.
     pub fn process(&mut self) {
-        if self.conditions[self.current_index](self) {
-            self.functions[self.current_index]();
+        let cond = self.conditions.get(self.current_index).unwrap();
+        let then = self.functions.get(self.current_index).unwrap();
+
+        if cond(self) {
+            then();
             self.current_index += 1;
 
             if self.current_index == self.tail {
                 self.current_index = 0;
             } 
 
-            self.target_times[self.current_index] = nanos() + self.durations[self.current_index];
+            self.target_times.put(self.current_index, nanos() + self.durations.get(self.current_index).unwrap());
         }
 
     }
