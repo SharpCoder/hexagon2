@@ -1,3 +1,4 @@
 out/
 target/
 src/env.rs
+hotswap.sh

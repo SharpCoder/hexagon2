@@ -3,6 +3,9 @@ mkdir -p out/
 
 rm -rf out/*
 
+# Hot-swap the wifi password so I don't accidentally check that in to source :P
+./hotswap.sh 2
+
 echo Compiling rust...
 # Compile rust
 rustc --target thumbv7em-none-eabihf \
@@ -59,3 +62,6 @@ arm-none-eabi-objcopy -O ihex -R .eeprom out/kernel.elf out/kern.hex
 # Cleanup
 rm -rf out/*.elf
 rm -rf out/*.o
+
+# Hot-swap the wifi password back so I don't accidentally check that in to source :P
+./hotswap.sh 1
