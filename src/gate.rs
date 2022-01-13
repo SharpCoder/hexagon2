@@ -7,7 +7,7 @@ If the condition is not met, the gate will yield
 until a later point.
 */
 use crate::clock::*;
-use crate::system::{ boxed::*, vector::* };
+use crate::system::vector::*;
 
 type CondFn = fn(&mut Gate) -> bool;
 type ExecFn = fn();
