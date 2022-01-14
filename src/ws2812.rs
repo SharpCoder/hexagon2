@@ -1,10 +1,10 @@
-mod shader;
+pub mod shader;
 
-use crate::Task;
 use crate::drivers::ws2812::*;
-use crate::clock::*;
-use crate::phys::irq::{disable_interrupts, enable_interrupts};
-use crate::system::strings::*;
+use teensycore::clock::*;
+use teensycore::debug::{debug_str, debug_u32};
+use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
+use teensycore::system::strings::*;
 
 use self::shader::*;
 
@@ -52,7 +52,18 @@ impl ActiveShader {
 }
 
 impl WS2812Task {
-    pub fn new() -> WS2812Task {
+
+    pub fn set_shader(&mut self, shader: ActiveShader) {
+        let active_shader = get_shader(shader);
+        for i in 0 .. LEDS {
+            self.contexts[i] = active_shader.init(self.contexts[i]);
+        }
+    }
+}
+
+impl teensycore::Task for WS2812Task {
+
+    fn new() -> WS2812Task {
         return WS2812Task { 
             shader: ActiveShader::Basic,
             target: 0,
@@ -63,15 +74,6 @@ impl WS2812Task {
         };
     }
 
-    pub fn set_shader(&mut self, shader: ActiveShader) {
-        let active_shader = get_shader(shader);
-        for i in 0 .. LEDS {
-            self.contexts[i] = active_shader.init(self.contexts[i]);
-        }
-    }
-}
-
-impl Task for WS2812Task {
     fn init(&mut self) {
         for idx in 0 .. LEDS {
             self.contexts[idx].node_id = idx;
@@ -90,11 +92,7 @@ impl Task for WS2812Task {
             }
 
             self.driver.flush();
-            self.target = nanos() + crate::MS_TO_NANO * 18;
+            self.target = nanos() + teensycore::MS_TO_NANO * 18;
         }
-    }
-
-    fn handle_message(&mut self, _topic: String, _content: String) {
-        
     }
 }

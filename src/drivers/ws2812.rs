@@ -1,7 +1,8 @@
-use crate::wait_ns;
-use crate::irq::*;
-use crate::phys::pins::*;
-use crate::debug::*;
+use core::arch::asm;
+use teensycore::phys::irq::*;
+use teensycore::phys::pins::*;
+use teensycore::debug::*;
+use teensycore::wait_ns;
 
 #[derive(Clone, Copy)]
 struct Node {
@@ -77,12 +78,11 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         wait_ns(300);
         pin_out(self.pin, Power::Low);
         wait_ns(900);
-
     }
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(    85_000);
+        wait_ns(    185_000);
     }
 
     pub fn flush(&self) {

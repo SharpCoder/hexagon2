@@ -1,12 +1,13 @@
-use crate::*;
-use crate::clock;
-use crate::serio::*;
-use crate::phys::pins::*;
-use crate::system::strings::*;
-use crate::system::vector::*;
-use crate::system::map::*;
+use teensycore::*;
+use teensycore::debug::*;
+use teensycore::clock;
+use teensycore::serio::*;
+use teensycore::phys::pins::*;
+use teensycore::system::strings::*;
+use teensycore::system::vector::*;
+use teensycore::system::map::*;
+use teensycore::math::*;
 use crate::http_models::*;
-use crate::math::*;
 
 /// This is the standardized callback signature. The argument
 /// is a lits of strings. Each string represents an output
@@ -40,7 +41,7 @@ impl WifiDriver {
                 WifiCommand::new().with_command(b"AT+CIFSR")
                     .with_expected_response(b"OK")
             ]),
-            Box::new(callback),
+            callback
         ));
     }
 
@@ -57,22 +58,22 @@ impl WifiDriver {
                     .join_vec(vec_str!(b"\""))
                     .with_expected_response(b"OK"),
             ]),
-            Box::new(callback)
+            callback
         ));
     }
 
     pub fn reset(&mut self) {
         pin_out(self.reset_pin, Power::High);
-        crate::wait_ns(crate::MS_TO_NANO * 100);
+        teensycore::wait_ns(teensycore::MS_TO_NANO * 100);
         pin_out(self.reset_pin, Power::Low);
-        crate::wait_ns(crate::MS_TO_NANO * 1200);
+        teensycore::wait_ns(teensycore::MS_TO_NANO * 1200);
         
         self.queued_commands.enqueue(WifiCommandSequence::new(
             vector!(
                 WifiCommand::new()
                     .with_command(b"ATE1")
                     .with_expected_response(b"OK")
-                    .with_delay(crate::MS_TO_NANO * 1000)
+                    .with_delay(teensycore::MS_TO_NANO * 1000)
             )
         ));
     }
@@ -85,7 +86,7 @@ impl WifiDriver {
                     .join_vec(itoa_u32(rate))
                     .with_expected_response(b"OK")
             ),
-            Box::new(method),
+            method
         ))
     }
 
@@ -113,7 +114,7 @@ impl WifiDriver {
                         return result;
                     })  
             ),
-            Box::new(method)
+            method
         ));
     }
 
@@ -172,7 +173,7 @@ impl WifiDriver {
 
                                 if line.contains(CL) {
                                     // Parse out content length
-                                    content_length = crate::math::atoi_u32(line.slice(16, 100));
+                                    content_length = teensycore::math::atoi_u32(line.slice(16, 100));
                                 }
     
                                 if line.size() == 2 && content_length > 0 {
@@ -198,7 +199,7 @@ impl WifiDriver {
                     .with_command(b"AT+CIPCLOSE")
                     .with_expected_response(b"OK")
             ),
-            Box::new(method)
+            method
         ));
     }
 
@@ -217,7 +218,7 @@ impl WifiDriver {
         if clock::nanos() < self.time_target {
             return;
         }
-        self.time_target = clock::nanos() + crate::MS_TO_NANO * 15;
+        self.time_target = clock::nanos() + teensycore::MS_TO_NANO * 15;
         let device = self.device;
         
         match self.active_command {
@@ -324,7 +325,7 @@ pub struct WifiCommandSequence {
     time_target: u64,
     complete: bool,
     aborted: bool,
-    callback: Option<Box<Callback>>,
+    callback: Option<Callback>,
 }
 
 /// A WifiCommandSequence is a list of commands
@@ -345,7 +346,7 @@ impl  WifiCommandSequence {
         };
     }
 
-    pub fn new_with_callback(commands: Vector<WifiCommand>, func: Box<Callback>) -> WifiCommandSequence {
+    pub fn new_with_callback(commands: Vector<WifiCommand>, func: Callback) -> WifiCommandSequence {
         return WifiCommandSequence {
             commands: commands,
             outputs: BTreeMap::new(),
@@ -373,7 +374,7 @@ impl  WifiCommandSequence {
         
         match self.commands.get(self.index) {
             None => {
-                // crate::err();
+                // teensycore::err();
             },
             Some(command) => {
                 if clock::nanos() < (self.time_target + command.delay) {
@@ -443,7 +444,7 @@ impl  WifiCommandSequence {
         self.index += 1;
         if self.index >= self.commands.size() {
             if self.callback.is_some() {
-                let method = self.callback.unwrap().reference;
+                let method = self.callback.unwrap();
                 (*method)(driver, self.outputs);
             }
             self.complete = true;
@@ -463,6 +464,6 @@ impl  WifiCommandSequence {
     }
 
     fn update_time_target(&mut self) {
-        self.time_target = clock::nanos() + crate::MS_TO_NANO * 250;
+        self.time_target = clock::nanos() + teensycore::MS_TO_NANO * 250;
     }
 }

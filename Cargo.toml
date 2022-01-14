@@ -1,28 +1,17 @@
 [package]
-name = "hexagon2_kernel"
+name = "hexagon2"
 version = "0.0.1"
 authors = ["Josh Cole"]
-publish = false
 edition = "2021"
 
-[unstable]
-asm = "yes"
-build-std = ["core"]
-
-[[bin]]
-name = "hexagon2_kernel"
-src = "src/main.rs"
-test = false
-
-[build]
-target = "thumbv7em-none-eabihf"
-all_targets = false
-
 [lib]
-name = "hexagon2_kernel"
+crate-type = ["staticlib"]
 path = "src/lib.rs"
-test = true 
-doctest = false
-crate-type = ["lib"] 
+
+[profile.release]
+opt-level = 3
+panic = 'abort'
+incremental = false
 
 [dependencies]
+teensycore = { path = "../teensycore" }

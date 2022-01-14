@@ -23,11 +23,6 @@ macro_rules! procs {
         $($x.init();)*
         loop {
             $($x.system_loop();)*
-
-            while unsafe { crate::MESSAGES.size() } > 0 {
-                let message = unsafe { crate::MESSAGES.dequeue().unwrap() };
-                $($x.handle_message(message.topic, message.content);)*
-            }
         }
     }};
 }

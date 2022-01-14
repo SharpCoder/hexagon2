@@ -1,4 +1,5 @@
-use crate::{drivers::ws2812::*, debug::{debug_u32, debug_str}};
+use crate::drivers::ws2812::*;
+use teensycore::debug::*;
 
 #[derive(Copy, Clone)]
 pub struct ShaderContext {
@@ -16,7 +17,7 @@ impl ShaderContext {
         return ShaderContext {
             node_id: id,
             total_nodes: total_nodes,
-            current_time: crate::clock::nanos(),
+            current_time: teensycore::clock::nanos(),
             temperature: 0,
             audio_bands: [0; 7],
             registers: [0; 10],
@@ -78,7 +79,7 @@ impl <const SIZE: usize> Shader<SIZE> for XmasShader {
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context = context;
         // Randomize the starting position for each node
-        next_context.registers[0] = (crate::math::rand() % 170) as i32;
+        next_context.registers[0] = (teensycore::math::rand() % 170) as i32;
         return next_context;
     }
     
@@ -126,7 +127,7 @@ impl <const SIZE: usize> Shader<SIZE> for ConstrainedRainbowShader {
         // Register 3 is whether to go up or down
         next_context.registers[3] = 1;
         // Randomize the starting position for each node
-        next_context.registers[0] = (start + crate::math::rand() % (end - start)) as i32;
+        next_context.registers[0] = (start + teensycore::math::rand() % (end - start)) as i32;
         return next_context;
     }
     

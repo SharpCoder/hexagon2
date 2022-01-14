@@ -2,9 +2,9 @@
     This really has no place being in a kernel, but whatever.
     It's a bunch of useful structs for http stuff.
 */
-use crate::*;
-use crate::system::vector::*;
-use crate::system::strings::*;
+use teensycore::*;
+use teensycore::system::vector::*;
+use teensycore::system::strings::*;
 
 #[derive(Copy, Clone)]
 pub struct HttpHeader {
