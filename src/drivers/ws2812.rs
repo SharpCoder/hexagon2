@@ -43,6 +43,11 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
         pin_out(pin, Power::Low);
 
+        let driver = WS2812Driver::<SIZE> {
+            nodes: [Node::new(0, 0, 0); SIZE],
+            pin: pin,
+        };
+        
         return WS2812Driver::<SIZE> {
             nodes: [Node::new(0, 0, 0); SIZE],
             pin: pin,

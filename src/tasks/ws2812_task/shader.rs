@@ -40,7 +40,7 @@ impl <const SIZE: usize> Shader<SIZE> for BasicShader {
 
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context = context;
-        next_context.registers[0] = 25i32 * context.node_id as i32;
+        next_context.registers[0] = (255i32 / context.total_nodes as i32) * context.node_id as i32;
         return next_context;
     }
     fn update(&mut self, context: ShaderContext) -> ShaderContext {

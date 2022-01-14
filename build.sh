@@ -14,6 +14,7 @@ rustc --target thumbv7em-none-eabihf \
     -O --emit=link \
     -o out/kernel.o \
     -C opt-level=3 \
+    -C no-redzone \
     src/main.rs \
 
 

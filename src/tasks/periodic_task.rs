@@ -27,8 +27,8 @@ impl Task for PeriodicTask {
     fn system_loop(&mut self) {
 
         gate_open!()
-            .when_nano(crate::MS_TO_NANO * 1500, || { debug_str(b"hello world"); })
-            .when_nano(crate::MS_TO_NANO * 400, || { debug_str(b"lolcatz"); })
+            .when_nano(crate::MS_TO_NANO * 500, || { debug_str(b"hello world"); })
+            .when_nano(crate::MS_TO_NANO * 500, || { debug_str(b"lolcatz"); })
             .compile();
     }
 
