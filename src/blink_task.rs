@@ -6,30 +6,31 @@ blink requests without tying up system resources.
 */
 
 use crate::*;
-use crate::Task;
-use crate::Gate;
-use crate::system::strings::*;
+use teensycore::debug::*;
+use teensycore::gate::*;
+use teensycore::system::strings::*;
 
 static mut NEXT_BLINK_EVENT: u64 = 0x0;
 
 pub struct BlinkTask { }
 impl BlinkTask {
-    pub fn new() -> BlinkTask {
-        return BlinkTask { };
-    }
 }
 
 impl Task for BlinkTask {
+    fn new() -> BlinkTask {
+        return BlinkTask { };
+    }
+
     fn init(&mut self) { }
     
     fn system_loop(&mut self) {
         gate_open!()
             .when(|_| unsafe { BLINK_CONFIG.remaining_count } > 0, || {
                 unsafe {
-                    NEXT_BLINK_EVENT = clock::nanos() + BLINK_CONFIG.speed as u64;
+                    NEXT_BLINK_EVENT = teensycore::clock::nanos() + BLINK_CONFIG.speed as u64;
                 }
             })
-            .when(|_| clock::nanos() > unsafe { NEXT_BLINK_EVENT }, || {
+            .when(|_| teensycore::clock::nanos() > unsafe { NEXT_BLINK_EVENT }, || {
                 unsafe {
                     if BLINK_CONFIG.remaining_count % 2 == 0 {
                         blink_led_on();
@@ -41,9 +42,5 @@ impl Task for BlinkTask {
                 }
             })
             .compile();
-    }
-
-    fn handle_message(&mut self, _topic: String, _content: String) {
-        
     }
 }

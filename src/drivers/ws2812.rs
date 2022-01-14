@@ -72,7 +72,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         pin_out(self.pin, Power::Low);
         wait_ns(600);
     }
-
+    
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
         wait_ns(300);
@@ -82,9 +82,10 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(    185_000);
+        wait_ns(85_000);
     }
 
+    #[no_mangle]
     pub fn flush(&self) {
         let mut node_index = 0;
         let mut bit_index: i32;

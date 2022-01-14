@@ -24,6 +24,8 @@ do :
         -T out/linker.ld \
         -strip-all \
         --gc-sections \
+        --stats \
+        -nostdlib \
         $elf \
         -o out/kernel.elf
 
