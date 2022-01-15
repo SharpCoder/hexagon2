@@ -156,22 +156,20 @@ impl WifiDriver {
                     .with_termination_condition(|buffer| {
                         // See if we can find the start of the http request
 
-                        let CL = vec_str!(b"content-length:");
+                        let content_length_str = vec_str!(b"content-length:");
                         let mut packet_size = 0u32;
                         let mut content_length = 0u32;
                         let mut count_line = false;
                         let mut start = 0;
-                        let mut end = 0;
                         let mut line;
 
                         for i in 0 .. buffer.size() {
                             let c = buffer.get(i).unwrap();
                             if c == b'\n' {
-                                end = i;
-                                line = buffer.slice(start, end);
+                                line = buffer.slice(start, i);
                                 start = i;
 
-                                if line.contains(CL) {
+                                if line.contains(content_length_str) {
                                     // Parse out content length
                                     content_length = teensycore::math::atoi_u32(line.slice(16, 100));
                                 }

@@ -1,5 +1,4 @@
 use crate::drivers::ws2812::*;
-use teensycore::debug::*;
 
 #[derive(Copy, Clone)]
 pub struct ShaderContext {

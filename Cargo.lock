@@ -17,7 +17,7 @@ dependencies = [
 
 [[package]]
 name = "teensycore"
-version = "0.0.2"
+version = "0.0.5"
 dependencies = [
  "cc",
 ]

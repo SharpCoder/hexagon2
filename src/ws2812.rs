@@ -2,9 +2,6 @@ pub mod shader;
 
 use crate::drivers::ws2812::*;
 use teensycore::clock::*;
-use teensycore::debug::{debug_str, debug_u32};
-use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
-use teensycore::system::strings::*;
 
 use self::shader::*;
 
@@ -65,7 +62,7 @@ impl teensycore::Task for WS2812Task {
 
     fn new() -> WS2812Task {
         return WS2812Task { 
-            shader: ActiveShader::Basic,
+            shader: ActiveShader::Constrained,
             target: 0,
             contexts: [ShaderContext::new(0, LEDS); LEDS],
             driver: WS2812Driver::<LEDS>::new(

@@ -8,7 +8,6 @@ blink requests without tying up system resources.
 use crate::*;
 use teensycore::debug::*;
 use teensycore::gate::*;
-use teensycore::system::strings::*;
 
 static mut NEXT_BLINK_EVENT: u64 = 0x0;
 

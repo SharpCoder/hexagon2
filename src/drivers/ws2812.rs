@@ -1,7 +1,4 @@
-use core::arch::asm;
-use teensycore::phys::irq::*;
 use teensycore::phys::pins::*;
-use teensycore::debug::*;
 use teensycore::wait_ns;
 
 #[derive(Clone, Copy)]
@@ -43,11 +40,6 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         });
 
         pin_out(pin, Power::Low);
-
-        let driver = WS2812Driver::<SIZE> {
-            nodes: [Node::new(0, 0, 0); SIZE],
-            pin: pin,
-        };
         
         return WS2812Driver::<SIZE> {
             nodes: [Node::new(0, 0, 0); SIZE],
@@ -85,7 +77,6 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         wait_ns(85_000);
     }
 
-    #[no_mangle]
     pub fn flush(&self) {
         let mut node_index = 0;
         let mut bit_index: i32;
