@@ -29,13 +29,13 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         // Configure the pin
         pin_mode(pin, Mode::Output);
         pin_pad_config(pin, PadConfig {
-            hysterisis: true,               // HYS
+            hysterisis: false,               // HYS
             resistance: PullUpDown::PullDown100k, // PUS
             pull_keep: PullKeep::Pull,            // PUE
-            pull_keep_en: true,             // PKE
+            pull_keep_en: false,             // PKE
             open_drain: false,               // ODE
             speed: PinSpeed::Fast150MHz,                // SPEED
-            drive_strength: DriveStrength::Disabled,  // DSE
+            drive_strength: DriveStrength::Max,  // DSE
             fast_slew_rate: true,           // SRE
         });
 
@@ -60,21 +60,21 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(600);
+        wait_ns(1360);
         pin_out(self.pin, Power::Low);
-        wait_ns(600);
+        wait_ns(350);
     }
     
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(300);
+        wait_ns(350);
         pin_out(self.pin, Power::Low);
-        wait_ns(900);
+        wait_ns(1360);
     }
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(85_000);
+        wait_ns(50_000);
     }
 
     pub fn flush(&self) {
