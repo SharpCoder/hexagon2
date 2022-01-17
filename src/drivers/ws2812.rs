@@ -1,5 +1,16 @@
+use teensycore::clock::nanos;
+use teensycore::debug::{blink_accumulate, debug_u64};
 use teensycore::phys::pins::*;
-use teensycore::wait_ns;
+use teensycore::{wait_ns, MICRO_TO_NANO};
+
+// Who tf knows. Magic number.
+const MODIFIER: u64 = 2;
+
+const H_H: u64 = 1360 / MODIFIER;
+const H_L: u64 = 350 / MODIFIER;
+const L_H: u64 = 350 / MODIFIER;
+const L_L: u64 = 1360 / MODIFIER;
+
 
 #[derive(Clone, Copy)]
 struct Node {
@@ -60,21 +71,21 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(1360);
+        wait_ns(H_H);
         pin_out(self.pin, Power::Low);
-        wait_ns(350);
+        wait_ns(H_L);
     }
     
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(350);
+        wait_ns(L_H);
         pin_out(self.pin, Power::Low);
-        wait_ns(1360);
+        wait_ns(L_L);
     }
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(50_000);
+        wait_ns(50 * MICRO_TO_NANO);
     }
 
     pub fn flush(&self) {

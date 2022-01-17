@@ -1,7 +1,16 @@
+use core::arch::asm;
 use teensycore::*;
 use teensycore::clock::*;
 use teensycore::debug::*;
+use teensycore::phys::irq::disable_interrupts;
+use teensycore::phys::irq::enable_interrupts;
 use teensycore::phys::pins::*;
+use teensycore::math::*;
+use teensycore::serio::*;
+
+const fn micros(time: u64) -> u64 {
+    return MICRO_TO_NANO * time;
+}
 
 pub struct Max31820Driver {
     pin: usize,
@@ -15,47 +24,143 @@ impl Max31820Driver {
         };
     }
 
-    pub fn read_temperature(&self) -> Option<u16> {
-        // Handshake proceedure
+    pub fn test(&self) {
         if self.initialize() {
-            self.send_command(0x44); // Convert T command
-            let byte_lsb = self.read_byte() as u16;
-            let byte_msb = self.read_byte() as u16;
-            let result: u16 = (byte_msb << 8) | byte_lsb;
-            return Some(result);
-        } else {
-            debug_str(b"failed to initialize handshake with max31820");
+            self.send_command(0x33);
+
+            for id in 0 .. 64 {
+                disable_interrupts();
+                let bit = self.read_bit();
+                enable_interrupts();
+
+                serial_write_vec(SerioDevice::Debug, &itoa_u16(id));
+                serial_write(SerioDevice::Debug, b" bit, val=");
+                debug_u32(bit as u32, b"bit");
+            }
+        }
+    }
+
+    fn log(&self, msg: &'static [u8]) {
+        debug_str(msg);
+    }
+
+    fn cmd_convert_t(&self) {
+        self.log(b"cmd_convert_t");
+        self.send_command(0x44); // Convert T command
+        // Read until receiving a 1
+        let mut count = 64;
+        // TODO: Add an oh-shit detector
+        loop {
+            let bit = self.read_bit();
+            // Temperature conversino is done
+            if bit > 0 {
+                break;
+            }
+        }
+    }
+
+    fn cmd_read_scratchpad(&self) -> Option<u16> {
+        self.log(b"cmd_read_scratchpad");
+        self.send_command(0xBE);
+
+        // Read bytes
+        let byte_lsb = self.read_byte() as u16;
+        let byte_msb = self.read_byte() as u16;
+        let result: u16 = (byte_msb << 8) | byte_lsb;
+        return Some(result);
+    }
+
+    fn cmd_skip_rom(&self) -> Option<bool> {
+        self.log(b"cmd_skip_rom");
+        if self.initialize() {
+            self.send_command(0xCC);
+            return Some(true);
         }
 
         return None;
     }
 
+    fn cmd_read_rom(&self) -> Option<u64> {
+        self.log(b"cmd_read_rom");
+        if self.initialize() {
+            self.send_command(0x33);
+            
+            // Rest period
+            wait_ns(micros(1));
+
+            // Read 64 bits     
+            let mut family_code = 0;
+            for bit in 0 .. 8 {
+                family_code |= ((self.read_bit() as u64) << bit);
+            }
+
+            debug_u32(family_code as u32, b"family code");
+
+            let mut rom_code = 0;       
+            for bit in 0 .. 48 {
+                rom_code |= ((self.read_bit() as u64) << bit);
+            }
+
+            debug_u64(rom_code, b"rom code");
+
+            let mut crc = 0u64;
+            for bit in 0 .. 8 {
+                crc |= ((self.read_bit() as u64) << bit);
+            }
+
+            debug_u32(crc as u32, b"crc");
+            return Some(rom_code);
+        }
+
+        return None;
+    }
+
+    fn cmd_match_rom(&self, rom: u64) {
+        self.log(b"cmd_match_rom");
+        // Tell the bus we're about to address a specific node
+        self.send_command(0x55);
+        let mut bit_index: usize = 0;
+        while bit_index < 64 {
+            let bit = rom & (0x1 << bit_index);
+            if bit > 0 {
+                self.write_1();
+            } else {
+                self.write_0();
+            }
+            bit_index += 1;
+        }
+    }
+
+    pub fn read_rom(&self) -> Option<u64> {
+        self.log(b"** read rom **");
+        return self.cmd_read_rom();
+    }
+
+    pub fn read_temperature(&self) -> Option<u16> {
+        self.log(b"read_temperature");
+        // Get ROM
+        self.cmd_skip_rom();
+        self.cmd_convert_t();
+        self.cmd_skip_rom();
+        return self.cmd_read_scratchpad();
+    }
+
     fn as_input(&self) {
         pin_mode(self.pin, Mode::Input);
         pin_pad_config(self.pin, PadConfig { 
-            hysterisis: true, 
-            resistance: PullUpDown::PullUp47k, 
+            hysterisis: false, 
+            resistance: PullUpDown::PullDown100k, 
             pull_keep: PullKeep::Pull, 
-            pull_keep_en: true, 
-            open_drain: false, 
-            speed: PinSpeed::Medium100MHz, 
+            pull_keep_en: false, 
+            open_drain: true, 
+            speed: PinSpeed::Max200MHz, 
             drive_strength: DriveStrength::Max, 
-            fast_slew_rate: true 
+            fast_slew_rate: false 
         });
     }
 
     fn as_output(&self) {
         pin_mode(self.pin, Mode::Output);
-        // pin_pad_config(self.pin, PadConfig { 
-        //     hysterisis: false, 
-        //     resistance: PullUpDown::PullUp47k, 
-        //     pull_keep: PullKeep::Pull, 
-        //     pull_keep_en: false, 
-        //     open_drain: false, 
-        //     speed: PinSpeed::Max200MHz, 
-        //     drive_strength: DriveStrength::Max, 
-        //     fast_slew_rate: false 
-        // });
     }
 
     fn pull_low(&self) {
@@ -64,127 +169,117 @@ impl Max31820Driver {
     }
 
 
-    pub fn initialize(&self) -> bool {
-        self.reset();
-        if self.detect_pulse() {
-            debug_str(b"pulse detected");
-            return true;
-        } else {
-            debug_str(b"could not connect to max31820");
-            return false;
-        }
+    fn initialize(&self) -> bool {
+        let mut retry = 125;
 
-        // loop {
-        //     pin_out(13, Power::High);
-        //     self.as_input();
-        //     wait_ns(S_TO_NANO * 2);
-
-
-        //     pin_out(13, Power::Low);
-        //     self.as_output();
-        //     pin_out(self.pin, Power::Low);
-        //     wait_ns(S_TO_NANO * 2);
-        // }
-        
-    }
-
-    fn reset(&self) {
-        self.pull_low();
-        wait_ns(MICRO_TO_NANO *  480);
-        self.as_input();
-    }
-
-    fn detect_pulse(&self) -> bool {
-        self.as_input();
-
-        let mut detected = false;
-        let mut z= 0;
-        let mut h = 0;
-
-        let target = nanos() + MICRO_TO_NANO * 2400;
-        while nanos() < target {
-            let reading = pin_read(self.pin);
-            if pin_read(self.pin) > 0 {
-                detected = true;
-                h+=1;
-            } else {
-                z+= 1;
+        for _ in 0 .. retry {
+            if self.reset() {
+                debug_str(b"pulse identified");
+                return true;
             }
         }
 
-        debug_u32(h, b"high pulses");
-        debug_u32(z, b"low pulses");
+        debug_str(b"could not connect to max31820");
+        return false;
+    }
 
-        return detected;
+    fn reset(&self) -> bool{
+        // Write low
+        self.pull_low();
+        wait_ns(micros(500));
+
+        // Allow float
+        self.as_input();
+        wait_ns(micros(70));
+
+        // Wait a while then sample
+        let target = nanos() + micros(240);
+        let mut result = 1;
+        while nanos() < target {
+
+            if pin_read(self.pin) == 0 {
+                result = 0;
+            }
+
+        }
+        
+        // Wait 410 micros
+        wait_ns(micros(500));
+
+        // If result is 0, that's an alive pulse.
+        return result == 0;
     }
 
     fn send_command(&self, command: u8) {
-        let mut bit_index: usize = 0;
-        while bit_index < 8 {
-            let bit = command & (0x1 << bit_index);
-            if bit > 0 {
+        for bit in 0 .. 8 {
+            let signal = command & (0x1 << bit);
+            if signal > 0 {
                 self.write_1();
             } else {
                 self.write_0();
             }
         }
+
+        self.as_input();
     }
 
     fn write_1(&self) {
-        self.as_output();
-        pin_out(self.pin, Power::Low);
-        wait_ns(MICRO_TO_NANO * 10);
-        
+        self.pull_low();
+        wait_ns(micros(10));
         // Release
-        self.as_input();
-        wait_ns(MICRO_TO_NANO * 50);
+        pin_out(self.pin, Power::High);
+        wait_ns(micros(55));
     } 
 
     fn write_0(&self) {
         self.pull_low();
-        wait_ns(MICRO_TO_NANO * 65);
+        wait_ns(micros( 65));
 
-        // Release
-        self.as_input();
+        // Release        // Wait for the recovery time.
+        pin_out(self.pin, Power::High);
+        wait_ns(micros(5));
     }
 
     fn read_bit(&self) -> u8 {
         // Initiate a read slot
         self.pull_low();
-        wait_ns(MICRO_TO_NANO * 1);
+        wait_ns( micros(3));
 
         self.as_input();
-        // Wait a few microseconds
-        wait_ns(MICRO_TO_NANO * 5);
-        // Sample for 54 microseconds
-        let target = nanos() + MICRO_TO_NANO *  54;
-        let mut result = false;
-        
-        let mut high = 0;
-        let mut low = 0;
+        wait_ns(micros(12));
 
-        while nanos() < target {
-            // Sample
-            let reading = pin_read(self.pin);
-            if reading > 0 {
-                high += 1;
+        let mut sig_high = 0;
+        let mut sig_low = 0;
+        let duration = nanos() + micros(1);
+
+        loop {
+            let signal = pin_read(self.pin);
+            if signal == 0 {
+                sig_low += 1;
             } else {
-                low += 1;
+                sig_high += 1;
             }
-        } 
+
+            if nanos() > duration {
+                break;
+            }
+        }
+        
+        // Wait the remainder of the time slot
+        wait_ns(micros(53));
 
         // Determine the result based on which bucket
         // got more hits.
-        if high > low {
+        if sig_high > sig_low {
             return 1;
         } else {
             return 0;
         }
-    }
+    } 
 
     fn read_byte(&self) -> u8 {
         let mut result = 0;
-        for bit in 0 .. 8 {
+        for bit in 0 .. 7 {
             result |= (self.read_bit() << bit);
         }
         return result;

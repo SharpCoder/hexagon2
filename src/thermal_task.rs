@@ -1,4 +1,4 @@
-use teensycore::{clock::nanos, S_TO_NANO, debug::debug_u32};
+use teensycore::{clock::nanos, S_TO_NANO, debug::{debug_u32, debug_str, debug_hex, debug_u64}};
 
 use crate::drivers::max31820::Max31820Driver;
 
@@ -19,20 +19,28 @@ impl ThermalTask {
     }
 
     pub fn init(&self) {
-        self.driver.initialize();
+    
     }
 
     pub fn system_loop(&mut self) {
         if nanos() > self.next_event {
-            match self.driver.read_temperature() {
-                None => {},
-                Some(temp) => {
-                    // Set temperature somewhere.
-                    debug_u32(temp as u32, b"[temp sample]");
-                }
-            }
+            
+            // New line
+            debug_str(b"");
 
-            self.next_event = nanos() + S_TO_NANO * 10;
+            self.driver.test();
+            
+            // match self.driver.read_rom() {
+            //     None => {
+            //         debug_str(b"failed");
+            //     },
+            //     Some(temp) => {
+            //         // Set temperature somewhere.
+            //         // debug_u64(temp, b"rom code");
+            //     }
+            // }
+
+            self.next_event = nanos() + S_TO_NANO * 5;
         }
     }
 }

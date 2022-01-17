@@ -120,8 +120,8 @@ impl <const SIZE: usize> Shader<SIZE> for ConstrainedRainbowShader {
         // let start = 0u64;
         // let end = 45u64;
 
-        let start = 45u64;
-        let end = 200u64;
+        let start = 0u64;
+        let end = 78u64;
 
         // Registers 1 and 2 are lower and upper limit
         next_context.registers[1] = start as i32;

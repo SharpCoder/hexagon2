@@ -5,7 +5,7 @@ use teensycore::clock::*;
 
 use self::shader::*;
 
-const LEDS: usize = 3;
+const LEDS: usize = 4;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();

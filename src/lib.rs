@@ -19,22 +19,28 @@ use thermal_task::*;
 
 teensycore::main!({
     // Drivers and stateful things
-    let _wifi_driver = WifiDriver::new(SerioDevice::Default, 5, 6);
+    // let _wifi_driver = WifiDriver::new(SerioDevice::Default, 5, 6);
     let temp_driver = Max31820Driver::new(10);
 
     // Tasks
     let mut led_task = WS2812Task::new();
     let mut blink_task = BlinkTask::new();
-    let mut thermal_task = ThermalTask::new(temp_driver);
+    // let mut thermal_task = ThermalTask::new(temp_driver);
 
     led_task.init();
     blink_task.init();
-    thermal_task.init();
-    
+    // thermal_task.init();
+
     loop {
+        disable_interrupts();
         led_task.system_loop();
+        enable_interrupts();
+
         blink_task.system_loop();
-        thermal_task.system_loop();
+
+        // disable_interrupts();
+        // thermal_task.system_loop();
+        // enable_interrupts();
 
         unsafe {
             asm!("nop");
