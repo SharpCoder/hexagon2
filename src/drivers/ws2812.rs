@@ -1,5 +1,4 @@
-use teensycore::clock::nanos;
-use teensycore::debug::{blink_accumulate, debug_u64};
+use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::phys::pins::*;
 use teensycore::{wait_ns, MICRO_TO_NANO};
 
@@ -92,18 +91,11 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         let mut node_index = 0;
         let mut bit_index: i32;
 
-        // We need to disable interrupts so things
-        // don't interfere with the timing.
-        // Buuuut that can cause lost packets
-        // on the uart which can entirely
-        // screw up the program. So... Maybe
-        // don't disable interrupts.
-        // disable_interrupts();
-
         while node_index < SIZE {
             let node = self.nodes[node_index];
             let color: u32 = rgb_to_hex(node.red / 5, node.green / 5, node.blue / 5);
 
+            disable_interrupts();
             // Now we need to process each bit
             bit_index = 23;
             while bit_index >= 0 {
@@ -115,11 +107,12 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
                 }
                 bit_index -= 1;
             }
+
+            enable_interrupts();
             node_index += 1;
         }
 
         self.rest();
-        // enable_interrupts();
         
     }
 }

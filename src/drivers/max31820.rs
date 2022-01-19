@@ -33,9 +33,9 @@ impl Max31820Driver {
                 let bit = self.read_bit();
                 enable_interrupts();
 
-                serial_write_vec(SerioDevice::Debug, &itoa_u16(id));
+                serial_write_str(SerioDevice::Debug, &itoa(id));
                 serial_write(SerioDevice::Debug, b" bit, val=");
-                debug_u32(bit as u32, b"bit");
+                debug_u64(bit as u64, b"bit");
             }
         }
     }
@@ -48,7 +48,6 @@ impl Max31820Driver {
         self.log(b"cmd_convert_t");
         self.send_command(0x44); // Convert T command
         // Read until receiving a 1
-        let mut count = 64;
         // TODO: Add an oh-shit detector
         loop {
             let bit = self.read_bit();
@@ -91,24 +90,24 @@ impl Max31820Driver {
             // Read 64 bits     
             let mut family_code = 0;
             for bit in 0 .. 8 {
-                family_code |= ((self.read_bit() as u64) << bit);
+                family_code |= (self.read_bit() as u64) << bit;
             }
 
-            debug_u32(family_code as u32, b"family code");
+            debug_u64(family_code, b"family code");
 
             let mut rom_code = 0;       
             for bit in 0 .. 48 {
-                rom_code |= ((self.read_bit() as u64) << bit);
+                rom_code |= (self.read_bit() as u64) << bit;
             }
 
             debug_u64(rom_code, b"rom code");
 
             let mut crc = 0u64;
             for bit in 0 .. 8 {
-                crc |= ((self.read_bit() as u64) << bit);
+                crc |= (self.read_bit() as u64) << bit;
             }
 
-            debug_u32(crc as u32, b"crc");
+            debug_u64(crc, b"crc");
             return Some(rom_code);
         }
 
@@ -170,9 +169,7 @@ impl Max31820Driver {
 
 
     fn initialize(&self) -> bool {
-        let mut retry = 125;
-
-        for _ in 0 .. retry {
+        for _ in 0 .. 125 {
             if self.reset() {
                 debug_str(b"pulse identified");
                 return true;
@@ -280,7 +277,7 @@ impl Max31820Driver {
     fn read_byte(&self) -> u8 {
         let mut result = 0;
         for bit in 0 .. 7 {
-            result |= (self.read_bit() << bit);
+            result |= self.read_bit() << bit;
         }
         return result;
     }

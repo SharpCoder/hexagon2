@@ -4,25 +4,23 @@
 */
 use teensycore::*;
 use teensycore::system::vector::*;
-use teensycore::system::strings::*;
+use teensycore::system::str::*;
 
-#[derive(Copy, Clone)]
 pub struct HttpHeader {
-    pub key: String,
-    pub value: String,
+    pub key: Str,
+    pub value: Str,
 }
 
-#[derive(Copy, Clone)]
 pub struct HttpRequest {
-    pub method: String,
-    pub request_uri: String,
-    pub host: String,
+    pub method: Str,
+    pub request_uri: Str,
+    pub host: Str,
     pub headers: Option<Vector::<HttpHeader>>,
-    pub content: Option<String>,
+    pub content: Option<Str>,
 }
 
 impl HttpRequest {
-    pub fn as_vec(&self) -> String {
+    pub fn as_vec(&self) -> Str {
         // Formulate the request
         let mut result = Vector::new();
         

@@ -1,4 +1,6 @@
-use teensycore::{clock::nanos, S_TO_NANO, debug::{debug_u32, debug_str, debug_hex, debug_u64}};
+use teensycore::*;
+use teensycore::clock::*;
+use teensycore::debug::*;
 
 use crate::drivers::max31820::Max31820Driver;
 

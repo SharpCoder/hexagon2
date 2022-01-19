@@ -62,7 +62,7 @@ impl teensycore::Task for WS2812Task {
 
     fn new() -> WS2812Task {
         return WS2812Task { 
-            shader: ActiveShader::Constrained,
+            shader: ActiveShader::Basic,
             target: 0,
             contexts: [ShaderContext::new(0, LEDS); LEDS],
             driver: WS2812Driver::<LEDS>::new(
