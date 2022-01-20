@@ -11,10 +11,20 @@ use crate::drivers::esp8266::*;
 const DEVICE: SerioDevice = SerioDevice::Default;
 const RST_PIN: usize = 3;
 
+static mut INITIALIZED: bool = false;
+static mut PROCESS_COMPLETE: bool = false;
+static mut PROCESS_TIMEOUT: u64 = 0;
+
 static mut OK: Option<Str> = None;
 static mut READY: Option<Str> = None;
 static mut ERROR: Option<Str> = None;
 static mut FAIL: Option<Str> = None;
+
+// Buffers to hold the content and header, so we don't have
+// to recreate them all the time.
+static mut CONTENT: Option<Str> = None;
+static mut HEADER: Option<Str> = None;
+
 pub struct WifiTask {
 
 }
@@ -51,6 +61,8 @@ impl WifiTask {
             READY = Some(str!(b"ready"));
             ERROR = Some(str!(b"ERROR"));
             FAIL = Some(str!(b"FAIL"));
+            HEADER = Some(Str::new());
+            CONTENT = Some(Str::new());
         }
     }
 
@@ -97,24 +109,57 @@ impl WifiTask {
                 // we're good. If we don't get here, the watchdog
                 // mechanism should have kicked in and rebooted the 
                 // esp32.
+                unsafe {
+                    INITIALIZED = true;
+                }
             })
             .sealed()
             .compile();
 
         gate_open!()
-            .when_nano(MS_TO_NANO * 1500, || {
-                let (header, content) = parse_http_request(serial_read(DEVICE));
-                if content.is_some() {
-                    debug_str(b"=== found content ===");
-                    serial_write_str(SerioDevice::Debug, &Str::from_str(&content.as_ref().unwrap()));
-                    serial_read(DEVICE).clear();
-                    
-                    header.unwrap().drop();
-                    content.unwrap().drop();
+            .when(|_| {
+                if unsafe { !INITIALIZED } {
+                    return false;
+                }
+
+                let header = match unsafe { HEADER.as_mut() } {
+                    None => {
+                        return false;
+                    },
+                    Some(value) => value
+                };
+
+                let content = match unsafe { CONTENT.as_mut() } {
+                    None => {
+                        return false;
+                    },
+                    Some(value) => value,
+                };
+
+                return parse_http_request(serial_read(DEVICE), header, content);
+            }, || {
+                // Process content
+
+                unsafe {
+                    PROCESS_COMPLETE = true;
+                    PROCESS_TIMEOUT = nanos() + S_TO_NANO * 3;
                     esp8266_close_tcp(DEVICE, Some(0));
                 }
             })
             .compile();
+
+            gate_open!()
+                .when(|_| {
+                    return unsafe { INITIALIZED && PROCESS_COMPLETE } && (
+                        nanos() > unsafe { PROCESS_TIMEOUT } ||  err_or_ok(serial_read(DEVICE))
+                    );
+                }, || {
+                    serial_read(DEVICE).clear();
+                    unsafe {
+                        PROCESS_COMPLETE = false;
+                    }
+                })
+                .compile();
     }
 }
 
@@ -122,6 +167,7 @@ fn ready(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &READY });
 fn ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }); }
 fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
     match unsafe { &ERROR } {
+        // I know you think this logic is wrong, but it's not
         None => {
             return false;
         },
@@ -135,6 +181,7 @@ fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
     }
 
     match unsafe { &FAIL } {
+        // I know you think this logic is wrong, but it's not
         None => {
             return false;
         },
@@ -160,4 +207,35 @@ fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
             }
         }
     }
+}
+
+fn err_or_ok(rx_buffer: &Str) -> bool {
+    match unsafe { &FAIL } {
+        None => { return false; },
+        Some(fail) => {
+            if rx_buffer.contains(fail) {
+                return true;
+            }
+        }
+    }
+
+    match unsafe { &ERROR } {
+        None => { return false; },
+        Some(error) => {
+            if rx_buffer.contains(error) {
+                return true;
+            }
+        }
+    }
+
+    match unsafe { &OK } {
+        None => { return false; },
+        Some(ok) => {
+            if rx_buffer.contains(ok) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

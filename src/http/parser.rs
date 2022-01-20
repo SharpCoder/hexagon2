@@ -41,9 +41,11 @@ fn init_buffer() {
     }
 }
 
-pub fn parse_http_request(rx_buffer: &Str) -> HttpResponse {
+pub fn parse_http_request(rx_buffer: &Str, header: &mut Str, content: &mut Str) -> bool {
     // Ensure buffers are setup
     init_buffer();
+    header.clear();
+    content.clear();
     
     let buffer = unsafe { BUFFER.as_mut().unwrap() };
     let line = unsafe { LINE.as_mut().unwrap() };
@@ -110,17 +112,22 @@ pub fn parse_http_request(rx_buffer: &Str) -> HttpResponse {
     crnl.drop();
 
     // Checksum validation
-    let con_complete = match content_length {
-        None => false,
-        Some(len) => bytes_read as u64 >= len - 1,
+    match content_length {
+        None => {
+            
+            header.clear();
+            content.clear();
+
+            return false;
+        },
+        Some(len) => {
+            if bytes_read as u64 >= len - 1 {
+                return true;
+            } else {
+                header.clear();
+                content.clear();
+                return false;
+            }
+        },
     };
-
-
-    if con_complete {
-        return (Some(header), Some(content));
-    } else {
-        header.drop();
-        content.drop();
-        return (None, None);
-    }
 }
