@@ -1,67 +1,134 @@
 use crate::*;
-use crate::Task;
-use crate::drivers::wifi::*;
-use crate::system::vector::*;
-use crate::system::strings::*;
-use crate::http_models::*;
+use teensycore::*;
+use teensycore::gate::*;
+use teensycore::system::str::*;
+use teensycore::serio::*;
+use teensycore::phys::pins::*;
+use crate::drivers::esp8266::*;
 
-pub struct WifiTask<'a> { 
-    // startup_sequence: WifiCommandSequence,
-    driver: &'a mut WifiDriver,
+const DEVICE: SerioDevice = SerioDevice::Default;
+const RST_PIN: usize = 3;
+
+static mut OK: Option<Str> = None;
+static mut READY: Option<Str> = None;
+static mut ERROR: Option<Str> = None;
+static mut FAIL: Option<Str> = None;
+pub struct WifiTask {
+
 }
 
-impl <'a> WifiTask<'a> {
-    pub fn new(wifi_driver: &'a mut WifiDriver) -> WifiTask<'a> {
+impl WifiTask {
+
+    pub fn new() -> Self {
         return WifiTask {
-            driver: wifi_driver,
-        }
+
+        };
     }
-}
 
-pub static mut HTTP_COMPLETE: bool = false;
+    pub fn init(&mut self) {
+        serial_init(DEVICE);
+        serial_baud(DEVICE, 115200);
 
-impl <'a> Task for WifiTask<'a> {
-    fn init(&mut self) {
-        debug_str(b"Resetting ESP8266");
-        self.driver.reset();
-        // Set baud using both bauds in case it's stuck
-        self.driver.get_ip(&|driver, _| {
-            debug_str(b"Connecting to Wifi");
-            driver.connect(b"NCC-1701D", b"password_here", &|driver,_| {
-                debug_str(b"Wifi Connected!");
-
-                driver.dns_lookup(b"worldtimeapi.org", &|driver, outputs: BTreeMap<String, String>| {
-                    debug_str(b"DNS lookup complete");
-                    // For this function, the first argument is the string
-                    // containing the ip address.
-                    if outputs.size() > 0 {
-                        let ip_address = outputs.get(vec_str!(b"ip_address")).unwrap();
-                        driver.http_request(ip_address, HttpRequest {
-                            method: vec_str!(b"GET"),
-                            request_uri: vec_str!(b"/api/timezone/America/Los_Angeles.txt"),
-                            host: vec_str!(b"worldtimeapi.org"),
-                            headers: None,
-                            content: None,
-                        }, &|_driver, artifacts| {
-                            debug_str(b"HTTP Request complete");
-                            serial_write_vec(SerioDevice::Debug, &artifacts.get(vec_str!(b"content")).unwrap());
-                            unsafe {
-                                HTTP_COMPLETE = true;
-                            }
-                        });
-                    }
-                });
-            });
-            
+        // Restart
+        pin_mode(RST_PIN, Mode::Output);
+        pin_pad_config(RST_PIN, PadConfig { 
+            hysterisis: false, 
+            resistance: PullUpDown::PullDown100k, 
+            pull_keep: PullKeep::Pull, 
+            pull_keep_en: true, 
+            open_drain: false, 
+            speed: PinSpeed::Max200MHz, 
+            drive_strength: DriveStrength::Max, 
+            fast_slew_rate: false 
         });
 
+        // If we don't cache these, it uses up a lot of memory re-creating them
+        // in the main loop. Which just seems silly.
+        unsafe {
+            OK = Some(str!(b"OK"));
+            READY = Some(str!(b"ready"));
+            ERROR = Some(str!(b"ERROR"));
+            FAIL = Some(str!(b"FAIL"));
+        }
     }
 
-    fn handle_message(&mut self, _topic: String, _content: String) {
-        
+
+
+    pub fn system_loop(&mut self) {
+        gate_open!()
+            .once(|| {
+                pin_out(RST_PIN, Power::Low);
+                pin_out(RST_PIN, Power::High);
+                esp8266_reset(DEVICE);
+            })
+            .when(ready, || {
+                esp8266_auto_connect(DEVICE, false);
+            })
+            .when(ok, || {
+                esp8266_configure_echo(DEVICE, true);
+            })
+            .when(ok, || {
+                esp8266_wifi_mode(DEVICE, WifiMode::Client);
+            })
+            .when(ok, || {
+                esp8266_connect_to_wifi(DEVICE, str!(b"NCC-1701D"), str!(b"password_here"));
+            })
+            .when(ok, || {
+                esp8266_read_ip(DEVICE);
+            })
+            .when(ok, || {
+                esp8266_multiple_connections(DEVICE, true);
+            })
+            .when(ok, || {
+                esp8266_create_server(DEVICE, 80);
+            })
+            .when(ok, || {
+
+            })
+            .sealed()
+            .compile();
     }
-    
-    fn system_loop(&mut self) {
-        self.driver.process();
+}
+
+fn ready(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &READY }); }
+fn ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }); }
+fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
+    match unsafe { &ERROR } {
+        None => {
+            return false;
+        },
+        Some(target) => {
+            if serial_read(DEVICE).contains(&target) {
+                gate.reset();
+                return false;
+            }
+        }
+    }
+
+    match unsafe { &FAIL } {
+        None => {
+            return false;
+        },
+        Some(target) => {
+            if serial_read(DEVICE).contains(&target) {
+                gate.reset();
+                serial_read(DEVICE).clear();
+                return false;
+            }
+        }
+    }
+
+    match cond {
+        None => {
+            return false;
+        },
+        Some(target) => {
+            if serial_read(DEVICE).contains(&target) {
+                serial_read(DEVICE).clear();
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 }

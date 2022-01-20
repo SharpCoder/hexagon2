@@ -40,6 +40,20 @@ pub fn esp8266_configure_echo(device: SerioDevice, enabled: bool) {
     }
 }
 
+pub fn esp8266_dhcp_mode(device: SerioDevice, mode: WifiMode, dhcp_enabled: bool) {
+    // serial_write(device, b"AT+CWDHCP=1");
+    serial_write_str(device, &itoa((mode as u64) - 1));
+    serial_write(device, b",");
+    match dhcp_enabled {
+        true => {
+            serial_write(device, b"0\r\n");
+        },
+        false => {
+            serial_write(device, b"1\r\n");
+        }
+    }
+}
+
 /// Configure the ESP8266 to either be a client,
 /// a host, or both.
 pub fn esp8266_wifi_mode(device: SerioDevice, mode: WifiMode) {
@@ -127,6 +141,25 @@ pub fn esp8266_read_ip(device: SerioDevice) {
     esp8266_raw(device, b"AT+CIFSR");
 }
 
+pub fn esp8266_set_ip(device: SerioDevice, ip: Str) {
+    serial_write(device, b"AT+CIPAP=\"");
+    serial_write_str(device, &ip);
+    serial_write(device, b"\"\r\n");
+}
+
+/// Set whether the device will automatically attempt to reconnect
+/// to the AP on boot.
+pub fn esp8266_auto_connect(device: SerioDevice, auto_connect: bool) {
+    match auto_connect {
+        true => {
+            esp8266_raw(device, b"AT+CWAUTOCONN=1");
+        },
+        false => {
+            esp8266_raw(device, b"AT+CWAUTOCONN=0");
+        },
+    }
+}
+
 /// This muxes the device to either allow or disallow multiple connections.
 /// If multiple connections are allowed, you'll need to be cognizant
 /// of that when interfacing with some of the other commands.
@@ -155,21 +188,29 @@ pub fn esp8266_set_server_timeout(device: SerioDevice, timeout: u32) {
     serial_write(device, b"\r\n");
 }
 
+pub fn esp8266_list_wifi(device: SerioDevice) {
+    esp8266_raw(device, b"AT+CWLAP");
+}
+
 pub fn esp8266_block_until(device: SerioDevice, command: &[u8], timeout: u64) {
     let threshold = nanos() + timeout;
+    let cmd = str!(command);
+
     loop {
         let buf = serial_read(device);
-        if buf.contains(str!(command)) {
+        if buf.contains(&cmd) {
             buf.clear();
+            wait_ns(MS_TO_NANO * 500);
             return;
         } else if nanos() > threshold {
             return;
         }
+        wait_ns(MS_TO_NANO * 100);
     }
 }
 
 /// Send a raw command to the esp8266
-fn esp8266_raw(device: SerioDevice, command: &[u8]) {
+pub fn esp8266_raw(device: SerioDevice, command: &[u8]) {
     serial_write(device, command);
     serial_write(device, b"\r\n");
 }

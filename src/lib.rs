@@ -6,16 +6,17 @@ pub mod drivers;
 pub mod ws2812;
 pub mod blink_task;
 pub mod thermal_task;
+pub mod wifi_task;
 
 use core::arch::asm;
 use drivers::max31820::Max31820Driver;
 use teensycore::*;
 use teensycore::phys::pins::*;
-// use drivers::wifi::*;
 use ws2812::*;
 use blink_task::*;
 use thermal_task::*;
 use teensycore::serio::*;
+use wifi_task::*;
 
 teensycore::main!({
     use teensycore::gate::*;
@@ -27,10 +28,13 @@ teensycore::main!({
     // Tasks
     let mut led_task = WS2812Task::new();
     let mut blink_task = BlinkTask::new();
+    let mut wifi_task = WifiTask::new();
+
     // let mut thermal_task = ThermalTask::new(temp_driver);
 
     led_task.init();
     blink_task.init();
+    wifi_task.init();
     // thermal_task.init();
 
     serial_init(SerioDevice::Default);
@@ -41,24 +45,7 @@ teensycore::main!({
         enable_interrupts();
 
         blink_task.system_loop();
-
-        loop {
-            if serial_available(SerioDevice::Default) > 0 {
-                let sb = serial_read(SerioDevice::Default);
-                // Consume the buffer.
-                sb.clear();
-            } else {
-                break;
-            }
-        }
-
-        gate_open!()
-            .when_nano(S_TO_NANO, || {
-                disable_interrupts();
-                serial_write(SerioDevice::Debug, b"hello world, ping pong!");
-                enable_interrupts();
-            }).compile();
-            
+        wifi_task.system_loop();
 
         // disable_interrupts();
         // thermal_task.system_loop();
