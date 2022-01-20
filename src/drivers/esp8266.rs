@@ -63,7 +63,7 @@ pub fn esp8266_wifi_mode(device: SerioDevice, mode: WifiMode) {
 }
 
 /// Connect to a wifi access point.
-pub fn esp8266_connect_to_wifi(device: SerioDevice, ssid: Str, pwd: Str) {
+pub fn esp8266_connect_to_wifi(device: SerioDevice, ssid: &Str, pwd: &Str) {
     serial_write(device, b"AT+CWJAP=\"");
     serial_write_str(device, &ssid);
     serial_write(device, b"\",\"");

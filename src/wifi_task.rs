@@ -1,9 +1,11 @@
 use crate::*;
+use crate::http::parser::*;
 use teensycore::*;
 use teensycore::gate::*;
 use teensycore::system::str::*;
 use teensycore::serio::*;
 use teensycore::phys::pins::*;
+use teensycore::debug::*;
 use crate::drivers::esp8266::*;
 
 const DEVICE: SerioDevice = SerioDevice::Default;
@@ -71,7 +73,14 @@ impl WifiTask {
                 esp8266_wifi_mode(DEVICE, WifiMode::Client);
             })
             .when(ok, || {
-                esp8266_connect_to_wifi(DEVICE, str!(b"NCC-1701D"), str!(b"password_here"));
+                let mut ssid = str!(b"NCC-1701D");
+                let mut pwd = str!(b"password_here");
+
+                esp8266_connect_to_wifi(DEVICE, &ssid, &pwd);
+
+                // Free up memory
+                ssid.drop();
+                pwd.drop();
             })
             .when(ok, || {
                 esp8266_read_ip(DEVICE);
@@ -83,9 +92,28 @@ impl WifiTask {
                 esp8266_create_server(DEVICE, 80);
             })
             .when(ok, || {
-
+                // Gate complete. This empty segment is meant to verify
+                // the final command succeded. Because if we get here
+                // we're good. If we don't get here, the watchdog
+                // mechanism should have kicked in and rebooted the 
+                // esp32.
             })
             .sealed()
+            .compile();
+
+        gate_open!()
+            .when_nano(MS_TO_NANO * 1500, || {
+                let (header, content) = parse_http_request(serial_read(DEVICE));
+                if content.is_some() {
+                    debug_str(b"=== found content ===");
+                    serial_write_str(SerioDevice::Debug, &Str::from_str(&content.as_ref().unwrap()));
+                    serial_read(DEVICE).clear();
+                    
+                    header.unwrap().drop();
+                    content.unwrap().drop();
+                    esp8266_close_tcp(DEVICE, Some(0));
+                }
+            })
             .compile();
     }
 }
@@ -100,6 +128,7 @@ fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
         Some(target) => {
             if serial_read(DEVICE).contains(&target) {
                 gate.reset();
+                serial_read(DEVICE).clear();
                 return false;
             }
         }

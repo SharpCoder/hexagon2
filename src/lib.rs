@@ -2,11 +2,11 @@
 #![crate_type = "staticlib"]
 #![no_std]
 pub mod drivers;
-// pub mod http_models;
 pub mod ws2812;
 pub mod blink_task;
 pub mod thermal_task;
 pub mod wifi_task;
+pub mod http;
 
 use core::arch::asm;
 use drivers::max31820::Max31820Driver;
