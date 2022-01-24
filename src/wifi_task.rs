@@ -12,6 +12,7 @@ const DEVICE: SerioDevice = SerioDevice::Default;
 const RST_PIN: usize = 3;
 
 static mut INITIALIZED: bool = false;
+static mut INITIALIZE_TIMEOUT: u64 = 0;
 static mut PROCESS_COMPLETE: bool = false;
 static mut PROCESS_TIMEOUT: u64 = 0;
 
@@ -63,14 +64,14 @@ impl WifiTask {
             FAIL = Some(str!(b"FAIL"));
             HEADER = Some(Str::new());
             CONTENT = Some(Str::new());
+            INITIALIZE_TIMEOUT = nanos() + S_TO_NANO * 30;
         }
     }
-
-
 
     pub fn system_loop(&mut self) {
         gate_open!()
             .once(|| {
+                unsafe { INITIALIZED = false; }
                 pin_out(RST_PIN, Power::Low);
                 pin_out(RST_PIN, Power::High);
                 esp8266_reset(DEVICE);
@@ -139,7 +140,16 @@ impl WifiTask {
                 return parse_http_request(serial_read(DEVICE), header, content);
             }, || {
                 // Process content
-
+                match unsafe { CONTENT.as_mut() } {
+                    None => {},
+                    Some(content) => {
+                        debug_str(b"about to parse");
+                        // TODO: BUG HERE!!! next line fails always
+                        let command = parse_command(content);
+                        debug_str(b"command parsed\r\n");
+                        proc_emit(&command);
+                    }
+                }
                 unsafe {
                     PROCESS_COMPLETE = true;
                     PROCESS_TIMEOUT = nanos() + S_TO_NANO * 3;
@@ -148,18 +158,18 @@ impl WifiTask {
             })
             .compile();
 
-            gate_open!()
-                .when(|_| {
-                    return unsafe { INITIALIZED && PROCESS_COMPLETE } && (
-                        nanos() > unsafe { PROCESS_TIMEOUT } ||  err_or_ok(serial_read(DEVICE))
-                    );
-                }, || {
-                    serial_read(DEVICE).clear();
-                    unsafe {
-                        PROCESS_COMPLETE = false;
-                    }
-                })
-                .compile();
+            // gate_open!()
+            //     .when(|_| {
+            //         return unsafe { INITIALIZED && PROCESS_COMPLETE } && (
+            //             nanos() > unsafe { PROCESS_TIMEOUT } ||  err_or_ok(serial_read(DEVICE))
+            //         );
+            //     }, || {
+            //         serial_read(DEVICE).clear();
+            //         unsafe {
+            //             PROCESS_COMPLETE = false;
+            //         }
+            //     })
+            //     .compile();
     }
 }
 

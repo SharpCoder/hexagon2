@@ -13,5 +13,8 @@ opt-level = 3
 panic = 'abort'
 incremental = false
 
+[features]
+testing = []
+
 [dependencies]
 teensycore = { path = "../teensycore" }

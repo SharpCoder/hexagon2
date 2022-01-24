@@ -4,7 +4,6 @@ use crate::drivers::ws2812::*;
 pub struct ShaderContext {
     pub node_id: usize,
     pub total_nodes: usize,
-    pub current_time: u64,
     pub temperature: i32,
     pub audio_bands: [u32; 7], // Data from the band equalizer
     pub registers: [i32; 10],
@@ -12,11 +11,10 @@ pub struct ShaderContext {
 }
 
 impl ShaderContext {
-    pub fn new(id: usize, total_nodes: usize) -> Self {
+    pub const fn new(id: usize, total_nodes: usize) -> Self {
         return ShaderContext {
             node_id: id,
             total_nodes: total_nodes,
-            current_time: teensycore::clock::nanos(),
             temperature: 0,
             audio_bands: [0; 7],
             registers: [0; 10],
@@ -119,7 +117,6 @@ impl <const SIZE: usize> Shader<SIZE> for ConstrainedRainbowShader {
         
         // let start = 0u64;
         // let end = 45u64;
-
         let start = 0u64;
         let end = 78u64;
 

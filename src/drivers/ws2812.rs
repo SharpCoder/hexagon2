@@ -19,7 +19,7 @@ struct Node {
 }
 
 impl Node {
-    pub fn new(red: u8, green: u8, blue: u8) -> Node {
+    pub const fn new(red: u8, green: u8, blue: u8) -> Node {
         return Node {
             red: red,
             green: green,
@@ -35,10 +35,17 @@ pub struct WS2812Driver<const SIZE: usize> {
 }
 
 impl<const SIZE: usize> WS2812Driver<SIZE> {
-    pub fn new(pin: usize) -> WS2812Driver::<SIZE> {
+    pub const fn new(pin: usize) -> WS2812Driver::<SIZE> {
+        return WS2812Driver::<SIZE> {
+            nodes: [Node::new(0, 0, 0); SIZE],
+            pin: pin,
+        }
+    }
+
+    pub fn init(&self) {
         // Configure the pin
-        pin_mode(pin, Mode::Output);
-        pin_pad_config(pin, PadConfig {
+        pin_mode(self.pin, Mode::Output);
+        pin_pad_config(self.pin, PadConfig {
             hysterisis: false,               // HYS
             resistance: PullUpDown::PullDown100k, // PUS
             pull_keep: PullKeep::Pull,            // PUE
@@ -49,12 +56,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
             fast_slew_rate: true,           // SRE
         });
 
-        pin_out(pin, Power::Low);
-        
-        return WS2812Driver::<SIZE> {
-            nodes: [Node::new(0, 0, 0); SIZE],
-            pin: pin,
-        }
+        pin_out(self.pin, Power::Low);
     }
 
     pub fn set_color(&mut self, index: usize, rgb: u32) {
