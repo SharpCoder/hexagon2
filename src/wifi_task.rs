@@ -143,10 +143,7 @@ impl WifiTask {
                 match unsafe { CONTENT.as_mut() } {
                     None => {},
                     Some(content) => {
-                        debug_str(b"about to parse");
-                        // TODO: BUG HERE!!! next line fails always
                         let command = parse_command(content);
-                        debug_str(b"command parsed\r\n");
                         proc_emit(&command);
                     }
                 }
