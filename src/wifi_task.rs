@@ -154,6 +154,7 @@ impl WifiTask {
                     PROCESS_COMPLETE = true;
                     PROCESS_TIMEOUT = nanos() + S_TO_NANO * 3;
                     esp8266_close_tcp(DEVICE, Some(0));
+                    serial_read(DEVICE).clear();
                 }
             })
             .compile();

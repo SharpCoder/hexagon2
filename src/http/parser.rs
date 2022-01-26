@@ -143,6 +143,8 @@ pub fn parse_command(buf: &Str) -> SystemCommand {
     for char in buf.into_iter() {
         if ptr < 4 {
             result.command[ptr] = char;
+        } else if ptr == 4 && char == DELIMITER {
+            // Skip  
         } else if char == DELIMITER {
             // Process
             if reg < result.args.len() {

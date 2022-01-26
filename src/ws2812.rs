@@ -2,8 +2,10 @@ pub mod shader;
 
 use crate::shader::*;
 use crate::{drivers::ws2812::*, proc_handle, models::SystemCommand};
+use teensycore::debug::debug_u64;
+use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::{clock::*, debug::debug_str, system::closure::Closure};
-use teensycore::math::*;
+use teensycore::{math::{self, *}, S_TO_NANO, MS_TO_NANO};
 
 const LEDS: usize = 4;
 
@@ -43,7 +45,7 @@ impl Interpolator {
         if self.start_colors[index] > self.end_colors[index] {
             return self.start_colors[index] - delta;
         } else {
-            return delta;
+            return self.start_colors[index] + delta;
         }
         
     }
@@ -84,7 +86,7 @@ static mut TASK_INSTANCE: WS2812Task = WS2812Task {
         18, // pin
     ),
     shader: ActiveShader::Basic,
-    speed: teensycore::MS_TO_NANO * 18,
+    speed: teensycore::MS_TO_NANO * 8,
     contexts: [ShaderContext::new(0, LEDS); LEDS],
     interpolator: Interpolator  {
         begin_time: 0,
@@ -107,23 +109,34 @@ impl WS2812Task {
     pub fn interpolate_to(&mut self, next_shader: ActiveShader, registers: [i32; 10]) {
         // Store current values
         for i in 0 .. LEDS {
-            // We are interpolating /wheel/ not colors.
-            // so access register[0] which is always allocated
-            // for wheel.
-            self.interpolator.start_colors[i] = self.contexts[i].registers[0] as u32;
+            // We are interpolating /wheel/ not colors
+            self.interpolator.start_colors[i] = find_wheel_pos(self.contexts[i].color) as u32;
         }
 
         // Initialize next colors
         let active_shader = get_shader(next_shader);
         for i in 0 .. LEDS {
             // Update registers based on provided data
-            self.contexts[i].registers = registers;
             self.contexts[i] = active_shader.init(self.contexts[i]);
-            self.interpolator.end_colors[i] = self.contexts[i].registers[0] as u32;
+            self.contexts[i] = active_shader.randomize(self.contexts[i]);
+            
+            // Copy any registers that aren't i32::MAX which
+            // is the default value specified in parser..
+            // ALSO!!! The first register is not what you think it is.
+            // Reg[0] is typically important to not wipe out.
+            for r in 1 .. 10 {
+                if registers[r] != i32::MAX {
+                    self.contexts[i].registers[r] = registers[r];
+                }
+            }
+
+            self.contexts[i] = active_shader.update(self.contexts[i]);
+            self.interpolator.end_colors[i] = find_wheel_pos(self.contexts[i].color) as u32;
         }
 
         // Update the shader
         self.interpolator.begin_time = nanos();
+        self.interpolator.duration = MS_TO_NANO * 850;
         self.shader = next_shader;
     }
 
@@ -141,9 +154,6 @@ impl WS2812Task {
         self.set_shader(self.shader);
 
         proc_handle(&|cmd: &SystemCommand| {
-            debug_str(b"message received!!");
-            debug_str(&cmd.command);
-
             let instance = WS2812Task::get_instance();
             match &cmd.command {
                 b"SETS" => {
@@ -204,6 +214,30 @@ impl WS2812Task {
             self.target = nanos() + self.speed;
         }
     }
+}
+
+/// Given rgb, find the closest wheel setting to that
+fn find_wheel_pos(rgb: u32) -> u8 {
+    let (r, g, b) = hex_to_rgb(rgb);
+    let mut final_pos = 0;
+    let mut final_dist = u64::MAX;
+
+    for i in 0 .. 255 {
+        let (r2, g2, b2) = hex_to_rgb(wheel(i));
+
+        let dist = unsafe {
+            math::pow(max(r2, r) as u64 - min(r2, r) as u64, 2) +
+            math::pow(max(g2, g) as u64 - min(g2, g) as u64, 2) +
+            math::pow(max(b2, b) as u64 - min(b2, b) as u64, 2)
+        };
+
+        if dist < final_dist {
+            final_pos = i;
+            final_dist = dist;
+        }
+    }
+
+    return final_pos as u8;
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
 use crate::drivers::ws2812::*;
+use teensycore::math::*;
 
 #[derive(Copy, Clone)]
 pub struct ShaderContext {
@@ -25,6 +26,7 @@ impl ShaderContext {
 
 pub trait Shader<const SIZE: usize> {
     fn name(&self) -> &[u8];
+    fn randomize(&self, context: ShaderContext) -> ShaderContext;
     fn init(&mut self, context: ShaderContext) -> ShaderContext;
     fn update(&mut self, context: ShaderContext) -> ShaderContext;
 }
@@ -41,6 +43,7 @@ impl <const SIZE: usize> Shader<SIZE> for BasicShader {
         next_context.registers[0] = (255i32 / context.total_nodes as i32) * context.node_id as i32;
         return next_context;
     }
+
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context: ShaderContext = context;
         let count = context.registers[0] as u8;
@@ -51,6 +54,10 @@ impl <const SIZE: usize> Shader<SIZE> for BasicShader {
             next_context.registers[0] = 0;
         }
         return next_context;
+    }
+
+    fn randomize(&self, context: ShaderContext) -> ShaderContext {
+        return context;
     }
 }
 
@@ -95,6 +102,12 @@ impl <const SIZE: usize> Shader<SIZE> for XmasShader {
         }
 
         next_context.registers[0] += 1;
+        return next_context;
+    }
+
+    fn randomize(&self, context: ShaderContext) -> ShaderContext {
+        let mut next_context = context;
+        next_context.registers[0] = (teensycore::math::rand() % 170) as i32;
         return next_context;
     }
 }
@@ -151,6 +164,18 @@ impl <const SIZE: usize> Shader<SIZE> for ConstrainedRainbowShader {
         next_context.registers[0] = next_pos as i32;
         return next_context;
     }
+
+    fn randomize(&self, context: ShaderContext) -> ShaderContext {
+        let mut next_context = context;
+        let start = (teensycore::math::rand() % 254) as i32;
+        let end = (teensycore::math::rand() % 254) as i32;
+
+        next_context.registers[1] = min(start, end);
+        next_context.registers[2] = max(end, start);
+        next_context.registers[3] = 1;
+        next_context.registers[0] = next_context.registers[1] + (teensycore::math::rand() % (next_context.registers[2] as u64 - next_context.registers[1] as u64)) as i32;
+        return next_context;
+    }
 }
 
 
@@ -176,5 +201,9 @@ impl <const SIZE: usize> Shader<SIZE> for AudioEqualizerShader {
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
         let next_context: ShaderContext = context;
         return next_context;
+    }
+    
+    fn randomize(&self, context: ShaderContext) -> ShaderContext {
+        return context;
     }
 }

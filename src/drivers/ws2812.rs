@@ -92,7 +92,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
     pub fn flush(&self) {
         let mut node_index = 0;
         let mut bit_index: i32;
-
+        
         while node_index < SIZE {
             let node = self.nodes[node_index];
             let color: u32 = rgb_to_hex(node.red / 5, node.green / 5, node.blue / 5);
@@ -117,6 +117,14 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         self.rest();
         
     }
+}
+
+pub fn hex_to_rgb(rgb: u32) -> (u32, u32, u32) {
+    let r = ((rgb & 0xFF0000) << 16);
+    let g = ((rgb & 0x00FF00) << 8);
+    let b = (rgb & 0x0000FF);
+
+    return (r, g, b);
 }
 
 pub fn rgb_to_hex(r: u8, g: u8, b: u8) -> u32 {
