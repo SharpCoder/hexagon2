@@ -1,8 +1,8 @@
 include <config.scad>
 
 // Shape
-distance_x = 13.8;//HEX_BORDER * 2 - 6;
-distance_y = 17;
+distance_x = 16.5;//HEX_BORDER * 2 - 6;
+distance_y = 17.5;
 
 // snapfit
 width = 4;
@@ -49,7 +49,7 @@ module assembly() {
             color("purple")
             linear_extrude(SNAPFIT_DEPTH)
             translate([(distance_x)/2, distance_y + .75, 0])
-            square([distance_x*1.25, 2.5], center=true);
+            square([2+distance_x*1.25, 2.5], center=true);
         }
         
         $fn = 100;
@@ -57,7 +57,7 @@ module assembly() {
         translate([distance_x/2,2 + distance_y/2,0])
         
         scale([1.0,2.0,3.0]) 
-        circle(d=distance_x/2.6);
+        circle(d=distance_x/2.1);
         
         linear_extrude(10)
         square([200, .75], center=false);
@@ -70,6 +70,6 @@ assembly();
 translate([-42+distance_x,0,0])
 assembly();
 
-translate([-distance_x+1.25,distance_y+.75,0])
+translate([-distance_x+2.5,distance_y+.75,0])
 linear_extrude(SNAPFIT_DEPTH)
 square([45.5,2.5], center=true);
