@@ -1,13 +1,13 @@
 include <config.scad>
 
 // Shape
-distance_x = 16.5;//HEX_BORDER * 2 - 6;
+distance_x = 16.1;//HEX_BORDER * 2 - 6;
 distance_y = 17.5;
 
 // snapfit
 width = 4;
-SNAPFIT_DEPTH = 7;
-tol = .6;
+SNAPFIT_DEPTH = 6.45;
+tol = .5;
 module snapfit() {
     color("blue")
     linear_extrude(SNAPFIT_DEPTH)
@@ -28,22 +28,22 @@ module assembly() {
     translate([-distance_x / 2, 0, 0])
     difference() {
         union() {
-            translate([-tol, 0, 0])
+            translate([-tol-.5, 0, 0])
             mirror([1,0,0])
             snapfit();
 
-            translate([distance_x + tol, 0, 0])
+            translate([distance_x + tol - .25, 0, 0])
             mirror([0,0,0])
             snapfit();
             
             color("red")
             linear_extrude(SNAPFIT_DEPTH)
-            translate([width - 1, 0, 0])
+            translate([width - 1.5, 0, 0])
             square([2, distance_y]);
             
             color("red")
             linear_extrude(SNAPFIT_DEPTH)
-            translate([distance_x - width - 1.25 , 0, 0])
+            translate([distance_x - width - 1.5 , 0, 0])
             square([2, distance_y]);
             
             color("purple")
@@ -52,12 +52,10 @@ module assembly() {
             square([2+distance_x*1.25, 2.5], center=true);
         }
         
-        $fn = 100;
         linear_extrude(SNAPFIT_DEPTH+1)
-        translate([distance_x/2,2 + distance_y/2,0])
-        
+        translate([distance_x/2-.5,2 + distance_y/2,0])
         scale([1.0,2.0,3.0]) 
-        circle(d=distance_x/2.1);
+        circle(d=distance_x/2, $fn = 100);
         
         linear_extrude(10)
         square([200, .75], center=false);
