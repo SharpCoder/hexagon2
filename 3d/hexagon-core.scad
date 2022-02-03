@@ -1,14 +1,25 @@
 include <config.scad>;
+include <pcb-mount.scad>;
+
 $fn = 6;
 
 module snapfit_xtor() {
     hole_width = SNAPFIT_DEPTH;
     hole_height = SNAPFIT_HEIGHT;
-    dist_y = 12;
+    dist_y = 20;
     
-    translate([14, 0, dist_y-hole_height])
-    linear_extrude(hole_height)
-    square([hole_width, 200], center=true);
+    translate([14, 0, dist_y - hole_height])
+    union() {
+        linear_extrude(hole_height)
+        square([hole_width, 200], center=true);
+    }
+}
+
+module wire_channel() {
+    translate([14, 0, 11.6])
+    translate([-14, 0, -11])
+    linear_extrude(8)
+    square([10, 1000], center=true);
 }
 
 module all_sides() {
@@ -26,7 +37,7 @@ difference() {
         difference() {
             $fn = 6;
             circle(d=HEX_WIDTH);
-            circle(d=HEX_WIDTH - 3);
+            circle(d=HEX_WIDTH - 6);
             
         }
 
@@ -46,5 +57,16 @@ difference() {
         
         mirror([1,0,0])
         snapfit_xtor();
+        
+        wire_channel();
     }
 }
+
+
+// Floor
+color("red")
+linear_extrude(1.6)
+circle(d=HEX_WIDTH + HEX_BORDER, $fn=6);
+
+translate([0, 0, 1])
+pcb_mount();
