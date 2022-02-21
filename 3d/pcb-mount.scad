@@ -10,14 +10,14 @@ module pcb_mount() {
         circle(d=4.2);
 
 
-        translate([0, 0, 2])
+        translate([0, 0, 1.6])
         union() {
             $fn = 6;
             linear_extrude(3.2)
-            translate([0, -1, 0])
+            translate([0, -2, 0])
             circle(d=7.2);
 
-            translate([0, 5, 0])
+            translate([0, 4, 0])
             linear_extrude(4.2)
             square([7.2, 12], center=true);
         }  

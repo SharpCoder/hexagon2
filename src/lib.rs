@@ -15,9 +15,10 @@ pub mod thermal_task;
 pub mod wifi_task;
 #[cfg(not(feature = "testing"))]
 pub mod http;
+#[cfg(not(feature = "testing"))]
+pub mod audio_task;
 
 use core::arch::asm;
-use drivers::max31820::Max31820Driver;
 use models::SystemCommand;
 use teensycore::*;
 use teensycore::phys::pins::*;
@@ -30,6 +31,7 @@ use {
     blink_task::*,
     wifi_task::*,
     thermal_task::*,
+    audio_task::*,
 };
 
 use teensycore::serio::*;
@@ -59,12 +61,15 @@ teensycore::main!({
     let led_task = WS2812Task::get_instance();
     let mut blink_task = BlinkTask::new();
     let mut wifi_task = WifiTask::new();
+    let mut audio_task = AudioTask::new();
 
     // let mut thermal_task = ThermalTask::new(temp_driver);
 
     led_task.init();
     blink_task.init();
-    wifi_task.init();
+    // audio_task.init();
+
+    // wifi_task.init();
     // thermal_task.init();
 
     serial_init(SerioDevice::Default);
@@ -75,7 +80,8 @@ teensycore::main!({
         enable_interrupts();
 
         blink_task.system_loop();
-        wifi_task.system_loop();
+        // audio_task.system_loop();
+        // wifi_task.system_loop();
 
         // disable_interrupts();
         // thermal_task.system_loop();

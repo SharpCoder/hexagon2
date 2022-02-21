@@ -6,7 +6,7 @@ $fn = 6;
 module snapfit_xtor() {
     hole_width = SNAPFIT_DEPTH;
     hole_height = SNAPFIT_HEIGHT;
-    dist_y = 20;
+    dist_y = 22;
     
     translate([14, 0, dist_y - hole_height])
     union() {
@@ -37,7 +37,7 @@ difference() {
         difference() {
             $fn = 6;
             circle(d=HEX_WIDTH);
-            circle(d=HEX_WIDTH - 6);
+            circle(d=HEX_WIDTH - 4);
             
         }
 
@@ -68,5 +68,5 @@ color("red")
 linear_extrude(1.6)
 circle(d=HEX_WIDTH + HEX_BORDER, $fn=6);
 
-translate([0, 0, 1])
+translate([0, 0, 0])
 pcb_mount();

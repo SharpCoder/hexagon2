@@ -7,7 +7,7 @@ use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::{clock::*, debug::debug_str, system::closure::Closure};
 use teensycore::{math::{self, *}, S_TO_NANO, MS_TO_NANO};
 
-const LEDS: usize = 4;
+const LEDS: usize = 10;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
@@ -146,7 +146,7 @@ impl WS2812Task {
 
     pub fn init(&mut self) {
         for idx in 0 .. LEDS {
-            self.contexts[idx].node_id = idx;
+            self.contexts[idx].node_id = (idx + 2) / 3;
             self.contexts[idx].total_nodes = LEDS;
         }
 

@@ -3,12 +3,23 @@ use teensycore::phys::pins::*;
 use teensycore::{wait_ns, MICRO_TO_NANO};
 
 // Who tf knows. Magic number.
-const MODIFIER: u64 = 2;
+const MODIFIER: u64 = 12;
 
-const H_H: u64 = 1360 / MODIFIER;
-const H_L: u64 = 350 / MODIFIER;
-const L_H: u64 = 350 / MODIFIER;
-const L_L: u64 = 1360 / MODIFIER;
+// 800MHz
+const CYCLE: u64 = 1250; // ns
+const T0_H: u64 = 50; // ns
+const T1_H: u64 = 600; // ns
+
+// 400MHz
+// const CYCLE: u64 = 2500; // ns
+// const T0_H: u64 = 500; // ns
+// const T1_H: u64 = 1260; // ns
+
+
+// const H_H: u64 = 1360 / MODIFIER;
+// const H_L: u64 = 350 / MODIFIER;
+// const L_H: u64 = 350 / MODIFIER;
+// const L_L: u64 = 1360 / MODIFIER;
 
 
 #[derive(Clone, Copy)]
@@ -51,9 +62,9 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
             pull_keep: PullKeep::Pull,            // PUE
             pull_keep_en: false,             // PKE
             open_drain: false,               // ODE
-            speed: PinSpeed::Fast150MHz,                // SPEED
+            speed: PinSpeed::Low50MHz,                // SPEED
             drive_strength: DriveStrength::Max,  // DSE
-            fast_slew_rate: true,           // SRE
+            fast_slew_rate: false,           // SRE
         });
 
         pin_out(self.pin, Power::Low);
@@ -72,16 +83,16 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(H_H);
+        wait_ns(T1_H);
         pin_out(self.pin, Power::Low);
-        wait_ns(H_L);
+        wait_ns(CYCLE - T1_H);
     }
     
     fn off_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(L_H);
+        wait_ns(T0_H);
         pin_out(self.pin, Power::Low);
-        wait_ns(L_L);
+        wait_ns(CYCLE - T0_H);
     }
 
     fn rest(&self) {
@@ -95,7 +106,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         
         while node_index < SIZE {
             let node = self.nodes[node_index];
-            let color: u32 = rgb_to_hex(node.red / 5, node.green / 5, node.blue / 5);
+            let color: u32 = rgb_to_hex(node.red / 1, node.green / 1, node.blue / 1);
 
             disable_interrupts();
             // Now we need to process each bit
@@ -128,8 +139,8 @@ pub fn hex_to_rgb(rgb: u32) -> (u32, u32, u32) {
 }
 
 pub fn rgb_to_hex(r: u8, g: u8, b: u8) -> u32 {
-    return ((r as u32) << 16) |
-        ((g as u32) << 8) |
+    return ((g as u32) << 16) |
+        ((r as u32) << 8) |
         (b as u32); 
 }
 

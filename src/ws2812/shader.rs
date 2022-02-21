@@ -83,7 +83,8 @@ impl <const SIZE: usize> Shader<SIZE> for XmasShader {
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
         let mut next_context = context;
         // Randomize the starting position for each node
-        next_context.registers[0] = (teensycore::math::rand() % 170) as i32;
+        next_context.registers[0] = (255i32 / context.total_nodes as i32) * context.node_id as i32;
+        // next_context.registers[0] = (teensycore::math::rand() % 170) as i32;
         return next_context;
     }
     
@@ -194,12 +195,41 @@ impl <const SIZE: usize> Shader<SIZE> for AudioEqualizerShader {
     fn name(&self) -> &[u8] { return b"Audio Equalizer"; }
 
     fn init(&mut self, context: ShaderContext) -> ShaderContext {
-        let next_context = context;
+        let mut next_context = context;
+        
+        // Define the color range of this element
+        let start = (teensycore::math::rand() % 200) as i32;
+        let end = (teensycore::math::rand() % (254 - start as u64)) as i32;
+        // Pick an audio band
+        let audio_band = (teensycore::math::rand() % 7) as i32;
+        let decay = audio_band * 100;
+
+        next_context.registers[1] = start;
+        next_context.registers[2] = end;
+        next_context.registers[3] = audio_band;
+        next_context.registers[4] = decay;
+        next_context.registers[5] = -1; // decay direction
+
         return next_context;
     }
     
     fn update(&mut self, context: ShaderContext) -> ShaderContext {
-        let next_context: ShaderContext = context;
+        let mut next_context: ShaderContext = context;
+
+        let start = context.registers[1] as u32;
+        let end = context.registers[2] as u32;
+        let audio_band = context.registers[3];
+        let max_decay = 0;//context.audio_bands[audio_band] as i32;
+        let current_decay = context.registers[4] + next_context.registers[5];
+        
+        next_context.color = wheel(interpolate(start, end, current_decay as u64, max_decay as u64) as u8);
+
+        if current_decay == 0 && next_context.registers[5] == -1 {
+            next_context.registers[5] = 1;
+        } else if current_decay == max_decay && next_context.registers[5] == 1 {
+            next_context.registers[5] = -1;
+        }
+
         return next_context;
     }
     

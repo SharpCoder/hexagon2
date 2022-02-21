@@ -1,8 +1,8 @@
-include <config.scad>
+    include <config.scad>
 
 // Shape
 distance_x = 16.1;//HEX_BORDER * 2 - 6;
-distance_y = 17.5;
+distance_y = 19.5;
 
 // snapfit
 width = 4;
