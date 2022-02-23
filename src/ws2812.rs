@@ -1,6 +1,10 @@
-pub mod shader;
+use crate::shaders::{
+    core::*,
+    basic::*,
+    constrained::*,
+    xmas::*,
+};
 
-use crate::shader::*;
 use crate::{drivers::ws2812::*, proc_handle, models::SystemCommand};
 use teensycore::debug::debug_u64;
 use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
@@ -14,14 +18,12 @@ const UNITS: usize = (LEDS - 1) / LED_PER_UNIT;
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
 static mut CONSTRAINED_RAINBOW_SHADER: ConstrainedRainbowShader = ConstrainedRainbowShader::new();
-static mut AUDIO_EQUALIZER_SHADER: AudioEqualizerShader = AudioEqualizerShader::new();
 
 fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
     return match shader {
         ActiveShader::Basic => unsafe { &mut BASIC_SHADER }, 
         ActiveShader::Xmas => unsafe { &mut XMAS_SHADER },
         ActiveShader::Constrained => unsafe { &mut CONSTRAINED_RAINBOW_SHADER },
-        ActiveShader::AudioEqualizer => unsafe { &mut AUDIO_EQUALIZER_SHADER },
     };
 }
 
@@ -58,16 +60,14 @@ pub enum ActiveShader {
     Basic = 0x0,
     Xmas = 0x1,
     Constrained = 0x2,
-    AudioEqualizer = 0x3,
 }
 
 impl ActiveShader {
-    pub fn list() -> [ActiveShader; 4] {
+    pub fn list() -> [ActiveShader; 3] {
         return [
             ActiveShader::Basic,
             ActiveShader::Xmas,
             ActiveShader::Constrained,
-            ActiveShader::AudioEqualizer,
         ];
     }
 }
@@ -169,9 +169,6 @@ impl WS2812Task {
                         2 => {
                             instance.interpolate_to(ActiveShader::Xmas, cmd.args);
                         },
-                        3 => {
-                            instance.interpolate_to(ActiveShader::AudioEqualizer, cmd.args);
-                        },
                         _ => {
                             
                         }
@@ -193,7 +190,6 @@ impl WS2812Task {
         let time = nanos();
 
         if time > self.target {
-
             // Check if we're interpolating
             let interpolating = (self.interpolator.begin_time + self.interpolator.duration) > time;
             if interpolating {
@@ -201,7 +197,7 @@ impl WS2812Task {
                 for i in 0 .. UNITS {
                     let wheel_index = self.interpolator.interpolate(i, time);
                     for r in 0 .. LED_PER_UNIT {
-                        self.driver.set_color(i * LED_PER_UNIT + r, wheel(wheel_index as u8));
+                        self.driver.set_color(1 + i * LED_PER_UNIT + r, wheel(wheel_index as u8));
                     }
                 }
             } else {
@@ -215,6 +211,9 @@ impl WS2812Task {
                 }
             }
 
+
+            // Turn off the first LED
+            self.driver.set_color(0, 0x00);
 
             self.driver.flush();
             self.target = nanos() + self.speed;

@@ -5,6 +5,7 @@
 pub mod drivers;
 pub mod ws2812;
 pub mod models;
+pub mod shaders;
 
 // This is ugly but necessary
 #[cfg(not(feature = "testing"))]
