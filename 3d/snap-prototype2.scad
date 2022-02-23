@@ -2,7 +2,7 @@
 
 // Shape
 distance_x = 16.1;//HEX_BORDER * 2 - 6;
-distance_y = 19.5;
+distance_y = 18;
 
 // snapfit
 width = 4;

@@ -67,7 +67,7 @@ teensycore::main!({
 
     led_task.init();
     blink_task.init();
-    // audio_task.init();
+    audio_task.init();
 
     // wifi_task.init();
     // thermal_task.init();
@@ -80,7 +80,7 @@ teensycore::main!({
         enable_interrupts();
 
         blink_task.system_loop();
-        // audio_task.system_loop();
+        audio_task.system_loop();
         // wifi_task.system_loop();
 
         // disable_interrupts();

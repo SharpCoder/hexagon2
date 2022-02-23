@@ -8,13 +8,15 @@ use teensycore::{clock::*, debug::debug_str, system::closure::Closure};
 use teensycore::{math::{self, *}, S_TO_NANO, MS_TO_NANO};
 
 const LEDS: usize = 10;
+const LED_PER_UNIT: usize = 3;
+const UNITS: usize = (LEDS - 1) / LED_PER_UNIT;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
 static mut CONSTRAINED_RAINBOW_SHADER: ConstrainedRainbowShader = ConstrainedRainbowShader::new();
 static mut AUDIO_EQUALIZER_SHADER: AudioEqualizerShader = AudioEqualizerShader::new();
 
-fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<LEDS> {
+fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
     return match shader {
         ActiveShader::Basic => unsafe { &mut BASIC_SHADER }, 
         ActiveShader::Xmas => unsafe { &mut XMAS_SHADER },
@@ -24,8 +26,8 @@ fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<LEDS> {
 }
 
 pub struct Interpolator {
-    start_colors: [u32; LEDS],
-    end_colors: [u32; LEDS],
+    start_colors: [u32; UNITS],
+    end_colors: [u32; UNITS],
     duration: u64,
     begin_time: u64,
 }
@@ -75,7 +77,7 @@ pub struct WS2812Task {
     target: u64,
     driver: WS2812Driver<LEDS>,
     shader: ActiveShader,
-    contexts: [ShaderContext; LEDS],
+    contexts: [ShaderContext; UNITS],
     interpolator: Interpolator,
     speed: u64,
 }
@@ -87,11 +89,11 @@ static mut TASK_INSTANCE: WS2812Task = WS2812Task {
     ),
     shader: ActiveShader::Basic,
     speed: teensycore::MS_TO_NANO * 8,
-    contexts: [ShaderContext::new(0, LEDS); LEDS],
+    contexts: [ShaderContext::new(0, UNITS); UNITS],
     interpolator: Interpolator  {
         begin_time: 0,
-        start_colors: [0; LEDS],
-        end_colors: [0; LEDS],
+        start_colors: [0; UNITS],
+        end_colors: [0; UNITS],
         duration: 0,
     },
 };
@@ -100,7 +102,7 @@ impl WS2812Task {
 
     pub fn set_shader(&mut self, shader: ActiveShader) {
         let active_shader = get_shader(shader);
-        for i in 0 .. LEDS {
+        for i in 0 .. UNITS {
             self.contexts[i] = active_shader.init(self.contexts[i]);
         }
         self.shader = shader;
@@ -108,14 +110,14 @@ impl WS2812Task {
 
     pub fn interpolate_to(&mut self, next_shader: ActiveShader, registers: [i32; 10]) {
         // Store current values
-        for i in 0 .. LEDS {
+        for i in 0 .. UNITS {
             // We are interpolating /wheel/ not colors
             self.interpolator.start_colors[i] = find_wheel_pos(self.contexts[i].color) as u32;
         }
 
         // Initialize next colors
         let active_shader = get_shader(next_shader);
-        for i in 0 .. LEDS {
+        for i in 0 .. UNITS {
             // Update registers based on provided data
             self.contexts[i] = active_shader.init(self.contexts[i]);
             self.contexts[i] = active_shader.randomize(self.contexts[i]);
@@ -145,9 +147,9 @@ impl WS2812Task {
     }
 
     pub fn init(&mut self) {
-        for idx in 0 .. LEDS {
-            self.contexts[idx].node_id = (idx + 2) / 3;
-            self.contexts[idx].total_nodes = LEDS;
+        for idx in 0 .. UNITS {
+            self.contexts[idx].node_id = idx;
+            self.contexts[idx].total_nodes = UNITS;
         }
 
         self.driver.init();
@@ -196,16 +198,20 @@ impl WS2812Task {
             let interpolating = (self.interpolator.begin_time + self.interpolator.duration) > time;
             if interpolating {
                 // Process the interpolation
-                for i in 0 .. LEDS {
+                for i in 0 .. UNITS {
                     let wheel_index = self.interpolator.interpolate(i, time);
-                    self.driver.set_color(i, wheel(wheel_index as u8));
+                    for r in 0 .. LED_PER_UNIT {
+                        self.driver.set_color(i * LED_PER_UNIT + r, wheel(wheel_index as u8));
+                    }
                 }
             } else {
                 // Process the shader as normal
                 let active_shader = get_shader(self.shader);
-                for i in 0 .. LEDS {
+                for i in 0 .. UNITS {
                     self.contexts[i] = active_shader.update(self.contexts[i]);
-                    self.driver.set_color(i, self.contexts[i].color);
+                    for r in 0 .. LED_PER_UNIT {
+                        self.driver.set_color(1 + i * LED_PER_UNIT + r, self.contexts[i].color);
+                    }
                 }
             }
 
