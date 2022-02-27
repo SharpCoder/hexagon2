@@ -50,7 +50,7 @@ teensycore::main!({
 
     // Drivers and stateful things
     // let _wifi_driver = WifiDriver::new(SerioDevice::Default, 5, 6);
-    // let temp_driver = Max31820Driver::new(10);
+    let thermal_driver = crate::drivers::max31820::Max31820Driver::new(10);
 
     // Setup event loop
     unsafe {
@@ -63,41 +63,27 @@ teensycore::main!({
     let mut blink_task = BlinkTask::new();
     let mut wifi_task = WifiTask::new();
     let mut audio_task = AudioTask::new();
+    let mut thermal_task = ThermalTask::new(thermal_driver);
 
-    // let mut thermal_task = ThermalTask::new(temp_driver);
-
+    // Thermal task must run first because
+    // it seeds the prng
+    thermal_task.init();
+    
     led_task.init();
     blink_task.init();
-    audio_task.init();
+    // audio_task.init();
 
     // wifi_task.init();
-    // thermal_task.init();
-
-    let mut change = 0;
-    let mut iteration = 0;
-
     serial_init(SerioDevice::Default);
 
     loop {
         disable_interrupts();
         led_task.system_loop();
-
-        // One shot operation
-        // if change == 0 {
-        //     one_shot();
-        //     change = 1;
-        // }
-
         enable_interrupts();
 
         blink_task.system_loop();
         // audio_task.system_loop();
         // wifi_task.system_loop();
-
-
-        // disable_interrupts();
-        // thermal_task.system_loop();
-        // enable_interrupts();
 
     
         unsafe {
@@ -106,26 +92,6 @@ teensycore::main!({
     }
 });
 
-#[inline]
-#[no_mangle]
-pub fn one_shot() {
-
-    let mut error = 0;
-    // Test conditions
-    for cond in 1 ..= 10 {
-        let wait = cond * 150;
-        let start = nanos();
-        test_wait(wait);
-        test_wait(wait);
-        let end = nanos();
-
-        error += (end - start) - 296 - wait;
-        debug::debug_u64(wait * 2, b"wait");
-        debug::debug_u64((end - start) - 296, b"time to read nanos\n");
-    }
-
-    debug::debug_u64(error, b"total error");
-}
 
 #[no_mangle]
 #[inline]

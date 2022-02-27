@@ -2,8 +2,6 @@ use core::arch::asm;
 use teensycore::*;
 use teensycore::clock::*;
 use teensycore::debug::*;
-use teensycore::phys::irq::disable_interrupts;
-use teensycore::phys::irq::enable_interrupts;
 use teensycore::phys::pins::*;
 use teensycore::math::*;
 use teensycore::serio::*;
@@ -24,28 +22,11 @@ impl Max31820Driver {
         };
     }
 
-    pub fn test(&self) {
-        if self.initialize() {
-            self.send_command(0x33);
-
-            for id in 0 .. 64 {
-                disable_interrupts();
-                let bit = self.read_bit();
-                enable_interrupts();
-
-                serial_write_str(SerioDevice::Debug, &itoa(id));
-                serial_write(SerioDevice::Debug, b" bit, val=");
-                debug_u64(bit as u64, b"bit");
-            }
-        }
-    }
-
     fn log(&self, msg: &'static [u8]) {
         debug_str(msg);
     }
 
     fn cmd_convert_t(&self) {
-        self.log(b"cmd_convert_t");
         self.send_command(0x44); // Convert T command
         // Read until receiving a 1
         // TODO: Add an oh-shit detector
@@ -55,22 +36,23 @@ impl Max31820Driver {
             if bit > 0 {
                 break;
             }
+            wait_ns(micros(1));
         }
     }
 
     fn cmd_read_scratchpad(&self) -> Option<u16> {
-        self.log(b"cmd_read_scratchpad");
         self.send_command(0xBE);
 
         // Read bytes
         let byte_lsb = self.read_byte() as u16;
-        let byte_msb = self.read_byte() as u16;
+        let byte_msb = self.read_byte() as u16; 
         let result: u16 = (byte_msb << 8) | byte_lsb;
+
+        // Take the first 10 bits
         return Some(result);
     }
 
     fn cmd_skip_rom(&self) -> Option<bool> {
-        self.log(b"cmd_skip_rom");
         if self.initialize() {
             self.send_command(0xCC);
             return Some(true);
@@ -80,7 +62,6 @@ impl Max31820Driver {
     }
 
     fn cmd_read_rom(&self) -> Option<u64> {
-        self.log(b"cmd_read_rom");
         if self.initialize() {
             self.send_command(0x33);
             
@@ -90,7 +71,9 @@ impl Max31820Driver {
             // Read 64 bits     
             let mut family_code = 0;
             for bit in 0 .. 8 {
-                family_code |= (self.read_bit() as u64) << bit;
+                let bit_val = self.read_bit();
+                debug_u64(bit_val as u64, b"bit");
+                family_code |= (bit_val as u64) << bit;
             }
 
             debug_u64(family_code, b"family code");
@@ -115,7 +98,6 @@ impl Max31820Driver {
     }
 
     fn cmd_match_rom(&self, rom: u64) {
-        self.log(b"cmd_match_rom");
         // Tell the bus we're about to address a specific node
         self.send_command(0x55);
         let mut bit_index: usize = 0;
@@ -131,17 +113,19 @@ impl Max31820Driver {
     }
 
     pub fn read_rom(&self) -> Option<u64> {
-        self.log(b"** read rom **");
         return self.cmd_read_rom();
     }
 
     pub fn read_temperature(&self) -> Option<u16> {
-        self.log(b"read_temperature");
         // Get ROM
-        self.cmd_skip_rom();
-        self.cmd_convert_t();
-        self.cmd_skip_rom();
-        return self.cmd_read_scratchpad();
+        if self.initialize() {
+            self.cmd_skip_rom();
+            self.cmd_convert_t();
+            self.cmd_skip_rom();
+            return self.cmd_read_scratchpad();
+        } else {
+            return None;
+        }
     }
 
     fn as_input(&self) {
@@ -171,12 +155,10 @@ impl Max31820Driver {
     fn initialize(&self) -> bool {
         for _ in 0 .. 125 {
             if self.reset() {
-                debug_str(b"pulse identified");
                 return true;
             }
         }
 
-        debug_str(b"could not connect to max31820");
         return false;
     }
 
@@ -190,18 +172,16 @@ impl Max31820Driver {
         wait_ns(micros(70));
 
         // Wait a while then sample
-        let target = nanos() + micros(240);
+        let target = nanos() + micros(240 - 70);
         let mut result = 1;
         while nanos() < target {
-
             if pin_read(self.pin) == 0 {
                 result = 0;
             }
-
         }
         
         // Wait 410 micros
-        wait_ns(micros(500));
+        wait_ns(micros(240));
 
         // If result is 0, that's an alive pulse.
         return result == 0;
@@ -224,16 +204,16 @@ impl Max31820Driver {
         self.pull_low();
         wait_ns(micros(10));
         // Release
-        pin_out(self.pin, Power::High);
-        wait_ns(micros(55));
+        pin_mode(self.pin, Mode::Input);
+        wait_ns(micros(65));
     } 
 
     fn write_0(&self) {
         self.pull_low();
         wait_ns(micros( 65));
 
-        // Release        // Wait for the recovery time.
-        pin_out(self.pin, Power::High);
+        // Release
+        pin_mode(self.pin, Mode::Input);
         wait_ns(micros(5));
     }
 
@@ -276,7 +256,7 @@ impl Max31820Driver {
 
     fn read_byte(&self) -> u8 {
         let mut result = 0;
-        for bit in 0 .. 7 {
+        for bit in 0 .. 8 {
             result |= self.read_bit() << bit;
         }
         return result;

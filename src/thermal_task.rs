@@ -1,6 +1,9 @@
 use teensycore::*;
 use teensycore::clock::*;
 use teensycore::debug::*;
+use teensycore::math::seed_rand;
+use teensycore::phys::irq::disable_interrupts;
+use teensycore::phys::irq::enable_interrupts;
 
 use crate::drivers::max31820::Max31820Driver;
 
@@ -21,28 +24,23 @@ impl ThermalTask {
     }
 
     pub fn init(&self) {
-    
-    }
+        let mut prng_seed = 1337;
+        let primes = [3,5,7,11,13,17,19,23,29];
+        let samples = [
+            self.driver.read_temperature(),
+            self.driver.read_temperature(),
+            self.driver.read_temperature(),
+            self.driver.read_temperature(),
+            self.driver.read_temperature(),
+        ];
 
-    pub fn system_loop(&mut self) {
-        if nanos() > self.next_event {
-            
-            // New line
-            debug_str(b"");
-
-            self.driver.test();
-            
-            // match self.driver.read_rom() {
-            //     None => {
-            //         debug_str(b"failed");
-            //     },
-            //     Some(temp) => {
-            //         // Set temperature somewhere.
-            //         // debug_u64(temp, b"rom code");
-            //     }
-            // }
-
-            self.next_event = nanos() + S_TO_NANO * 5;
+        for i in 0 .. samples.len() {
+            if samples[i].is_some() {
+                prng_seed += samples[i].unwrap() as u64 * primes[i];
+            }
         }
+        
+        debug_u64(prng_seed, b"prng seed");
+        seed_rand(prng_seed);
     }
 }

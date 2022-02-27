@@ -1,8 +1,11 @@
+use crate::shaders::halloween::HalloweenShader;
 use crate::shaders::{
     core::*,
     basic::*,
     constrained::*,
     xmas::*,
+    independence::*,
+    halloween::*,
 };
 
 use crate::{drivers::ws2812::*, proc_handle, models::SystemCommand};
@@ -18,12 +21,16 @@ const UNITS: usize = LEDS / LED_PER_UNIT;
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
 static mut CONSTRAINED_RAINBOW_SHADER: ConstrainedRainbowShader = ConstrainedRainbowShader::new();
+static mut INDEPENDENCE_SHADER: IndependenceShader = IndependenceShader::new();
+static mut HALLOWEEN_SHADER: HalloweenShader = HalloweenShader::new();
 
 fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
     return match shader {
         ActiveShader::Basic => unsafe { &mut BASIC_SHADER }, 
         ActiveShader::Xmas => unsafe { &mut XMAS_SHADER },
         ActiveShader::Constrained => unsafe { &mut CONSTRAINED_RAINBOW_SHADER },
+        ActiveShader::Independence => unsafe { &mut INDEPENDENCE_SHADER },
+        ActiveShader::Halloween => unsafe { &mut HALLOWEEN_SHADER },
     };
 }
 
@@ -60,14 +67,18 @@ pub enum ActiveShader {
     Basic = 0x0,
     Xmas = 0x1,
     Constrained = 0x2,
+    Independence = 0x3,
+    Halloween = 0x4,
 }
 
 impl ActiveShader {
-    pub fn list() -> [ActiveShader; 3] {
+    pub fn list() -> [ActiveShader; 5] {
         return [
             ActiveShader::Basic,
             ActiveShader::Xmas,
             ActiveShader::Constrained,
+            ActiveShader::Independence,
+            ActiveShader::Halloween,
         ];
     }
 }
@@ -89,7 +100,7 @@ static mut TASK_INSTANCE: WS2812Task = WS2812Task {
     driver: WS2812Driver::<LEDS>::new(
         18, // pin
     ),
-    shader: ActiveShader::Basic,
+    shader: ActiveShader::Halloween,
     speed: teensycore::MS_TO_NANO * 8,
     contexts: [ShaderContext::new(0, UNITS); UNITS],
     interpolator: Interpolator  {
@@ -195,23 +206,23 @@ impl WS2812Task {
     pub fn system_loop(&mut self) {
         let time = nanos();
 
-        if time > self.transition_target {
-            // Transition to
-            self.transition_target = time + S_TO_NANO * 10;
-            let rnd = rand() % 3;   
-            let instance = WS2812Task::get_instance();
-            match rnd {
-                0 => {
-                    instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
-                },
-                1 => {
-                    instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
-                },
-                _ => {
-                    instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
-                }
-            }
-        }
+        // if time > self.transition_target {
+        //     // Transition to
+        //     self.transition_target = time + S_TO_NANO * 10;
+        //     let rnd = rand() % 3;   
+        //     let instance = WS2812Task::get_instance();
+        //     match rnd {
+        //         0 => {
+        //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
+        //         },
+        //         1 => {
+        //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
+        //         },
+        //         _ => {
+        //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
+        //         }
+        //     }
+        // }
 
         if time > self.target {
             // Check if we're interpolating
