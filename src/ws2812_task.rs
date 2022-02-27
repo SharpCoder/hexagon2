@@ -11,9 +11,9 @@ use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::{clock::*, debug::debug_str, system::closure::Closure};
 use teensycore::{math::{self, *}, S_TO_NANO, MS_TO_NANO};
 
-const LEDS: usize = 10;
+const LEDS: usize = 9;
 const LED_PER_UNIT: usize = 3;
-const UNITS: usize = (LEDS - 1) / LED_PER_UNIT;
+const UNITS: usize = LEDS / LED_PER_UNIT;
 
 static mut BASIC_SHADER: BasicShader = BasicShader::new();
 static mut XMAS_SHADER: XmasShader = XmasShader::new();
@@ -75,6 +75,7 @@ impl ActiveShader {
 
 pub struct WS2812Task { 
     target: u64,
+    transition_target: u64,
     driver: WS2812Driver<LEDS>,
     shader: ActiveShader,
     contexts: [ShaderContext; UNITS],
@@ -84,6 +85,7 @@ pub struct WS2812Task {
 
 static mut TASK_INSTANCE: WS2812Task = WS2812Task {
     target: 0,
+    transition_target: 0,
     driver: WS2812Driver::<LEDS>::new(
         18, // pin
     ),
@@ -99,6 +101,10 @@ static mut TASK_INSTANCE: WS2812Task = WS2812Task {
 };
 
 impl WS2812Task {
+
+    pub fn iterate(&mut self) {
+        self.driver.iterate();
+    }
 
     pub fn set_shader(&mut self, shader: ActiveShader) {
         let active_shader = get_shader(shader);
@@ -189,6 +195,24 @@ impl WS2812Task {
     pub fn system_loop(&mut self) {
         let time = nanos();
 
+        if time > self.transition_target {
+            // Transition to
+            self.transition_target = time + S_TO_NANO * 10;
+            let rnd = rand() % 3;   
+            let instance = WS2812Task::get_instance();
+            match rnd {
+                0 => {
+                    instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
+                },
+                1 => {
+                    instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
+                },
+                _ => {
+                    instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
+                }
+            }
+        }
+
         if time > self.target {
             // Check if we're interpolating
             let interpolating = (self.interpolator.begin_time + self.interpolator.duration) > time;
@@ -197,7 +221,7 @@ impl WS2812Task {
                 for i in 0 .. UNITS {
                     let wheel_index = self.interpolator.interpolate(i, time);
                     for r in 0 .. LED_PER_UNIT {
-                        self.driver.set_color(1 + i * LED_PER_UNIT + r, wheel(wheel_index as u8));
+                        self.driver.set_color(i * LED_PER_UNIT + r, wheel(wheel_index as u8));
                     }
                 }
             } else {
@@ -206,7 +230,7 @@ impl WS2812Task {
                 for i in 0 .. UNITS {
                     self.contexts[i] = active_shader.update(self.contexts[i]);
                     for r in 0 .. LED_PER_UNIT {
-                        self.driver.set_color(1 + i * LED_PER_UNIT + r, self.contexts[i].color);
+                        self.driver.set_color(i * LED_PER_UNIT + r, self.contexts[i].color);
                     }
                 }
             }

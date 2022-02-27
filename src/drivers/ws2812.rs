@@ -1,14 +1,18 @@
 use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::phys::pins::*;
-use teensycore::{wait_ns, MICRO_TO_NANO};
-
-// Who tf knows. Magic number.
-const MODIFIER: u64 = 12;
+use teensycore::{wait_ns, wait_exact_ns, MICRO_TO_NANO};
+use teensycore::clock::*;
 
 // 800MHz
 const CYCLE: u64 = 1250; // ns
-const T0_H: u64 = 50; // ns
+const T0_H: u64 = 110; // ns
+const T0_L: u64 = 600;
 const T1_H: u64 = 600; // ns
+const T1_L: u64 = 600;
+
+// const CYCLE: u64 = 1500; // ns
+// const T0_H: u64 = 50; // ns
+// const T1_H: u64 = 700; // ns
 
 // 400MHz
 // const CYCLE: u64 = 2500; // ns
@@ -43,6 +47,7 @@ impl Node {
 pub struct WS2812Driver<const SIZE: usize> {
     nodes: [Node; SIZE],
     pin: usize,
+    iteration: usize,
 }
 
 impl<const SIZE: usize> WS2812Driver<SIZE> {
@@ -50,6 +55,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         return WS2812Driver::<SIZE> {
             nodes: [Node::new(0, 0, 0); SIZE],
             pin: pin,
+            iteration: 0,
         }
     }
 
@@ -62,9 +68,9 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
             pull_keep: PullKeep::Pull,            // PUE
             pull_keep_en: false,             // PKE
             open_drain: false,               // ODE
-            speed: PinSpeed::Low50MHz,                // SPEED
-            drive_strength: DriveStrength::Max,  // DSE
-            fast_slew_rate: false,           // SRE
+            speed: PinSpeed::Max200MHz,                // SPEED
+            drive_strength: DriveStrength::MaxDiv3,  // DSE
+            fast_slew_rate: true,           // SRE
         });
 
         pin_out(self.pin, Power::Low);
@@ -83,21 +89,25 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
-        wait_ns(T1_H);
+        wait_exact_ns(T1_H);
         pin_out(self.pin, Power::Low);
-        wait_ns(CYCLE - T1_H);
+        wait_exact_ns(T1_L);
     }
     
-    fn off_bit(&self) {
+    fn off_bit(&self) {        
         pin_out(self.pin, Power::High);
-        wait_ns(T0_H);
+        wait_exact_ns(T0_H);
         pin_out(self.pin, Power::Low);
-        wait_ns(CYCLE - T0_H);
+        wait_exact_ns(T0_L);
     }
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(50 * MICRO_TO_NANO);
+        wait_ns(3500 * MICRO_TO_NANO);
+    }
+
+    pub fn iterate(&mut self) {
+        self.iteration += 1;
     }
 
     pub fn flush(&self) {

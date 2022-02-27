@@ -3,7 +3,7 @@
 #![no_std]
 
 pub mod drivers;
-pub mod ws2812;
+pub mod ws2812_task;
 pub mod models;
 pub mod shaders;
 
@@ -24,7 +24,7 @@ use models::SystemCommand;
 use teensycore::*;
 use teensycore::phys::pins::*;
 use teensycore::system::observable::Observable;
-use ws2812::*;
+use ws2812_task::*;
 
 
 #[cfg(not(feature = "testing"))]
@@ -73,16 +73,27 @@ teensycore::main!({
     // wifi_task.init();
     // thermal_task.init();
 
+    let mut change = 0;
+    let mut iteration = 0;
+
     serial_init(SerioDevice::Default);
 
     loop {
         disable_interrupts();
         led_task.system_loop();
+
+        // One shot operation
+        // if change == 0 {
+        //     one_shot();
+        //     change = 1;
+        // }
+
         enable_interrupts();
 
         blink_task.system_loop();
-        audio_task.system_loop();
+        // audio_task.system_loop();
         // wifi_task.system_loop();
+
 
         // disable_interrupts();
         // thermal_task.system_loop();
@@ -94,6 +105,36 @@ teensycore::main!({
         }
     }
 });
+
+#[inline]
+#[no_mangle]
+pub fn one_shot() {
+
+    let mut error = 0;
+    // Test conditions
+    for cond in 1 ..= 10 {
+        let wait = cond * 150;
+        let start = nanos();
+        test_wait(wait);
+        test_wait(wait);
+        let end = nanos();
+
+        error += (end - start) - 296 - wait;
+        debug::debug_u64(wait * 2, b"wait");
+        debug::debug_u64((end - start) - 296, b"time to read nanos\n");
+    }
+
+    debug::debug_u64(error, b"total error");
+}
+
+#[no_mangle]
+#[inline]
+pub fn test_wait(nanos: u64) {
+    let cycles = (nanos - 55) / 10;
+    for _ in 0 .. cycles {
+        assembly!("nop");
+    }
+}
 
 pub fn proc_handle(func: &'static dyn Fn(&SystemCommand)) {
     unsafe {

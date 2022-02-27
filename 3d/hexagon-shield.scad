@@ -1,6 +1,6 @@
 include <config.scad>;
 $fn = 6;
-tol = 0.3;
+tol = 0.25;
 
 linear_extrude(SHIELD_THICKNESS)
 circle(d=HEX_WIDTH+tol);

@@ -37,6 +37,7 @@ do :
     proj=$(echo $lib | sed 's/lib//g')
 
     arm-none-eabi-objdump -S out/kernel.elf > out/$proj.asm
+    # arm-none-eabi-objdump -S $elf > out/teensy.asm
 
     # Use objcopy to generate the hex output
     arm-none-eabi-objcopy -O ihex out/kernel.elf out/$proj.hex
