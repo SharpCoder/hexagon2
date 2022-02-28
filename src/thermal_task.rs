@@ -13,6 +13,9 @@ use crate::drivers::max31820::Max31820Driver;
 pub struct ThermalTask {
     driver: Max31820Driver,
     next_event: u64,
+    count: usize,
+    samples: [Option<u16>; 5],
+    pub loaded: bool,
 }
 
 impl ThermalTask {
@@ -20,12 +23,13 @@ impl ThermalTask {
         return ThermalTask {
             driver: driver,
             next_event: 0,
+            count: 0,
+            loaded: false,
+            samples: [None; 5],
         };
     }
 
     pub fn init(&self) {
-        let mut prng_seed = 1337;
-        let primes = [3,5,7,11,13,17,19,23,29];
         let samples = [
             self.driver.read_temperature(),
             self.driver.read_temperature(),
@@ -34,13 +38,29 @@ impl ThermalTask {
             self.driver.read_temperature(),
         ];
 
-        for i in 0 .. samples.len() {
-            if samples[i].is_some() {
-                prng_seed += samples[i].unwrap() as u64 * primes[i];
+    }
+
+    pub fn system_loop(&mut self) {
+        if self.count < 5 {
+            self.samples[self.count] = self.driver.read_temperature();
+            self.count += 1;
+        } else if self.count == 5 {
+            let mut prng_seed = 1337;
+            let primes = [3,5,7,11,13,17,19,23,29];
+
+            for i in 0 .. self.samples.len() {
+                if self.samples[i].is_some() {
+                    prng_seed += self.samples[i].unwrap() as u64 * primes[i];
+                }
             }
+            
+            debug_u64(prng_seed, b"prng seed");
+            seed_rand(prng_seed);
+
+            self.loaded = true;
+            self.count += 1;
+        } else {
+
         }
-        
-        debug_u64(prng_seed, b"prng seed");
-        seed_rand(prng_seed);
     }
 }

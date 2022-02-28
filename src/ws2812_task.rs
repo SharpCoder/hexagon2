@@ -66,7 +66,7 @@ impl Interpolator {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum ActiveShader {
     Basic = 0x0,
     Xmas = 0x1,
@@ -224,7 +224,7 @@ impl WS2812Task {
         } else if time > self.transition_target {
             self.transition_target = time + self.speed * 255;
         }
-        
+
         // if time > self.transition_target {
         //     // Transition to
         //     self.transition_target = time + S_TO_NANO * 10;

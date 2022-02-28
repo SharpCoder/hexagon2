@@ -65,12 +65,10 @@ teensycore::main!({
     let mut audio_task = AudioTask::new();
     let mut thermal_task = ThermalTask::new(thermal_driver);
 
-    // Thermal task must run first because
-    // it seeds the prng
-    thermal_task.init();
-    
     led_task.init();
     blink_task.init();
+    thermal_task.init();
+    
     // audio_task.init();
 
     // wifi_task.init();
@@ -82,10 +80,16 @@ teensycore::main!({
         enable_interrupts();
 
         blink_task.system_loop();
+        thermal_task.system_loop();
         // audio_task.system_loop();
         // wifi_task.system_loop();
 
-    
+        // If the thermal task has completed, we can transition
+        // the loading indicator forward
+        if thermal_task.loaded {
+            led_task.ready();
+        }
+
         unsafe {
             asm!("nop");
         }
