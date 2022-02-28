@@ -1,4 +1,5 @@
 use crate::shaders::halloween::HalloweenShader;
+use crate::shaders::loading::LoadingShader;
 use crate::shaders::{
     core::*,
     basic::*,
@@ -6,6 +7,7 @@ use crate::shaders::{
     xmas::*,
     independence::*,
     halloween::*,
+    loading::*,
 };
 
 use crate::{drivers::ws2812::*, proc_handle, models::SystemCommand};
@@ -23,6 +25,7 @@ static mut XMAS_SHADER: XmasShader = XmasShader::new();
 static mut CONSTRAINED_RAINBOW_SHADER: ConstrainedRainbowShader = ConstrainedRainbowShader::new();
 static mut INDEPENDENCE_SHADER: IndependenceShader = IndependenceShader::new();
 static mut HALLOWEEN_SHADER: HalloweenShader = HalloweenShader::new();
+static mut LOADING_SHADER: LoadingShader = LoadingShader::new();
 
 fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
     return match shader {
@@ -31,6 +34,7 @@ fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
         ActiveShader::Constrained => unsafe { &mut CONSTRAINED_RAINBOW_SHADER },
         ActiveShader::Independence => unsafe { &mut INDEPENDENCE_SHADER },
         ActiveShader::Halloween => unsafe { &mut HALLOWEEN_SHADER },
+        ActiveShader::Loading => unsafe { &mut LOADING_SHADER },
     };
 }
 
@@ -69,16 +73,18 @@ pub enum ActiveShader {
     Constrained = 0x2,
     Independence = 0x3,
     Halloween = 0x4,
+    Loading = 0x5,
 }
 
 impl ActiveShader {
-    pub fn list() -> [ActiveShader; 5] {
+    pub fn list() -> [ActiveShader; 6] {
         return [
             ActiveShader::Basic,
             ActiveShader::Xmas,
             ActiveShader::Constrained,
             ActiveShader::Independence,
             ActiveShader::Halloween,
+            ActiveShader::Loading,
         ];
     }
 }
@@ -92,6 +98,7 @@ pub struct WS2812Task {
     contexts: [ShaderContext; UNITS],
     interpolator: Interpolator,
     speed: u64,
+    loading: bool,
 }
 
 static mut TASK_INSTANCE: WS2812Task = WS2812Task {
@@ -109,18 +116,17 @@ static mut TASK_INSTANCE: WS2812Task = WS2812Task {
         end_colors: [0; UNITS],
         duration: 0,
     },
+    loading: true,
 };
 
 impl WS2812Task {
 
-    pub fn iterate(&mut self) {
-        self.driver.iterate();
-    }
-
     pub fn set_shader(&mut self, shader: ActiveShader) {
         let active_shader = get_shader(shader);
+
         for i in 0 .. UNITS {
             self.contexts[i] = active_shader.init(self.contexts[i]);
+            // self.contexts[i] = active_shader.randomize(self.contexts[i]);
         }
         self.shader = shader;
     }
@@ -170,7 +176,7 @@ impl WS2812Task {
         }
 
         self.driver.init();
-        self.set_shader(self.shader);
+        self.set_shader(ActiveShader::Loading);
 
         proc_handle(&|cmd: &SystemCommand| {
             let instance = WS2812Task::get_instance();
@@ -203,23 +209,39 @@ impl WS2812Task {
 
     }
 
+    pub fn ready(&mut self) {
+        self.loading = false;
+    }
+
     pub fn system_loop(&mut self) {
         let time = nanos();
 
+        // If we've played the aniimation and want to transition away from loading
+        // now is the time to do it.
+        if time > self.transition_target && self.shader == ActiveShader::Loading && self.loading == false {
+            let instance = WS2812Task::get_instance();
+            instance.interpolate_to(self.shader, [i32::MAX; 10]);
+        } else if time > self.transition_target {
+            self.transition_target = time + self.speed * 255;
+        }
+        
         // if time > self.transition_target {
         //     // Transition to
         //     self.transition_target = time + S_TO_NANO * 10;
-        //     let rnd = rand() % 3;   
+        //     let rnd = rand() % 4;   
         //     let instance = WS2812Task::get_instance();
         //     match rnd {
         //         0 => {
         //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
         //         },
         //         1 => {
-        //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
+        //             instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
         //         },
+        //         2 => {
+        //             instance.interpolate_to(ActiveShader::Xmas, [i32::MAX; 10]);
+        //         }
         //         _ => {
-        //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
+        //             instance.interpolate_to(ActiveShader::Independence, [i32::MAX; 10]);
         //         }
         //     }
         // }
@@ -245,10 +267,6 @@ impl WS2812Task {
                     }
                 }
             }
-
-
-            // Turn off the first LED
-            self.driver.set_color(0, 0x00);
 
             self.driver.flush();
             self.target = nanos() + self.speed;

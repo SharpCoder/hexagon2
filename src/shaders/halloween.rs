@@ -1,16 +1,5 @@
 use crate::shaders::core::*;
 
-fn sub_if(val: u8, sub: u8) -> u8 {
-    if val > sub {
-        return val - sub;
-    } else {
-        return 0;
-    }
-}
-
-/**
-4th of july themed shader
-*/
 pub struct HalloweenShader {}
 impl HalloweenShader {
     pub const fn new() -> HalloweenShader {
