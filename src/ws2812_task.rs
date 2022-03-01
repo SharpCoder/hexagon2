@@ -1,5 +1,3 @@
-use crate::shaders::halloween::HalloweenShader;
-use crate::shaders::loading::LoadingShader;
 use crate::shaders::{
     core::*,
     basic::*,
@@ -8,6 +6,7 @@ use crate::shaders::{
     independence::*,
     halloween::*,
     loading::*,
+    lunar::*,
 };
 
 use crate::{drivers::ws2812::*, proc_handle, models::SystemCommand};
@@ -26,6 +25,7 @@ static mut CONSTRAINED_RAINBOW_SHADER: ConstrainedRainbowShader = ConstrainedRai
 static mut INDEPENDENCE_SHADER: IndependenceShader = IndependenceShader::new();
 static mut HALLOWEEN_SHADER: HalloweenShader = HalloweenShader::new();
 static mut LOADING_SHADER: LoadingShader = LoadingShader::new();
+static mut LUNAR_SHADER: LunarShader = LunarShader::new();
 
 fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
     return match shader {
@@ -35,6 +35,7 @@ fn get_shader(shader: ActiveShader) -> &'static mut dyn Shader::<UNITS> {
         ActiveShader::Independence => unsafe { &mut INDEPENDENCE_SHADER },
         ActiveShader::Halloween => unsafe { &mut HALLOWEEN_SHADER },
         ActiveShader::Loading => unsafe { &mut LOADING_SHADER },
+        ActiveShader::Lunar => unsafe { &mut LUNAR_SHADER },
     };
 }
 
@@ -74,10 +75,11 @@ pub enum ActiveShader {
     Independence = 0x3,
     Halloween = 0x4,
     Loading = 0x5,
+    Lunar = 0x6,
 }
 
 impl ActiveShader {
-    pub fn list() -> [ActiveShader; 6] {
+    pub fn list() -> [ActiveShader; 7] {
         return [
             ActiveShader::Basic,
             ActiveShader::Xmas,
@@ -85,6 +87,7 @@ impl ActiveShader {
             ActiveShader::Independence,
             ActiveShader::Halloween,
             ActiveShader::Loading,
+            ActiveShader::Lunar,
         ];
     }
 }
@@ -220,31 +223,10 @@ impl WS2812Task {
         // now is the time to do it.
         if time > self.transition_target && self.shader == ActiveShader::Loading && self.loading == false {
             let instance = WS2812Task::get_instance();
-            instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
+            instance.interpolate_to(ActiveShader::Lunar, [i32::MAX; 10]);
         } else if time > self.transition_target {
             self.transition_target = time + self.speed * 255;
         }
-
-        // if time > self.transition_target {
-        //     // Transition to
-        //     self.transition_target = time + S_TO_NANO * 10;
-        //     let rnd = rand() % 4;   
-        //     let instance = WS2812Task::get_instance();
-        //     match rnd {
-        //         0 => {
-        //             instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
-        //         },
-        //         1 => {
-        //             instance.interpolate_to(ActiveShader::Basic, [i32::MAX; 10]);
-        //         },
-        //         2 => {
-        //             instance.interpolate_to(ActiveShader::Xmas, [i32::MAX; 10]);
-        //         }
-        //         _ => {
-        //             instance.interpolate_to(ActiveShader::Independence, [i32::MAX; 10]);
-        //         }
-        //     }
-        // }
 
         if time > self.target {
             // Check if we're interpolating

@@ -5,3 +5,4 @@ pub mod xmas;
 pub mod independence;
 pub mod halloween;
 pub mod loading;
+pub mod lunar;
