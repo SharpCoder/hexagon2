@@ -36,7 +36,7 @@ impl <const SIZE: usize> Shader<SIZE> for LoadingShader {
         // Determine mode
         // 0 = Rainbow
         // 1 = Color
-        next_context.registers[1] = (rand() % 2) as i32;
+        next_context.registers[1] = 1;//(rand() % 2) as i32;
 
         return next_context;
     }
@@ -49,16 +49,16 @@ impl <const SIZE: usize> Shader<SIZE> for LoadingShader {
             if pos < 85 {
                 // Green -> Blue
                 next_context.color = rgb_to_hex(
-                    (pos * 3) as u8,
+                    0,
                     255 - (pos * 3) as u8, 
-                    0
+                    (pos * 3) as u8,
                 );
             } else if pos < 170 {
                 // Blue -> Green
                 next_context.color = rgb_to_hex(
-                    255 - (pos * 3) as u8,
-                    (pos * 3) as u8, 
-                    0
+                    0,
+                    ((pos - 85) * 3) as u8, 
+                    255 - ((pos - 85) * 3) as u8,
                 );
             } else {
                 next_context.registers[0] = 0;

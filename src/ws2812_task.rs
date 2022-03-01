@@ -108,7 +108,7 @@ static mut TASK_INSTANCE: WS2812Task = WS2812Task {
         18, // pin
     ),
     shader: ActiveShader::Halloween,
-    speed: teensycore::MS_TO_NANO * 8,
+    speed: teensycore::MS_TO_NANO * 7,
     contexts: [ShaderContext::new(0, UNITS); UNITS],
     interpolator: Interpolator  {
         begin_time: 0,
@@ -220,7 +220,7 @@ impl WS2812Task {
         // now is the time to do it.
         if time > self.transition_target && self.shader == ActiveShader::Loading && self.loading == false {
             let instance = WS2812Task::get_instance();
-            instance.interpolate_to(self.shader, [i32::MAX; 10]);
+            instance.interpolate_to(ActiveShader::Halloween, [i32::MAX; 10]);
         } else if time > self.transition_target {
             self.transition_target = time + self.speed * 255;
         }
