@@ -17,8 +17,6 @@ pub mod thermal_task;
 pub mod wifi_task;
 #[cfg(not(feature = "testing"))]
 pub mod http;
-#[cfg(not(feature = "testing"))]
-pub mod audio_task;
 
 use core::arch::asm;
 use models::SystemCommand;
@@ -32,7 +30,6 @@ use {
     blink_task::*,
     wifi_task::*,
     thermal_task::*,
-    audio_task::*,
 };
 
 use teensycore::serio::*;
@@ -68,9 +65,8 @@ teensycore::main!({
 
     // led_task.init();
     blink_task.init();
-    // thermal_task.init();
     pixel_task.init();
-    // audio_task.init();
+    thermal_task.init();
 
     // wifi_task.init();
     serial_init(SerioDevice::Default);
@@ -82,15 +78,15 @@ teensycore::main!({
         enable_interrupts();
 
         blink_task.system_loop();
-        // thermal_task.system_loop();
+        thermal_task.system_loop();
         // audio_task.system_loop();
         // wifi_task.system_loop();
 
         // If the thermal task has completed, we can transition
         // the loading indicator forward
-        // if thermal_task.loaded {
-            // led_task.ready();
-        // }
+        if thermal_task.loaded {
+            pixel_task.ready();
+        }
 
         unsafe {
             asm!("nop");

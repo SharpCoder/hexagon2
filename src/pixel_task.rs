@@ -19,6 +19,8 @@ pub struct PixelTask {
     effect: Effect,
     driver: WS2812Driver<LEDS>,
     target: u64,
+    time_offset: u64,
+    ready: bool,
 }
 
 impl PixelTask {
@@ -26,6 +28,8 @@ impl PixelTask {
 
         return PixelTask {
             target: 0,
+            time_offset: 0,
+            ready: false,
             shader: None,
             shaders: initialize_shaders(),
             driver: WS2812Driver::<LEDS>::new(
@@ -66,14 +70,14 @@ impl PixelTask {
 
         // Select a shader
         for shader in self.shaders.into_iter() {
-            if shader.name == b"Birthday" {
+            if shader.name == b"Medbay" {
                 self.shader = Some(shader);
             }
         }
     }
 
     pub fn system_loop(&mut self) {
-        let time = nanos();
+        let time = nanos() - self.time_offset;
         let elapsed_ms = time / teensycore::MS_TO_NANO;
         if time > self.target {
 
@@ -99,6 +103,10 @@ impl PixelTask {
             }
         }
 
+    }
+
+    pub fn ready(&mut self) {
+        self.ready = true;
     }
 
 }

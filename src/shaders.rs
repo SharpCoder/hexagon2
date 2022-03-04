@@ -20,7 +20,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255, 0, 0), TIME)
             .build(),
 
-        Shader::new(b"Loading")
+        Shader::new(b"Medbay")
             .with_color(rgb(0, 255, 0))
             .transition_to(rgb(0,0,255), TIME)
             .transition_to(rgb(0, 255, 0), TIME)
@@ -44,21 +44,39 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(0,255,0), TIME)
             .transition_to(rgb(255,0,0), TIME)
             .build(),
-        
+
         Shader::new(b"Mars")
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(232,64,0), TIME)
             .transition_to(rgb(255,0,0), TIME)
             .build(),
 
+        Shader::new(b"Duna")
+            .with_color(rgb(255, 0, 0))
+            .transition_to(rgb(232,64,0), TIME)
+            .transition_to(rgb(255,255,255), TIME)
+            .transition_to(rgb(232,64,0), TIME)
+            .transition_to(rgb(255,0,0), TIME)
+            .transition_to(rgb(255,0,0), TIME)
+            .build(),
+
         Shader::new(b"Earth")
             .with_color(rgb(0,255,0))
             .transition_to(rgb(0, 0, 220), TIME)
+            .transition_to(rgb(10, 82, 6), TIME)
             .transition_to(rgb(25,49,15), TIME)
             .transition_to(rgb(0,255,0), TIME)
             .build(),
-        
-        Shader::new(b"Alert")
+
+        Shader::new(b"Diwali")
+            .with_color(rgb(255,0,0))
+            .transition_to(rgb(0, 161, 94), TIME)
+            .transition_to(rgb(252, 210, 0), TIME)
+            .transition_to(rgb(255,0,0), TIME)
+            .transition_to(rgb(255,0,0), TIME)
+            .build(),
+
+        Shader::new(b"Virus")
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255, 255, 255), TIME)
             .transition_to(rgb(255,0,0), TIME)
@@ -91,6 +109,22 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(77, 255, 0), TIME)
             .transition_to(rgb(255, 255, 255), TIME)
             .transition_to(rgb(255, 0, 70), TIME)
+            .build(),
+
+        Shader::new(b"JWST")
+            .with_color(rgb(255, 60, 0))
+            .transition_to(rgb(0, 0, 0), TIME)
+            .transition_to(rgb(255, 60, 0), TIME)
+            .build(),
+
+        Shader::new(b"Pride")
+            .with_color(rgb(255, 0, 0))
+            .transition_to(rgb(255, 60, 0), TIME)
+            .transition_to(rgb(255, 200, 0), TIME)
+            .transition_to(rgb(0, 255, 0), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(60, 0, 255), TIME)
+            .transition_to(rgb(255, 0, 0), TIME)
             .build()
         
     );
