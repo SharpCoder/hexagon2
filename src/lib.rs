@@ -3,9 +3,10 @@
 #![no_std]
 
 pub mod drivers;
-pub mod ws2812_task;
 pub mod models;
 pub mod shaders;
+pub mod pixel_engine;
+pub mod pixel_task;
 
 // This is ugly but necessary
 #[cfg(not(feature = "testing"))]
@@ -24,8 +25,7 @@ use models::SystemCommand;
 use teensycore::*;
 use teensycore::phys::pins::*;
 use teensycore::system::observable::Observable;
-use ws2812_task::*;
-
+use pixel_task::*;
 
 #[cfg(not(feature = "testing"))]
 use {
@@ -59,16 +59,17 @@ teensycore::main!({
     }
 
     // Tasks
-    let led_task = WS2812Task::get_instance();
+    // let led_task = WS2812Task::get_instance();
     let mut blink_task = BlinkTask::new();
-    let mut wifi_task = WifiTask::new();
-    let mut audio_task = AudioTask::new();
+    // let mut wifi_task = WifiTask::new();
+    // let mut audio_task = AudioTask::new();
     let mut thermal_task = ThermalTask::new(thermal_driver);
+    let mut pixel_task = PixelTask::new();
 
-    led_task.init();
+    // led_task.init();
     blink_task.init();
-    thermal_task.init();
-    
+    // thermal_task.init();
+    pixel_task.init();
     // audio_task.init();
 
     // wifi_task.init();
@@ -76,19 +77,20 @@ teensycore::main!({
 
     loop {
         disable_interrupts();
-        led_task.system_loop();
+        // led_task.system_loop();
+        pixel_task.system_loop();
         enable_interrupts();
 
         blink_task.system_loop();
-        thermal_task.system_loop();
+        // thermal_task.system_loop();
         // audio_task.system_loop();
         // wifi_task.system_loop();
 
         // If the thermal task has completed, we can transition
         // the loading indicator forward
-        if thermal_task.loaded {
-            led_task.ready();
-        }
+        // if thermal_task.loaded {
+            // led_task.ready();
+        // }
 
         unsafe {
             asm!("nop");
