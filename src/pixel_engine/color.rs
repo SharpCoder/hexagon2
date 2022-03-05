@@ -19,4 +19,12 @@ impl Color {
             ((self.g as u32) << 8) |
             (self.b as u32); 
     }
+
+    pub fn blank() -> Self {
+        return Color {
+            r: 255,
+            g: 255,
+            b: 255,
+        }
+    }
 }

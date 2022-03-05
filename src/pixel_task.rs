@@ -2,6 +2,7 @@
 use teensycore::MS_TO_NANO;
 use teensycore::clock::*;
 use teensycore::math::rand;
+use teensycore::system::vector::Array;
 use teensycore::system::vector::Vector;
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::math::interpolate;
@@ -14,9 +15,16 @@ use crate::shaders::initialize_shaders;
 const UNITS: usize = 7;
 const LEDS_PER_UNIT: usize = 3;
 const LEDS: usize = UNITS * LEDS_PER_UNIT;
-const TRANSITION_TIME: u64 = 3750; // ms
+const TRANSITION_TIME: u64 = 1000; // ms
+
+enum PixelState {
+    Loading,
+    Transitioning,
+    MainSequence,
+}
 
 pub struct PixelTask {
+    state: PixelState,
     shader: Option<Shader>,
     next_shader: Option<Shader>,
     shaders: Vector<Shader>,
@@ -25,26 +33,27 @@ pub struct PixelTask {
     driver: WS2812Driver<LEDS>,
     target: u64,
     ready: bool,
-    time_offset: u64,
+    color_buffer: [Color; UNITS],
     transition_start: u64,
-    transitioning: bool,
+    transition_offset: u64,
 }
 
 impl PixelTask {
     pub fn new() -> Self {
 
         return PixelTask {
+            state: PixelState::Loading,
             target: 0,
-            time_offset: 0,
             transition_start: 0,
+            transition_offset: 0,
             ready: false,
-            transitioning: false,
             shader: None,
             next_shader: None,
             shaders: initialize_shaders(),
             driver: WS2812Driver::<LEDS>::new(
                 18, // pin
             ),
+            color_buffer: [Color::blank(); UNITS],
             contexts: [Context::empty(); UNITS],
             effect: Effect::new(b"Randomized")
                 .with_initializer(|ctx| {
@@ -70,8 +79,13 @@ impl PixelTask {
 
     // Evaluate which shader to select based on
     // world information.
-    fn get_next_shader(&self) -> Option<Shader> {
-        return self.find_shader(b"Mars");
+    fn get_next_shader(&self) -> Shader {
+        return match self.find_shader(b"Mars") {
+            None => return self.shaders.get(0).unwrap(),
+            Some(shader) => {
+                return shader;
+            }
+        }
     }
 
     pub fn init(&mut self) {
@@ -88,83 +102,92 @@ impl PixelTask {
         self.shader = self.find_shader(b"Medbay");
     }
 
+    pub fn transition_to(&mut self, next_shader: Shader) {
+        self.next_shader = Some(next_shader);
+        
+        // Randomize each hexagon unit
+        for node_id in 0 .. UNITS {
+            self.contexts[node_id].initialized = false;
+        }
+
+        // Set the transition start time
+        self.transition_start = nanos();
+        self.state = PixelState::Transitioning;
+    }
+
     pub fn system_loop(&mut self) {
-        let time = nanos();
+        let time = (nanos() - self.transition_offset);
+        let elapsed_ms = time / teensycore::MS_TO_NANO;
+
         if time > self.target {
-            if self.transitioning {
-                if time > (self.transition_start + TRANSITION_TIME * teensycore::MS_TO_NANO) {
-                    self.transitioning = false;
-                    self.shader = self.next_shader;
-                    self.time_offset = self.transition_start;
-                    teensycore::debug::blink_accumulate();
-                }
-            }
-            
-            let elapsed_ms = (time - self.time_offset) / teensycore::MS_TO_NANO;
-            match self.shader.as_mut() {
-                None => {},
-                Some(shader) => {
+            let shader = self.shader.as_mut().unwrap();
+
+            match self.state {
+                PixelState::Transitioning => {
+                    
+                    if time > (self.transition_start + TRANSITION_TIME * MS_TO_NANO) {
+                        // We have arrived
+                        self.state = PixelState::MainSequence;
+                        self.shader = self.next_shader;
+                        self.transition_offset = self.transition_start;
+                    } else {
+                        // We will interpolate from the snapshot of the last known colors
+                        // into the computed effect of the next color. And once
+                        // we've iterated the correct amount of time, we will
+                        // swap next_shader with shader.
+                        for node_id in 0 .. UNITS {
+                            let mut ctx = self.contexts[node_id];
+                            let next_shader = self.next_shader.as_mut().unwrap();
+                            let transition_time_elapsed = (time - self.transition_start) / MS_TO_NANO;
+                            let (effect_time, next_context) = self.effect.process(&mut ctx, transition_time_elapsed);
+                            // let effect_time = (transition_time_elapsed as f64 / TRANSITION_TIME as f64) as u64;
+                            let time_t = ((effect_time as f64 / 100.0) * next_shader.total_time as f64) as u64;
+                            let next_color = next_shader.get_color(time_t);
+                            self.contexts[node_id] = next_context;
+                            
+                            let color = rgb(
+                                interpolate(self.color_buffer[node_id].r as u32, next_color.r as u32, transition_time_elapsed, TRANSITION_TIME) as u8,
+                                interpolate(self.color_buffer[node_id].g as u32, next_color.g as u32, transition_time_elapsed, TRANSITION_TIME) as u8,
+                                interpolate(self.color_buffer[node_id].b as u32, next_color.b as u32, transition_time_elapsed, TRANSITION_TIME) as u8,
+                            ).as_hex();
+
+                            for pixel_id in 0 .. LEDS_PER_UNIT {
+                                self.driver.set_color(node_id * LEDS_PER_UNIT + pixel_id, color);
+                            }
+                        }
+                    }
+                },
+
+                PixelState::MainSequence |
+                PixelState::Loading => {
+
+                    // For each hexagon node
                     for node_id in 0 .. UNITS {
                         let mut ctx = self.contexts[node_id];
-                        let (time_t, next_context) = self.effect.process(&mut ctx, elapsed_ms);
-                        let time_t = (( time_t as f64 / 100.0) * shader.total_time as f64) as u64;
+                        let (effect_time, next_context) = self.effect.process(&mut ctx, elapsed_ms);
+                        let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as u64;
+                        self.color_buffer[node_id] = shader.get_color(time_t);
+                        let color = self.color_buffer[node_id].as_hex();
 
-                        let color;
-                        
-                        // If we are transitioning, let's interpolate the colors
-                        // from where they were when transition started, to where
-                        // they should be as transition continues
-                        //
-                        // Over the time period of TRANSITION_TIME.
-                        if self.transitioning {
-                            let next_shader = self.next_shader.as_mut().unwrap();
-                            let time_t_transition = (time - self.transition_start) / teensycore::MS_TO_NANO;
-                            let time_ka = (self.effect.process(&mut ctx, time_t_transition).0 as f64 / 100.0);
-
-                            // Compute the colors based on the transition timeline
-                            let original_color = shader.get_color((time_ka * shader.total_time as f64) as u64);
-                            let next_color = next_shader.get_color((time_ka * next_shader.total_time as f64) as u64);
-
-                            // Interpolate the rgb values to produce a smooth
-                            // looking transition between the two
-                            // sequences.
-                            color = rgb(
-                                interpolate(original_color.r as u32, next_color.r as u32, time_t_transition, TRANSITION_TIME) as u8,
-                                interpolate(original_color.g as u32, next_color.g as u32, time_t_transition, TRANSITION_TIME) as u8,
-                                interpolate(original_color.b as u32, next_color.b as u32, time_t_transition, TRANSITION_TIME) as u8,
-                            ).as_hex();
-                            
-
-                        } else {
-                            color = shader.get_color(time_t).as_hex();
-                        }
-                        
+                        // Commit any updates to context that we should be registering
                         self.contexts[node_id] = next_context;
+
+                        // Render the color for each unit in this node
                         for pixel_id in 0 .. LEDS_PER_UNIT {
                             self.driver.set_color(node_id * LEDS_PER_UNIT + pixel_id, color);
                         }
                     }
-            
-                    self.driver.flush();
-                    self.target = nanos() + 7 * teensycore::MS_TO_NANO;
-                }
+                },
             }
+
+            self.driver.flush();
         }
     }
 
     pub fn ready(&mut self) {
         if !self.ready {
             self.ready = true;
-            // Create a custom shader to transition from current color
-            // to future color1
-            let next_shader = match self.get_next_shader() {
-                None => self.find_shader(b"Mars").unwrap(), // TODO: Special error shader
-                Some(shader)  => shader,
-            };
-
-            self.next_shader = Some(next_shader);
-            self.transitioning = true;
-            self.transition_start = nanos();
+            self.transition_to(self.get_next_shader());
         }
     }
 
