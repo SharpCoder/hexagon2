@@ -77,14 +77,14 @@ pub fn esp8266_disconnect_from_wifi(device: SerioDevice) {
 }
 
 /// Given a domain, this command will return the ip address
-pub fn esp8266_dns_lookup(device: SerioDevice, domain: Str) {
+pub fn esp8266_dns_lookup(device: SerioDevice, domain: &Str) {
     serial_write(device, b"AT+CIPDOMAIN=\"");
     serial_write_str(device, &domain);
     serial_write(device, b"\"\r\n");
 }
 
 /// Esetablish a TCP connection
-pub fn esp8266_open_tcp(device: SerioDevice, domain: Str, id: Option<u8>) {
+pub fn esp8266_open_tcp(device: SerioDevice, domain: &Str, id: Option<u8>) {
     match id {
         None => {
             serial_write(device, b"AT+CIPSTART=\"");
@@ -97,6 +97,10 @@ pub fn esp8266_open_tcp(device: SerioDevice, domain: Str, id: Option<u8>) {
     }
     serial_write_str(device, &domain);
     serial_write(device, b"\"\r\n");
+}
+
+pub fn esp8266_version(device: SerioDevice) {
+    esp8266_raw(device, b"AT+GMR");
 }
 
 /// Write content over TCP/UDP

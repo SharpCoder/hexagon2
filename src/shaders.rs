@@ -107,7 +107,6 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(124, 142, 208), TIME)
             .transition_to(rgb(255, 213, 0), TIME)
             .transition_to(rgb(77, 255, 0), TIME)
-            .transition_to(rgb(255, 255, 255), TIME)
             .transition_to(rgb(255, 0, 70), TIME)
             .build(),
 

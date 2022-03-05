@@ -57,7 +57,7 @@ impl ThermalTask {
             } else {
     
             }
-            self.next_event = time + MS_TO_NANO * 700;
+            self.next_event = time + MS_TO_NANO * 450;
         }
     }
 }

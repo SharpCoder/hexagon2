@@ -40,6 +40,8 @@ use teensycore::system::str::*;
 // handling.
 static mut OBSERVER: Option<Observable<SystemCommand>> = None;
 static mut OBSERVER_KEY: Option<Str> = None;
+static mut WORLD_TIME_S: u64 = 0;
+static mut UPTIME_WORLDTIME_OFFSET_S: u64 = 0;
 
 #[cfg(not(feature = "testing"))]
 teensycore::main!({
@@ -57,31 +59,23 @@ teensycore::main!({
     }
 
     // Tasks
-    // let led_task = WS2812Task::get_instance();
     let mut blink_task = BlinkTask::new();
-    // let mut wifi_task = WifiTask::new();
-    // let mut audio_task = AudioTask::new();
+    let mut wifi_task = WifiTask::new();
     let mut thermal_task = ThermalTask::new(thermal_driver);
     let mut pixel_task = PixelTask::new();
 
-    // led_task.init();
     blink_task.init();
     pixel_task.init();
     thermal_task.init();
+    wifi_task.init();
 
-    // wifi_task.init();
     serial_init(SerioDevice::Default);
 
     loop {
-        disable_interrupts();
-        // led_task.system_loop();
         pixel_task.system_loop();
-        enable_interrupts();
-
         blink_task.system_loop();
         thermal_task.system_loop();
-        // audio_task.system_loop();
-        // wifi_task.system_loop();
+        wifi_task.system_loop();
 
         // If the thermal task has completed, we can transition
         // the loading indicator forward
@@ -95,14 +89,19 @@ teensycore::main!({
     }
 });
 
-
-#[no_mangle]
-#[inline]
-pub fn test_wait(nanos: u64) {
-    let cycles = (nanos - 55) / 10;
-    for _ in 0 .. cycles {
-        assembly!("nop");
+/// Sets the current unix epoch in seconds
+pub fn set_world_time(time_s: u64) {
+    unsafe {
+        UPTIME_WORLDTIME_OFFSET_S = nanos() / S_TO_NANO;
+        WORLD_TIME_S = time_s;
     }
+}
+
+/// Returns the current unix epoch relative to seconds
+pub fn get_world_time() -> u64 {
+    return unsafe {
+        WORLD_TIME_S + (nanos() / S_TO_NANO) - UPTIME_WORLDTIME_OFFSET_S
+    };
 }
 
 pub fn proc_handle(func: &'static dyn Fn(&SystemCommand)) {

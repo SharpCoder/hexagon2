@@ -13,7 +13,7 @@ use crate::pixel_engine::effect::*;
 use crate::pixel_engine::context::*;
 use crate::drivers::ws2812::*;
 
-const UNITS: usize = 7;
+const UNITS: usize = 9;
 const LEDS_PER_UNIT: usize = 3;
 const LEDS: usize = UNITS * LEDS_PER_UNIT;
 const TRANSITION_TIME: u64 = 1000; // ms

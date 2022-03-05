@@ -9,7 +9,7 @@ use teensycore::debug::*;
 use crate::drivers::esp8266::*;
 
 const DEVICE: SerioDevice = SerioDevice::Default;
-const RST_PIN: usize = 3;
+const RST_PIN: usize = 2;
 
 static mut INITIALIZED: bool = false;
 static mut INITIALIZE_TIMEOUT: u64 = 0;
@@ -73,17 +73,22 @@ impl WifiTask {
             .once(|| {
                 unsafe { INITIALIZED = false; }
                 pin_out(RST_PIN, Power::Low);
+                teensycore::wait_ns(100 * teensycore::MS_TO_NANO);
                 pin_out(RST_PIN, Power::High);
+                teensycore::wait_ns(100 * teensycore::MS_TO_NANO);
                 esp8266_reset(DEVICE);
+                pin_mode(RST_PIN, Mode::Input);
+                debug::debug_str(b"reset");
             })
             .when(ready, || {
-                esp8266_auto_connect(DEVICE, false);
-            })
-            .when(ok, || {
-                esp8266_configure_echo(DEVICE, true);
+                esp8266_version(DEVICE);
+                // esp8266_configure_echo(DEVICE, true);
             })
             .when(ok, || {
                 esp8266_wifi_mode(DEVICE, WifiMode::Client);
+            })
+            .when(ok, || {
+                esp8266_auto_connect(DEVICE, false);
             })
             .when(ok, || {
                 let mut ssid = str!(b"NCC-1701D");
@@ -96,84 +101,117 @@ impl WifiTask {
                 pwd.drop();
             })
             .when(ok, || {
-                esp8266_read_ip(DEVICE);
-            })
-            .when(ok, || {
                 esp8266_multiple_connections(DEVICE, true);
             })
             .when(ok, || {
-                esp8266_create_server(DEVICE, 80);
+                // DNS Lookup
+                let mut addr = str!(b"worldtimeapi.org");
+                esp8266_dns_lookup(DEVICE, &addr);
+                addr.drop();
             })
-            .when(ok, || {
-                // Gate complete. This empty segment is meant to verify
-                // the final command succeded. Because if we get here
-                // we're good. If we don't get here, the watchdog
-                // mechanism should have kicked in and rebooted the 
-                // esp32.
-                unsafe {
-                    INITIALIZED = true;
-                }
+            .when(ok_without_clear, || {
+                // Parse the response
+                let content = serial_read(DEVICE);
+                let mut ip = parse_ip(content);
+                
+                // Clear serial buffer
+                serial_read(DEVICE).clear();
+
+                // Request world time
+                esp8266_open_tcp(DEVICE, &ip, None);
+
+                ip.drop();
             })
             .sealed()
             .compile();
 
-        gate_open!()
-            .when(|_| {
-                if unsafe { !INITIALIZED } {
-                    return false;
-                }
+        // gate_open!()
+        //     .when(|_| {
+        //         if unsafe { !INITIALIZED } {
+        //             return false;
+        //         }
 
-                let header = match unsafe { HEADER.as_mut() } {
-                    None => {
-                        return false;
-                    },
-                    Some(value) => value
-                };
+        //         let header = match unsafe { HEADER.as_mut() } {
+        //             None => {
+        //                 return false;
+        //             },
+        //             Some(value) => value
+        //         };
 
-                let content = match unsafe { CONTENT.as_mut() } {
-                    None => {
-                        return false;
-                    },
-                    Some(value) => value,
-                };
+        //         let content = match unsafe { CONTENT.as_mut() } {
+        //             None => {
+        //                 return false;
+        //             },
+        //             Some(value) => value,
+        //         };
 
-                return parse_http_request(serial_read(DEVICE), header, content);
-            }, || {
-                // Process content
-                match unsafe { CONTENT.as_mut() } {
-                    None => {},
-                    Some(content) => {
-                        let command = parse_command(content);
-                        proc_emit(&command);
-                    }
-                }
-                unsafe {
-                    PROCESS_COMPLETE = true;
-                    PROCESS_TIMEOUT = nanos() + S_TO_NANO * 3;
-                    esp8266_close_tcp(DEVICE, Some(0));
-                    serial_read(DEVICE).clear();
-                }
-            })
-            .compile();
+        //         return parse_http_request(serial_read(DEVICE), header, content);
+        //     }, || {
+        //         // Process content
+        //         match unsafe { CONTENT.as_mut() } {
+        //             None => {},
+        //             Some(content) => {
+        //                 let command = parse_command(content);
+        //                 proc_emit(&command);
+        //             }
+        //         }
+        //         unsafe {
+        //             PROCESS_COMPLETE = true;
+        //             PROCESS_TIMEOUT = nanos() + S_TO_NANO * 3;
+        //             esp8266_close_tcp(DEVICE, Some(0));
+        //             serial_read(DEVICE).clear();
+        //         }
+        //     })
+        //     .compile();
 
-            // gate_open!()
-            //     .when(|_| {
-            //         return unsafe { INITIALIZED && PROCESS_COMPLETE } && (
-            //             nanos() > unsafe { PROCESS_TIMEOUT } ||  err_or_ok(serial_read(DEVICE))
-            //         );
-            //     }, || {
-            //         serial_read(DEVICE).clear();
-            //         unsafe {
-            //             PROCESS_COMPLETE = false;
-            //         }
-            //     })
-            //     .compile();
+        //     // gate_open!()
+        //     //     .when(|_| {
+        //     //         return unsafe { INITIALIZED && PROCESS_COMPLETE } && (
+        //     //             nanos() > unsafe { PROCESS_TIMEOUT } ||  err_or_ok(serial_read(DEVICE))
+        //     //         );
+        //     //     }, || {
+        //     //         serial_read(DEVICE).clear();
+        //     //         unsafe {
+        //     //             PROCESS_COMPLETE = false;
+        //     //         }
+        //     //     })
+        //     //     .compile();
     }
 }
 
-fn ready(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &READY }); }
-fn ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }); }
-fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
+fn parse_ip(str: &Str) -> Str {
+    let mut target = str!(b":");
+    let mut newline = str!(b"\n");
+    let mut ip = Str::new();
+
+    if str.contains(&target) {
+        let mut ip_start = str.slice(
+            str.index_of(&target).unwrap() + 1,
+            str.len()
+        );
+        
+        if ip_start.contains(&newline) {
+            ip.join_with_drop(&mut ip_start.slice(
+                0,
+                ip_start.index_of(&newline).unwrap() - 1
+            ));
+
+        }
+
+        ip_start.drop();
+    }
+    
+
+    target.drop();
+    newline.drop();
+
+    return ip;
+}
+
+fn ready(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &READY }, true); }
+fn ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }, true); }
+fn ok_without_clear(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }, false); }
+fn rx_contains(gate: &mut Gate, cond: &Option<Str>, clear: bool) -> bool {
     match unsafe { &ERROR } {
         // I know you think this logic is wrong, but it's not
         None => {
@@ -208,7 +246,9 @@ fn rx_contains(gate: &mut Gate, cond: &Option<Str>) -> bool {
         },
         Some(target) => {
             if serial_read(DEVICE).contains(&target) {
-                serial_read(DEVICE).clear();
+                if clear {
+                    serial_read(DEVICE).clear();
+                }
                 return true;
             } else {
                 return false;
@@ -247,3 +287,4 @@ fn err_or_ok(rx_buffer: &Str) -> bool {
 
     return false;
 }
+
