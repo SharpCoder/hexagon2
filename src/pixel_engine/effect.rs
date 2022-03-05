@@ -15,7 +15,7 @@ pub struct Effect {
     name: &'static [u8],
     initializer: Option<fn(context: &Context) -> Context>,
     root: Option<*mut EffectNode>,
-    total_time: u64,
+    pub total_time: u64,
 }
 
 impl Effect {

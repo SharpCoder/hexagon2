@@ -5,6 +5,7 @@
 pub mod drivers;
 pub mod models;
 pub mod shaders;
+pub mod effects;
 pub mod pixel_engine;
 pub mod pixel_task;
 

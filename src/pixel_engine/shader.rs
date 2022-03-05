@@ -3,6 +3,7 @@ use teensycore::system::str::*;
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::math::*;
 
+#[derive(Copy, Clone)]
 struct ShaderStep {
     time: u64,
     color: Color,
@@ -30,23 +31,10 @@ impl Shader {
         }.clone();
     }
 
-    pub fn with_color(&mut self, color: Color) -> &mut Self {
-        self.color = color;
-        return self;
-    }
-
-    pub fn transition_to(&mut self, color: Color, time: u64) -> &mut Self {
-        if self.sealed {
-            return self;
-        }
-
+    fn add_node(&mut self, step: ShaderStep) {
         let ptr = alloc();
         unsafe {
-            (*ptr) = ShaderStep {
-                time: time,
-                color: color,
-                next: None,
-            };
+            (*ptr) = step;
         }
 
         // Iterate through head looking for the tail
@@ -61,8 +49,35 @@ impl Shader {
             unsafe { (*tail_ptr).next = Some(ptr) };
         }
 
-        self.total_time += time;
+        self.total_time += step.time;
+    }
+
+    pub fn with_color(&mut self, color: Color) -> &mut Self {
+        self.color = color;
         return self;
+    }
+
+    pub fn transition_to(&mut self, color: Color, time: u64) -> &mut Self {
+        if self.sealed {
+            return self;
+        }
+
+        self.add_node(ShaderStep {
+            time: time,
+            color: color,
+            next: None,
+        });
+
+        return self;
+    }
+
+    pub fn merge(&mut self, other: &Shader) {
+        let mut ptr = other.root;
+        while ptr.is_some() {
+            let node = unsafe { *ptr.unwrap() };
+            self.add_node(node);
+            ptr = node.next;
+        }
     }
 
     pub fn build(&mut self) -> Self {
