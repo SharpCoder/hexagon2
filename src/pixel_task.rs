@@ -4,13 +4,14 @@ use teensycore::clock::*;
 use teensycore::math::rand;
 use teensycore::system::vector::Array;
 use teensycore::system::vector::Vector;
+use crate::shaders::*;
+use crate::effects::*;
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::math::interpolate;
 use crate::pixel_engine::shader::*;
 use crate::pixel_engine::effect::*;
 use crate::pixel_engine::context::*;
 use crate::drivers::ws2812::*;
-use crate::shaders::initialize_shaders;
 
 const UNITS: usize = 7;
 const LEDS_PER_UNIT: usize = 3;
@@ -29,7 +30,8 @@ pub struct PixelTask {
     next_shader: Option<Shader>,
     shaders: Vector<Shader>,
     contexts: [Context; UNITS],
-    effect: Effect,
+    effect: Option<Effect>,
+    effects: Vector<Effect>,
     driver: WS2812Driver<LEDS>,
     target: u64,
     ready: bool,
@@ -48,22 +50,26 @@ impl PixelTask {
             transition_offset: 0,
             ready: false,
             shader: None,
+            effect: None,
             next_shader: None,
             shaders: initialize_shaders(),
+            effects: initialize_effects(),
             driver: WS2812Driver::<LEDS>::new(
                 18, // pin
             ),
             color_buffer: [Color::blank(); UNITS],
             contexts: [Context::empty(); UNITS],
-            effect: Effect::new(b"Randomized")
-                .with_initializer(|ctx| {
-                    let mut next_ctx = ctx.clone();
-                    next_ctx.offset = (rand() % 3) as u64 * 1000;
-                    return next_ctx;
-                })
-                .transition_to(100, 3000)
-                .build(),
         };   
+    }
+
+    fn find_effect(&self, name: &'static [u8]) -> Option<Effect> {
+        for effect in self.effects.into_iter() {
+            if effect.name == name {
+                return Some(effect);
+            }
+        }
+
+        return None;
     }
 
     fn find_shader(&self, name: &'static [u8]) -> Option<Shader> {
@@ -88,6 +94,12 @@ impl PixelTask {
         }
     }
 
+    // Returns a random effect
+    fn get_next_effect(&self) -> Effect {
+        let idx = rand() % self.effects.size() as u64;
+        return self.effects.get(idx as usize).unwrap();
+    }
+
     pub fn init(&mut self) {
         self.driver.init();
 
@@ -97,6 +109,9 @@ impl PixelTask {
             self.contexts[node_id].total_nodes = UNITS;
             self.contexts[node_id].initialized = false;
         }
+
+        // Select an effect
+        self.effect = Some(self.get_next_effect());
 
         // Select a shader
         self.shader = self.find_shader(b"Medbay");
@@ -110,9 +125,14 @@ impl PixelTask {
             self.contexts[node_id].initialized = false;
         }
 
+        // Randomize the next effect
+        self.effect = Some(self.get_next_effect());
+
         // Set the transition start time
         self.transition_start = nanos();
         self.state = PixelState::Transitioning;
+
+
     }
 
     pub fn system_loop(&mut self) {
@@ -121,6 +141,7 @@ impl PixelTask {
 
         if time > self.target {
             let shader = self.shader.as_mut().unwrap();
+            let effect = self.effect.as_mut().unwrap();
 
             match self.state {
                 PixelState::Transitioning => {
@@ -139,8 +160,7 @@ impl PixelTask {
                             let mut ctx = self.contexts[node_id];
                             let next_shader = self.next_shader.as_mut().unwrap();
                             let transition_time_elapsed = (time - self.transition_start) / MS_TO_NANO;
-                            let (effect_time, next_context) = self.effect.process(&mut ctx, transition_time_elapsed);
-                            // let effect_time = (transition_time_elapsed as f64 / TRANSITION_TIME as f64) as u64;
+                            let (effect_time, next_context) = effect.process(&mut ctx, transition_time_elapsed);
                             let time_t = ((effect_time as f64 / 100.0) * next_shader.total_time as f64) as u64;
                             let next_color = next_shader.get_color(time_t);
                             self.contexts[node_id] = next_context;
@@ -164,7 +184,7 @@ impl PixelTask {
                     // For each hexagon node
                     for node_id in 0 .. UNITS {
                         let mut ctx = self.contexts[node_id];
-                        let (effect_time, next_context) = self.effect.process(&mut ctx, elapsed_ms);
+                        let (effect_time, next_context) = effect.process(&mut ctx, elapsed_ms);
                         let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as u64;
                         self.color_buffer[node_id] = shader.get_color(time_t);
                         let color = self.color_buffer[node_id].as_hex();

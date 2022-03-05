@@ -12,7 +12,7 @@ pub struct EffectNode {
 
 #[derive(Clone, Copy)]
 pub struct Effect {
-    name: &'static [u8],
+    pub name: &'static [u8],
     initializer: Option<fn(context: &Context) -> Context>,
     root: Option<*mut EffectNode>,
     pub total_time: u64,

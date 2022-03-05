@@ -4,7 +4,7 @@ use teensycore::{system::vector::*, vector, math::rand};
 
 const TIME: u64 = 3500;
 
-pub fn initial_effects<'a>() -> Vector<Effect> {
+pub fn initialize_effects<'a>() -> Vector<Effect> {
     return vector!(
         Effect::new(b"Infection")
             .with_initializer(|ctx| {
