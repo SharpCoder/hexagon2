@@ -4,7 +4,7 @@
     so the hexagon wall knows if a specific day is special. And,
     if it is special, what theme to play that day.
 */
-
+const YEARS_FROM_2022 = 10;
 const filler_themes = [
     "R2D2",
     "Jupiter",
@@ -106,7 +106,7 @@ function encode(shader, start_date, end_date, priority) {
     for (const event of important_events) {
         
         // This requires fabricating a range
-        for (let year = 0; year < 10; year++) {
+        for (let year = 0; year < YEARS_FROM_2022; year++) {
             let start_date = new Date(event.origin);
             let end_date = new Date(event.origin);
 
@@ -126,7 +126,7 @@ function encode(shader, start_date, end_date, priority) {
                 range_start.setFullYear(range_start.getFullYear() + year, range_start.getMonth(), range_start.getDate());
                 range_end.setFullYear(range_end.getFullYear() + year, range_end.getMonth(), range_end.getDate());
                 range_end.setHours(23);
-                
+
                 lines.push(
                     encode(event.shader, range_start, range_end, 60)
                 );

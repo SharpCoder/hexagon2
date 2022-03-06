@@ -86,7 +86,7 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        return match self.find_shader(b"Thanksgiving") {
+        return match self.find_shader(b"RetroFuturistic") {
             None => return self.shaders.get(0).unwrap(),
             Some(shader) => {
                 return shader;
@@ -129,7 +129,7 @@ impl PixelTask {
         self.effect = Some(self.get_next_effect());
 
         // Set the transition start time
-        self.transition_start = nanos();
+        self.transition_start = (nanos() - self.transition_offset);
         self.state = PixelState::Transitioning;
 
 

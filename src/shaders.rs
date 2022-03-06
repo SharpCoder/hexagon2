@@ -75,24 +75,11 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255,0,0), TIME)
             .transition_to(rgb(255,0,0), TIME)
             .build(),
-
-        Shader::new(b"Virus")
-            .with_color(rgb(255, 0, 0))
-            .transition_to(rgb(255, 255, 255), TIME)
-            .transition_to(rgb(255,0,0), TIME)
-            .build(),
         
         Shader::new(b"Dinosaur")
             .with_color(rgb(0, 255, 0))
             .transition_to(rgb(31, 0, 99), TIME)
             .transition_to(rgb(0, 255, 0), TIME)
-            .build(),
-        
-        Shader::new(b"Stars")
-            .with_color(rgb(4, 0, 82))
-            .transition_to(rgb(5, 59, 93), TIME)
-            .transition_to(rgb(158, 150, 0), TIME)
-            .transition_to(rgb(4, 0, 82), TIME)
             .build(),
         
         Shader::new(b"Rainbow")
@@ -110,11 +97,6 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255, 0, 70), TIME)
             .build(),
 
-        Shader::new(b"JWST")
-            .with_color(rgb(255, 60, 0))
-            .transition_to(rgb(0, 0, 0), TIME)
-            .transition_to(rgb(255, 60, 0), TIME)
-            .build(),
 
         Shader::new(b"Pride")
             .with_color(rgb(255, 0, 0))
