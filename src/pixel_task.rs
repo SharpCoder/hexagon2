@@ -1,9 +1,11 @@
 
 use teensycore::MS_TO_NANO;
+use teensycore::S_TO_NANO;
 use teensycore::clock::*;
 use teensycore::math::rand;
 use teensycore::system::vector::Array;
 use teensycore::system::vector::Vector;
+use crate::date_time::DateTime;
 use crate::shaders::*;
 use crate::effects::*;
 use crate::pixel_engine::color::*;
@@ -34,6 +36,12 @@ pub struct PixelTask {
     effects: Vector<Effect>,
     driver: WS2812Driver<LEDS>,
     target: u64,
+    day_target: u64,
+
+    /// The day on which we last randomized the sequence
+    day_processed: u64,
+    // Randomize every couple hours
+    randomize_target: u64,
     ready: bool,
     color_buffer: [Color; UNITS],
     transition_start: u64,
@@ -46,6 +54,9 @@ impl PixelTask {
         return PixelTask {
             state: PixelState::Loading,
             target: 0,
+            day_target: 0,
+            randomize_target: 0,
+            day_processed: 0,
             transition_start: 0,
             transition_offset: 0,
             ready: false,
@@ -110,6 +121,9 @@ impl PixelTask {
             self.contexts[node_id].initialized = false;
         }
 
+        // Set the next day processing target
+        self.day_target = nanos() + (S_TO_NANO * 60 * 30);
+
         // Select an effect
         self.effect = Some(self.get_next_effect());
 
@@ -131,13 +145,34 @@ impl PixelTask {
         // Set the transition start time
         self.transition_start = (nanos() - self.transition_offset);
         self.state = PixelState::Transitioning;
+    }
 
-
+    pub fn randomize(&mut self) {
+        self.randomize_target = nanos() + (S_TO_NANO * 60 * 60 * 6);
+        self.transition_to(self.get_next_shader());
     }
 
     pub fn system_loop(&mut self) {
         let time = (nanos() - self.transition_offset);
         let elapsed_ms = time / teensycore::MS_TO_NANO;
+
+
+        match self.state {
+            PixelState::MainSequence => {
+                if nanos() > self.day_target {
+                    // Check if we need to recalculate transition
+                    let datetime = DateTime::now();
+                    if self.day_processed != datetime.days && datetime.hour >= 6 {
+                        self.day_processed = datetime.days;
+                        self.randomize();
+                    }
+                    self.day_target = nanos() + (S_TO_NANO * 60 * 30);
+                } else if nanos() > self.randomize_target {
+                    self.randomize();
+                }
+            },
+            _ => {},
+        }
 
         if time > self.target {
             let shader = self.shader.as_mut().unwrap();
@@ -207,7 +242,7 @@ impl PixelTask {
     pub fn ready(&mut self) {
         if !self.ready {
             self.ready = true;
-            self.transition_to(self.get_next_shader());
+            self.randomize();
         }
     }
 

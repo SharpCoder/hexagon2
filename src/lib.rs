@@ -8,6 +8,7 @@ pub mod shaders;
 pub mod effects;
 pub mod pixel_engine;
 pub mod pixel_task;
+pub mod date_time;
 
 // This is ugly but necessary
 #[cfg(not(feature = "testing"))]
@@ -41,6 +42,7 @@ use teensycore::system::str::*;
 static mut OBSERVER: Option<Observable<SystemCommand>> = None;
 static mut OBSERVER_KEY: Option<Str> = None;
 static mut WORLD_TIME_S: u64 = 0;
+static mut UTC_OFFSET: u64 = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: u64 = 0;
 
 #[cfg(not(feature = "testing"))]
@@ -101,6 +103,18 @@ pub fn set_world_time(time_s: u64) {
 pub fn get_world_time() -> u64 {
     return unsafe {
         WORLD_TIME_S + (nanos() / S_TO_NANO) - UPTIME_WORLDTIME_OFFSET_S
+    };
+}
+
+pub fn set_utc_offset(offset: u64) {
+    unsafe {
+        UTC_OFFSET = offset;
+    }
+}
+
+pub fn get_utc_offset() -> u64 {
+    return unsafe {
+        UTC_OFFSET
     };
 }
 
