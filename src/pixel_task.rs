@@ -86,7 +86,7 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        return match self.find_shader(b"R2D2") {
+        return match self.find_shader(b"Thanksgiving") {
             None => return self.shaders.get(0).unwrap(),
             Some(shader) => {
                 return shader;

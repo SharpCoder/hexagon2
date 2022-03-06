@@ -142,6 +142,44 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255, 0, 0), TIME)
             .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(0, 0, 255), TIME)
+            .build(),
+
+        Shader::new(b"Jupiter")
+            .with_color(rgb(49, 0, 51))
+            .transition_to(rgb(225,35,0), TIME)
+            .transition_to(rgb(255,0,0), TIME)
+            .transition_to(rgb(49, 0, 51), TIME)
+            .build(),
+
+        Shader::new(b"Valentines")
+            .with_color(rgb(255, 0, 0))
+            .transition_to(rgb(255, 0, 195), TIME)
+            .transition_to(rgb(255, 255,255), TIME)
+            .transition_to(rgb(255, 0, 195), TIME)
+            .transition_to(rgb(255, 0, 0), TIME)
+            .build(),
+
+        Shader::new(b"Neptune")
+            .with_color(rgb(0,0,188))
+            .transition_to(rgb(0, 35, 194), TIME)
+            .transition_to(rgb(0, 255, 183), TIME)
+            .transition_to(rgb(60, 0, 255), TIME)
+            .transition_to(rgb(0,0,188), TIME)
+            .build(),
+
+        Shader::new(b"RetroFuturistic")
+            .with_color(rgb(255, 70, 173))
+            .transition_to(rgb(255, 0, 0), TIME)
+            .transition_to(rgb(115, 6, 121), TIME)
+            .transition_to(rgb(4, 110, 106), TIME)
+            .transition_to(rgb(255, 255, 0), TIME)
+            .transition_to(rgb(255, 70, 173), TIME)
+            .build(),
+
+        Shader::new(b"Thanksgiving")
+            .with_color(rgb(255, 98, 0))
+            .transition_to(rgb(255, 0, 0), TIME)
+            .transition_to(rgb(255, 98, 0), TIME)
             .build()
         
     );
