@@ -124,6 +124,24 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(60, 0, 255), TIME)
             .transition_to(rgb(255, 0, 0), TIME)
+            .build(),
+        
+        Shader::new(b"Starfleet")
+            .with_color(rgb(0, 0, 255))
+            .transition_to(rgb(255, 0, 0), TIME)
+            .transition_to(rgb(255, 255, 0), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
+            .build(),
+
+
+        Shader::new(b"R2D2")
+            .with_color(rgb(0, 0, 255))
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(255, 255, 255), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(255, 0, 0), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
             .build()
         
     );
