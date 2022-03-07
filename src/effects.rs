@@ -53,8 +53,8 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .transition_to(100, 4000)
             .transition_to(0, 2000)
             .transition_to(100, 3000)
-            .transition_to(0, 1250)
-            .transition_to(100, 1500)
+            .transition_to(0, 2250)
+            .transition_to(100, 2500)
             .build(),
 
         Effect::new(b"Surprise")
@@ -63,6 +63,18 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
                 next_ctx.offset = rand() % 2000;
                 return next_ctx;
             })
+            .transition_to(50, 2000)
+            .transition_to(75, 1000)
+            .transition_to(100, 800)
+            .build(),
+
+        Effect::new(b"Surprise2")
+            .with_initializer(|ctx| {
+                let mut next_ctx = ctx.clone();
+                next_ctx.offset = rand() % 2000;
+                return next_ctx;
+            })
+            .transition_to(25, 2000)
             .transition_to(50, 2000)
             .transition_to(75, 1000)
             .transition_to(100, 800)

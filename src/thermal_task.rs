@@ -9,12 +9,12 @@ use crate::drivers::max31820::Max31820Driver;
 
 /// This task is responsible for sampling the ambiant temperature
 /// and keeping the system informed of changes.
-
+const SAMPLES: usize = 7;
 pub struct ThermalTask {
     driver: Max31820Driver,
     next_event: u64,
     count: usize,
-    samples: [Option<u16>; 5],
+    samples: [Option<u16>; SAMPLES],
     pub loaded: bool,
 }
 
@@ -25,7 +25,7 @@ impl ThermalTask {
             next_event: 0,
             count: 0,
             loaded: false,
-            samples: [None; 5],
+            samples: [None; SAMPLES],
         };
     }
 
@@ -36,10 +36,10 @@ impl ThermalTask {
     pub fn system_loop(&mut self) {
         let time = nanos();
         if time > self.next_event {
-            if self.count < 5 {
+            if self.count < SAMPLES {
                 self.samples[self.count] = self.driver.read_temperature();
                 self.count += 1;
-            } else if self.count == 5 {
+            } else if self.count == SAMPLES {
                 let mut prng_seed = 1337;
                 let primes = [3,5,7,11,13,17,19,23,29];
     
@@ -57,7 +57,7 @@ impl ThermalTask {
             } else {
     
             }
-            self.next_event = time + MS_TO_NANO * 450;
+            self.next_event = time + MS_TO_NANO * 500;
         }
     }
 }

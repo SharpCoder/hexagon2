@@ -84,10 +84,10 @@ pub fn esp8266_dns_lookup(device: SerioDevice, domain: &Str) {
 }
 
 /// Esetablish a TCP connection
-pub fn esp8266_open_tcp(device: SerioDevice, domain: &Str, id: Option<u8>) {
+pub fn esp8266_open_tcp(device: SerioDevice, domain: &Str, port: u32, id: Option<u8>) {
     match id {
         None => {
-            serial_write(device, b"AT+CIPSTART=\"");
+            serial_write(device, b"AT+CIPSTART=\"TCP\",\"");
         },
         Some(con_id) => {
             serial_write(device, b"AT+CIPSTART=");
@@ -96,7 +96,9 @@ pub fn esp8266_open_tcp(device: SerioDevice, domain: &Str, id: Option<u8>) {
         }
     }
     serial_write_str(device, &domain);
-    serial_write(device, b"\"\r\n");
+    serial_write(device, b"\",");
+    serial_write_str(device, &itoa(port as u64));
+    serial_write(device, b"\r\n");
 }
 
 pub fn esp8266_version(device: SerioDevice) {
@@ -104,7 +106,7 @@ pub fn esp8266_version(device: SerioDevice) {
 }
 
 /// Write content over TCP/UDP
-pub fn esp8266_write(device: SerioDevice, content: Str, id: Option<u8>) {
+pub fn esp8266_write(device: SerioDevice, content: &Str, id: Option<u8>) {
     serial_write(device, b"AT+CIPSEND=");
 
     match id {

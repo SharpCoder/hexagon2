@@ -1,4 +1,5 @@
 use crate::*;
+use crate::http::models::HttpRequest;
 use crate::http::parser::*;
 use teensycore::*;
 use teensycore::gate::*;
@@ -10,6 +11,7 @@ use crate::drivers::esp8266::*;
 
 const DEVICE: SerioDevice = SerioDevice::Default;
 const RST_PIN: usize = 2;
+const EN_PIN: usize = 3;
 
 static mut INITIALIZED: bool = false;
 static mut INITIALIZE_TIMEOUT: u64 = 0;
@@ -20,6 +22,8 @@ static mut OK: Option<Str> = None;
 static mut READY: Option<Str> = None;
 static mut ERROR: Option<Str> = None;
 static mut FAIL: Option<Str> = None;
+static mut CLOSED: Option<Str> = None;
+static mut SEND_OK: Option<Str> = None;
 
 // Buffers to hold the content and header, so we don't have
 // to recreate them all the time.
@@ -27,14 +31,14 @@ static mut CONTENT: Option<Str> = None;
 static mut HEADER: Option<Str> = None;
 
 pub struct WifiTask {
-
+    pub ready: bool,
 }
 
 impl WifiTask {
 
     pub fn new() -> Self {
         return WifiTask {
-
+            ready: false,
         };
     }
 
@@ -55,6 +59,18 @@ impl WifiTask {
             fast_slew_rate: false 
         });
 
+        pin_mode(EN_PIN, Mode::Output);
+        pin_pad_config(EN_PIN, PadConfig { 
+            hysterisis: false, 
+            resistance: PullUpDown::PullDown100k, 
+            pull_keep: PullKeep::Pull, 
+            pull_keep_en: true, 
+            open_drain: false, 
+            speed: PinSpeed::Max200MHz, 
+            drive_strength: DriveStrength::Max, 
+            fast_slew_rate: false 
+        });
+
         // If we don't cache these, it uses up a lot of memory re-creating them
         // in the main loop. Which just seems silly.
         unsafe {
@@ -62,6 +78,8 @@ impl WifiTask {
             READY = Some(str!(b"ready"));
             ERROR = Some(str!(b"ERROR"));
             FAIL = Some(str!(b"FAIL"));
+            CLOSED = Some(str!(b"CLOSED"));
+            SEND_OK = Some(str!(b"SEND OK"));
             HEADER = Some(Str::new());
             CONTENT = Some(Str::new());
             INITIALIZE_TIMEOUT = nanos() + S_TO_NANO * 30;
@@ -69,20 +87,28 @@ impl WifiTask {
     }
 
     pub fn system_loop(&mut self) {
+        if unsafe { INITIALIZED } {
+            self.ready = true;
+        }
+
         gate_open!()
             .once(|| {
                 unsafe { INITIALIZED = false; }
+                pin_out(EN_PIN, Power::Low);
+                teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
+                pin_out(EN_PIN, Power::High);
+                
                 pin_out(RST_PIN, Power::Low);
-                teensycore::wait_ns(100 * teensycore::MS_TO_NANO);
+                teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
                 pin_out(RST_PIN, Power::High);
-                teensycore::wait_ns(100 * teensycore::MS_TO_NANO);
-                esp8266_reset(DEVICE);
+                teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
+                // esp8266_reset(DEVICE);
                 pin_mode(RST_PIN, Mode::Input);
+                teensycore::wait_ns(300 * teensycore::MS_TO_NANO);
                 debug::debug_str(b"reset");
             })
             .when(ready, || {
-                esp8266_version(DEVICE);
-                // esp8266_configure_echo(DEVICE, true);
+                esp8266_configure_echo(DEVICE, true);
             })
             .when(ok, || {
                 esp8266_wifi_mode(DEVICE, WifiMode::Client);
@@ -101,26 +127,46 @@ impl WifiTask {
                 pwd.drop();
             })
             .when(ok, || {
-                esp8266_multiple_connections(DEVICE, true);
+                esp8266_multiple_connections(DEVICE, false);
             })
+            // .when(ok, || {
+            //     // DNS Lookup
+            //     let mut addr = str!(b"worldtimeapi.org");
+            //     esp8266_dns_lookup(DEVICE, &addr);
+            //     addr.drop();
+            // })
             .when(ok, || {
-                // DNS Lookup
-                let mut addr = str!(b"worldtimeapi.org");
-                esp8266_dns_lookup(DEVICE, &addr);
-                addr.drop();
-            })
-            .when(ok_without_clear, || {
                 // Parse the response
                 let content = serial_read(DEVICE);
-                let mut ip = parse_ip(content);
+                let mut ip = str!(b"213.188.196.246");// parse_ip(content);
                 
-                // Clear serial buffer
-                serial_read(DEVICE).clear();
-
                 // Request world time
-                esp8266_open_tcp(DEVICE, &ip, None);
-
+                esp8266_open_tcp(DEVICE, &ip, 80, None);
                 ip.drop();
+            })
+            .when(ok, || {
+                // Generate the http request
+                let mut request = HttpRequest {
+                    method: str!(b"GET"),
+                    request_path: str!(b"/api/timezone/America/Los_Angeles.txt"),
+                    host: str!(b"worldtimeapi.org"),
+                    headers: None,
+                    content: None,
+                };
+
+                // Send request
+                esp8266_write(DEVICE, &request.to_str(), None);
+                request.drop();
+            })
+            .when(send_ok, || {
+                unsafe { INITIALIZED = true };
+                // Parse response here
+                
+            })
+            .when(|gate| {
+                return false;
+            }, || {
+                
             })
             .sealed()
             .compile();
@@ -210,6 +256,8 @@ fn parse_ip(str: &Str) -> Str {
 
 fn ready(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &READY }, true); }
 fn ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }, true); }
+fn closed(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &CLOSED }, true); }
+fn send_ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &SEND_OK }, false); }
 fn ok_without_clear(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }, false); }
 fn rx_contains(gate: &mut Gate, cond: &Option<Str>, clear: bool) -> bool {
     match unsafe { &ERROR } {

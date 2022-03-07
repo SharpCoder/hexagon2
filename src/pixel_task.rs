@@ -103,6 +103,8 @@ impl PixelTask {
                 return shader;
             }
         }
+        // let idx = rand() % self.shaders.size() as u64;
+        // return self.shaders.get(idx as usize).unwrap();
     }
 
     // Returns a random effect
@@ -143,36 +145,19 @@ impl PixelTask {
         self.effect = Some(self.get_next_effect());
 
         // Set the transition start time
-        self.transition_start = (nanos() - self.transition_offset);
+        self.transition_start = nanos();
+        self.transition_offset = 0;
         self.state = PixelState::Transitioning;
     }
 
     pub fn randomize(&mut self) {
-        self.randomize_target = nanos() + (S_TO_NANO * 60 * 60 * 6);
+        self.randomize_target = nanos() + (S_TO_NANO * 10);// 60 * 60 * 6);
         self.transition_to(self.get_next_shader());
     }
 
     pub fn system_loop(&mut self) {
         let time = (nanos() - self.transition_offset);
         let elapsed_ms = time / teensycore::MS_TO_NANO;
-
-
-        match self.state {
-            PixelState::MainSequence => {
-                if nanos() > self.day_target {
-                    // Check if we need to recalculate transition
-                    let datetime = DateTime::now();
-                    if self.day_processed != datetime.days && datetime.hour >= 6 {
-                        self.day_processed = datetime.days;
-                        self.randomize();
-                    }
-                    self.day_target = nanos() + (S_TO_NANO * 60 * 30);
-                } else if nanos() > self.randomize_target {
-                    self.randomize();
-                }
-            },
-            _ => {},
-        }
 
         if time > self.target {
             let shader = self.shader.as_mut().unwrap();
@@ -234,6 +219,25 @@ impl PixelTask {
                     }
                 },
             }
+
+
+            match self.state {
+                PixelState::MainSequence => {
+                    if nanos() > self.day_target {
+                        // Check if we need to recalculate transition
+                        let datetime = DateTime::now();
+                        if self.day_processed != datetime.days && datetime.hour >= 6 {
+                            self.day_processed = datetime.days;
+                            self.randomize();
+                        }
+                        self.day_target = nanos() + (S_TO_NANO * 60 * 30);
+                    } else if nanos() > self.randomize_target {
+                        self.randomize();
+                    }
+                },
+                _ => {},
+            }
+
 
             self.driver.flush();
         }

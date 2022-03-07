@@ -81,7 +81,7 @@ teensycore::main!({
 
         // If the thermal task has completed, we can transition
         // the loading indicator forward
-        if thermal_task.loaded {
+        if thermal_task.loaded && wifi_task.ready {
             pixel_task.ready();
         }
 
