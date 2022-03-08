@@ -206,12 +206,12 @@ pub fn esp8266_block_until(device: SerioDevice, command: &[u8], timeout: u64) {
         let buf = serial_read(device);
         if buf.contains(&cmd) {
             buf.clear();
-            wait_ns(MS_TO_NANO * 500);
+            wait_ns(MS_TO_NANO * 14);
             return;
         } else if nanos() > threshold {
             return;
         }
-        wait_ns(MS_TO_NANO * 100);
+        wait_ns(MS_TO_NANO * 7);
     }
 }
 

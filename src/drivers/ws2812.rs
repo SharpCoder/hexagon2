@@ -1,29 +1,12 @@
 use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::phys::pins::*;
 use teensycore::{wait_ns, wait_exact_ns, MICRO_TO_NANO};
-use teensycore::clock::*;
 
 // 800MHz
-const CYCLE: u64 = 1250; // ns
 const T0_H: u64 = 110; // ns
 const T0_L: u64 = 600;
 const T1_H: u64 = 600; // ns
 const T1_L: u64 = 600;
-
-// const CYCLE: u64 = 1500; // ns
-// const T0_H: u64 = 50; // ns
-// const T1_H: u64 = 700; // ns
-
-// 400MHz
-// const CYCLE: u64 = 2500; // ns
-// const T0_H: u64 = 500; // ns
-// const T1_H: u64 = 1260; // ns
-
-
-// const H_H: u64 = 1360 / MODIFIER;
-// const H_L: u64 = 350 / MODIFIER;
-// const L_H: u64 = 350 / MODIFIER;
-// const L_L: u64 = 1360 / MODIFIER;
 
 
 #[derive(Clone, Copy)]

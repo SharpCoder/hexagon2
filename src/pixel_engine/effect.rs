@@ -1,4 +1,3 @@
-use teensycore::debug;
 use teensycore::mem::*;
 use crate::pixel_engine::math::*;
 use crate::pixel_engine::context::*;
@@ -100,7 +99,7 @@ impl Effect {
             let mut elapsed = 0;
 
             loop {
-                let node = unsafe { (*ptr) };
+                let node = unsafe { *ptr };
                 let node_duration = match node.hold {
                     false => node.duration,
                     true => node.duration + next_context.offset,
@@ -122,7 +121,7 @@ impl Effect {
             }
 
             let root_node = unsafe { *ptr };
-            let mut duration = match root_node.hold {
+            let duration = match root_node.hold {
                 false => root_node.duration,
                 true => root_node.duration + next_context.offset,
             };
@@ -132,7 +131,6 @@ impl Effect {
         
             return (next_time as u64, next_context);
         }
-        return (0, next_context);
     }
 }
 

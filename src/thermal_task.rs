@@ -2,8 +2,6 @@ use teensycore::*;
 use teensycore::clock::*;
 use teensycore::debug::*;
 use teensycore::math::seed_rand;
-use teensycore::phys::irq::disable_interrupts;
-use teensycore::phys::irq::enable_interrupts;
 
 use crate::drivers::max31820::Max31820Driver;
 

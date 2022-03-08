@@ -6,11 +6,9 @@ use crate::pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::gate::*;
 use teensycore::system::str::*;
-use teensycore::system::vector;
 use teensycore::system::vector::*;
 use teensycore::serio::*;
 use teensycore::phys::pins::*;
-use teensycore::debug::*;
 use teensycore::math::atoi;
 use crate::drivers::esp8266::*;
 
@@ -20,14 +18,11 @@ const EN_PIN: usize = 3;
 
 static mut INITIALIZED: bool = false;
 static mut INITIALIZE_TIMEOUT: u64 = 0;
-static mut PROCESS_COMPLETE: bool = false;
-static mut PROCESS_TIMEOUT: u64 = 0;
 
 static mut OK: Option<Str> = None;
 static mut READY: Option<Str> = None;
 static mut ERROR: Option<Str> = None;
 static mut FAIL: Option<Str> = None;
-static mut CLOSED: Option<Str> = None;
 static mut SEND_OK: Option<Str> = None;
 static mut BAD_REQUEST: Option<Str> = None;
 
@@ -84,7 +79,6 @@ impl WifiTask {
             READY = Some(str!(b"ready"));
             ERROR = Some(str!(b"ERROR"));
             FAIL = Some(str!(b"FAIL"));
-            CLOSED = Some(str!(b"CLOSED"));
             SEND_OK = Some(str!(b"SEND OK"));
             BAD_REQUEST = Some(str!(b"Bad Request"));
             HEADER = Some(Str::new());
@@ -138,10 +132,7 @@ impl WifiTask {
                 esp8266_multiple_connections(DEVICE, false);
             })
             .when(ok, || {
-                // Parse the response
-                let content = serial_read(DEVICE);
-                let mut ip = str!(b"52.27.143.19");                
-                // Request world time
+                let mut ip = str!(b"52.27.143.19");
                 esp8266_open_tcp(DEVICE, &ip, 80, None);
                 ip.drop();
             })
@@ -191,7 +182,7 @@ impl WifiTask {
             }, || {
                 unsafe { INITIALIZED = true };
             })
-            .when(|gate| {
+            .when(|_gate| {
                 return false;
             }, || {
                 
@@ -248,76 +239,9 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
     }
 }
 
-fn parse_packet_from_serial(serial_content: &Str) -> Str {
-    // Parse the serial_content until you encounter one single packet and then consume it
-    let mut result = Str::new();
-    let mut begin_target = str!(b"+IPD,");
-    let mut colon = str!(b":");
-    match serial_content.index_of(&begin_target) {
-        None => {},
-        Some(start_idx) => {
-
-            // We know where the content begins. Now read until we hit the colon
-            let mut packet_size_buff = Str::new();
-            let mut packet_size = None;
-            let mut substr = serial_content.slice(start_idx, serial_content.len());
-            
-            for char in substr.into_iter() {
-                if char == b':' {
-                    packet_size = Some(atoi(&packet_size_buff) as usize);
-                } else if packet_size.is_some() {
-                    result.append(&[char]);
-                    if result.len() >= packet_size.unwrap() {
-                        break;
-                    }
-                } else {
-                    packet_size_buff.append(&[char]);
-                }
-            }
-
-
-            substr.drop();
-
-        }
-    }
-
-    return result;
-}
-
-fn parse_ip(str: &Str) -> Str {
-    let mut target = str!(b":");
-    let mut newline = str!(b"\n");
-    let mut ip = Str::new();
-
-    if str.contains(&target) {
-        let mut ip_start = str.slice(
-            str.index_of(&target).unwrap() + 1,
-            str.len()
-        );
-        
-        if ip_start.contains(&newline) {
-            ip.join_with_drop(&mut ip_start.slice(
-                0,
-                ip_start.index_of(&newline).unwrap() - 1
-            ));
-
-        }
-
-        ip_start.drop();
-    }
-    
-
-    target.drop();
-    newline.drop();
-
-    return ip;
-}
-
 fn ready(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &READY }, true); }
 fn ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }, true); }
-fn closed(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &CLOSED }, true); }
 fn send_ok(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &SEND_OK }, false); }
-fn ok_without_clear(gate: &mut Gate) -> bool { return rx_contains(gate, unsafe { &OK }, false); }
 fn rx_contains(gate: &mut Gate, cond: &Option<Str>, clear: bool) -> bool {
     match unsafe { &ERROR } {
         // I know you think this logic is wrong, but it's not
@@ -376,35 +300,3 @@ fn rx_contains(gate: &mut Gate, cond: &Option<Str>, clear: bool) -> bool {
         }
     }
 }
-
-fn err_or_ok(rx_buffer: &Str) -> bool {
-    match unsafe { &FAIL } {
-        None => { return false; },
-        Some(fail) => {
-            if rx_buffer.contains(fail) {
-                return true;
-            }
-        }
-    }
-
-    match unsafe { &ERROR } {
-        None => { return false; },
-        Some(error) => {
-            if rx_buffer.contains(error) {
-                return true;
-            }
-        }
-    }
-
-    match unsafe { &OK } {
-        None => { return false; },
-        Some(ok) => {
-            if rx_buffer.contains(ok) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-

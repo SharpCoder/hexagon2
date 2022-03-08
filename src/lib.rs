@@ -50,7 +50,6 @@ static mut SHADER_CONFIGS: ShaderConfigList = ShaderConfigList { configs: Vector
 
 #[cfg(not(feature = "testing"))]
 teensycore::main!({
-    use teensycore::gate::*;
     use crate::*;
 
     // Drivers and stateful things

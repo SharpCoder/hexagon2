@@ -1,20 +1,8 @@
-use crate::*;
-use crate::models::SystemCommand;
 use teensycore::*;
 use teensycore::debug::*;
 use teensycore::math::atoi;
 use teensycore::system::str::*;
 use teensycore::system::vector::*;
-
-// This buffer is shared amongs all string operations. It will
-// be frequently cleared and should never be relied upon for
-// any kind of persisted data. It is simply a reservoire of
-// memory.
-static mut BUFFER: Option<Str> = None;
-static mut LINE: Option<Str> = None;
-
-// The system command delimiter
-const DELIMITER: u8 = b';';
 
 /// HttpResponse is a tuple containing two primary pieces
 /// of information. The first parameter is the parsed header
@@ -29,37 +17,14 @@ enum ParserState {
     Done = 0x4,
 }
 
-fn init_buffer<'a>() -> (&'a mut Str, &'a mut Str) {
-    unsafe {
-        match BUFFER {
-            None => {
-                BUFFER = Some(Str::new());
-                LINE = Some(Str::new());
-            },
-            Some(_) => { }
-        }
-
-        let buffer = BUFFER.as_mut().unwrap();
-        buffer.clear();
-
-        let line = LINE.as_mut().unwrap();
-        line.clear();
-
-        return (buffer, line);
-    }
-}
 
 pub fn parse_http_request(rx_buffer: &Str, header: &mut Str, content: &mut Str) -> bool {
     // Ensure buffers are setup
-    init_buffer();
     header.clear();
     content.clear();
 
     debug_str(b"HELLO YES THIS IS DOG");
     
-    let buffer = unsafe { BUFFER.as_mut().unwrap() };
-    let line = unsafe { LINE.as_mut().unwrap() };
-
     let mut content_length_cmp = str!(b"Content-Length: ");
     let mut ipd = str!(b"+IPD,");
     let mut colon = str!(b":");
@@ -68,7 +33,6 @@ pub fn parse_http_request(rx_buffer: &Str, header: &mut Str, content: &mut Str) 
 
     let mut content_length: Option<u64> = None;
     let mut state = ParserState::LookForStart;
-    let mut bytes_read = 0;
     let mut parsed_packet = parse_response_payload(&rx_buffer);
 
     // Debug each line of parsed data.
@@ -194,51 +158,6 @@ pub fn parse_response_payload(buf: &Str) -> Str {
     temp.drop();
     ipd.drop();
     colon.drop();
-    return result;
-}
-
-/// Take a content string and return the parsed system command.
-pub fn parse_command(buf: &Str) -> SystemCommand {
-    let (buffer, _) = init_buffer();
-    let mut ptr = 0;
-    let mut reg = 0;
-    let mut result = SystemCommand::new();
-
-    for char in buf.into_iter() {
-        if ptr < 4 {
-            result.command[ptr] = char;
-        } else if ptr == 4 && char == DELIMITER {
-            // Skip  
-        } else if char == DELIMITER {
-            // Process
-            if reg < result.args.len() {
-
-                // Only process if we have data
-                if buffer.len() > 0 {
-                    let number = atoi(&buffer);
-                    let is_negative = match buffer.char_at(0) {
-                        None => false,
-                        Some(char) => char == b'-',
-                    };
-
-                    result.args[reg] = number as i32;
-                    if is_negative {
-                        result.args[reg] *= -1;
-                    }
-                }
-                
-                reg += 1;
-            }
-
-            buffer.clear();
-        } else {
-            buffer.append(&[char]);
-        }
-
-        ptr += 1;
-    }
-
-
     return result;
 }
 

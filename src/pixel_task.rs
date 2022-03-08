@@ -1,8 +1,6 @@
 use teensycore::*;
 use teensycore::clock::*;
-use teensycore::debug::debug_str;
 use teensycore::math::rand;
-use teensycore::serio::serial_write_str;
 use teensycore::system::str::Str;
 use teensycore::system::str::StringOps;
 use teensycore::system::vector::Array;
@@ -76,6 +74,7 @@ impl PixelTask {
         };   
     }
 
+    #[allow(dead_code)]
     fn find_effect(&self, name: &'static [u8]) -> Option<Effect> {
         for effect in self.effects.into_iter() {
             if effect.name == name {
@@ -108,16 +107,10 @@ impl PixelTask {
     // world information.
     fn get_next_shader(&self) -> Shader {
         let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
-        serial_write_str(teensycore::serio::SerioDevice::Debug, &appropriate_shader);
-
         return match self.find_shader(&appropriate_shader) {
             None => return self.shaders.get(0).unwrap(),
-            Some(shader) => {
-                return shader;
-            }
+            Some(shader) => { shader }
         }
-        // let idx = rand() % self.shaders.size() as u64;
-        // return self.shaders.get(idx as usize).unwrap();
     }
 
     // Returns a random effect
@@ -169,7 +162,7 @@ impl PixelTask {
     }
 
     pub fn system_loop(&mut self) {
-        let time = (nanos() - self.transition_offset);
+        let time = nanos() - self.transition_offset;
         let elapsed_ms = time / teensycore::MS_TO_NANO;
 
         if time > self.target {

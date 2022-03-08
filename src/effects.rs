@@ -1,4 +1,3 @@
-use crate::pixel_engine::color::*;
 use crate::pixel_engine::effect::Effect;
 use teensycore::{system::vector::*, vector, math::rand};
 
@@ -17,7 +16,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
                 } else {
                     node_id = ctx.node_id + origin;
                 }
-                let step = (TIME as usize / ctx.total_nodes);
+                let step = TIME as usize / ctx.total_nodes;
                 next_ctx.offset = (node_id * step) as u64;
                 return next_ctx;
             })
@@ -28,7 +27,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
         Effect::new(b"Distributed")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                let step = (TIME as usize / ctx.total_nodes);
+                let step = TIME as usize / ctx.total_nodes;
                 next_ctx.offset = (ctx.node_id * step) as u64;
                 return next_ctx;
             })
@@ -38,7 +37,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
         Effect::new(b"Randomized")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = (rand() % TIME as usize as u64 / 2);
+                next_ctx.offset = rand() % TIME as usize as u64 / 2;
                 return next_ctx;
             })
             .transition_to(100, TIME)

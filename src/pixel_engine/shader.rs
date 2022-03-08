@@ -1,5 +1,4 @@
 use teensycore::mem::*;
-use teensycore::system::str::*;
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::math::*;
 

@@ -1,10 +1,7 @@
-use core::arch::asm;
 use teensycore::*;
 use teensycore::clock::*;
 use teensycore::debug::*;
 use teensycore::phys::pins::*;
-use teensycore::math::*;
-use teensycore::serio::*;
 
 const fn micros(time: u64) -> u64 {
     return MICRO_TO_NANO * time;
@@ -20,10 +17,6 @@ impl Max31820Driver {
         return Max31820Driver {
             pin: data_pin,
         };
-    }
-
-    fn log(&self, msg: &'static [u8]) {
-        debug_str(msg);
     }
 
     fn cmd_convert_t(&self) {
@@ -97,6 +90,7 @@ impl Max31820Driver {
         return None;
     }
 
+    #[allow(dead_code)]
     fn cmd_match_rom(&self, rom: u64) {
         // Tell the bus we're about to address a specific node
         self.send_command(0x55);

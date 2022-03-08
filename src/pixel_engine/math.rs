@@ -1,7 +1,6 @@
 use teensycore::math::*;
 
-type inum = u32;
-pub fn interpolate(from: inum, to: inum, current_time: u64, duration: u64) -> inum {
+pub fn interpolate(from: u32, to: u32, current_time: u64, duration: u64) -> u32 {
     let x0 = 0f32;
     let y0 = min(from, to) as f32;
     let x1 = duration as f32;
