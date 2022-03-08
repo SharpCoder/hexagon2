@@ -45,7 +45,7 @@ impl ShaderConfigList {
             if config.time_range_start < date && config.time_range_end > date {
                 // Check for immediate winner
                 if config.probability == 255 {
-                    // candidates.free();
+                    candidates.free();
                     return config.shader;
                 } else {
                     total_probabilities += config.probability;
@@ -53,19 +53,19 @@ impl ShaderConfigList {
                 }
             }
         }
-        
+
         // Identify target probability
         let target = rand() % total_probabilities;
         let mut accumulator = 0u64;
         for candidate in candidates.into_iter() {
             accumulator += candidate.probability as u64;
             if accumulator >= target {
-                // candidates.free();
+                candidates.free();
                 return candidate.shader;
             }
         }
 
-        // candidates.free();
+        candidates.free();
         return Str::new();
     }
 }
