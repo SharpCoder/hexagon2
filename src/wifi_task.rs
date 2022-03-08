@@ -1,12 +1,17 @@
 use crate::*;
 use crate::http::models::HttpRequest;
 use crate::http::parser::*;
+use crate::pixel_engine::shader_config::ShaderConfig;
+use crate::pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::gate::*;
 use teensycore::system::str::*;
+use teensycore::system::vector;
+use teensycore::system::vector::*;
 use teensycore::serio::*;
 use teensycore::phys::pins::*;
 use teensycore::debug::*;
+use teensycore::math::atoi;
 use crate::drivers::esp8266::*;
 
 const DEVICE: SerioDevice = SerioDevice::Default;
@@ -24,6 +29,7 @@ static mut ERROR: Option<Str> = None;
 static mut FAIL: Option<Str> = None;
 static mut CLOSED: Option<Str> = None;
 static mut SEND_OK: Option<Str> = None;
+static mut BAD_REQUEST: Option<Str> = None;
 
 // Buffers to hold the content and header, so we don't have
 // to recreate them all the time.
@@ -80,6 +86,7 @@ impl WifiTask {
             FAIL = Some(str!(b"FAIL"));
             CLOSED = Some(str!(b"CLOSED"));
             SEND_OK = Some(str!(b"SEND OK"));
+            BAD_REQUEST = Some(str!(b"Bad Request"));
             HEADER = Some(Str::new());
             CONTENT = Some(Str::new());
             INITIALIZE_TIMEOUT = nanos() + S_TO_NANO * 30;
@@ -106,6 +113,7 @@ impl WifiTask {
                 pin_mode(RST_PIN, Mode::Input);
                 teensycore::wait_ns(300 * teensycore::MS_TO_NANO);
                 debug::debug_str(b"reset");
+                esp8266_version(DEVICE);
             })
             .when(ready, || {
                 esp8266_configure_echo(DEVICE, true);
@@ -131,15 +139,15 @@ impl WifiTask {
             })
             // .when(ok, || {
             //     // DNS Lookup
-            //     let mut addr = str!(b"worldtimeapi.org");
-            //     esp8266_dns_lookup(DEVICE, &addr);
+            //     let mut addr = str!(b"jde8bazo69.execute-api.us-west-2.amazonaws.com");
+            //     // esp8266_dns_lookup(DEVICE, &addr);
+            //     esp8266_raw(DEVICE, b"AT+CIPDOMAIN?");
             //     addr.drop();
             // })
             .when(ok, || {
                 // Parse the response
                 let content = serial_read(DEVICE);
-                let mut ip = str!(b"213.188.196.246");// parse_ip(content);
-                
+                let mut ip = str!(b"52.27.143.19");                
                 // Request world time
                 esp8266_open_tcp(DEVICE, &ip, 80, None);
                 ip.drop();
@@ -148,8 +156,8 @@ impl WifiTask {
                 // Generate the http request
                 let mut request = HttpRequest {
                     method: str!(b"GET"),
-                    request_path: str!(b"/api/timezone/America/Los_Angeles.txt"),
-                    host: str!(b"worldtimeapi.org"),
+                    request_path: str!(b"/hexwall"),
+                    host: str!(b"amazon.com"),
                     headers: None,
                     content: None,
                 };
@@ -158,10 +166,36 @@ impl WifiTask {
                 esp8266_write(DEVICE, &request.to_str(), None);
                 request.drop();
             })
-            .when(send_ok, || {
-                unsafe { INITIALIZED = true };
-                // Parse response here
+            .when(send_ok, || {})
+            .when_nano(500 * MS_TO_NANO,  || { })
+            .when(|gate| {
+                // Check for bad request
+                let buf = serial_read(DEVICE);
+                match unsafe { &BAD_REQUEST } {
+                    None => {
+                        return false;
+                    },
+                    Some(target) => {
+                        if buf.contains(&target) {
+                            gate.reset();
+                            serial_read(DEVICE).clear();
+                            return false;
+                        }
+                    }
+                }
                 
+                // Parse response here
+                let shaders = parse_config(buf);
+                if shaders.size() > 0 {
+                    debug_str(b"Finished parsing shaders");
+                    set_shader_configs(shaders);
+                    debug_str(b"Finished setting shaders");
+                    return true;
+                } else {
+                    return false;
+                }
+            }, || {
+                unsafe { INITIALIZED = true };
             })
             .when(|gate| {
                 return false;
@@ -170,59 +204,89 @@ impl WifiTask {
             })
             .sealed()
             .compile();
-
-        // gate_open!()
-        //     .when(|_| {
-        //         if unsafe { !INITIALIZED } {
-        //             return false;
-        //         }
-
-        //         let header = match unsafe { HEADER.as_mut() } {
-        //             None => {
-        //                 return false;
-        //             },
-        //             Some(value) => value
-        //         };
-
-        //         let content = match unsafe { CONTENT.as_mut() } {
-        //             None => {
-        //                 return false;
-        //             },
-        //             Some(value) => value,
-        //         };
-
-        //         return parse_http_request(serial_read(DEVICE), header, content);
-        //     }, || {
-        //         // Process content
-        //         match unsafe { CONTENT.as_mut() } {
-        //             None => {},
-        //             Some(content) => {
-        //                 let command = parse_command(content);
-        //                 proc_emit(&command);
-        //             }
-        //         }
-        //         unsafe {
-        //             PROCESS_COMPLETE = true;
-        //             PROCESS_TIMEOUT = nanos() + S_TO_NANO * 3;
-        //             esp8266_close_tcp(DEVICE, Some(0));
-        //             serial_read(DEVICE).clear();
-        //         }
-        //     })
-        //     .compile();
-
-        //     // gate_open!()
-        //     //     .when(|_| {
-        //     //         return unsafe { INITIALIZED && PROCESS_COMPLETE } && (
-        //     //             nanos() > unsafe { PROCESS_TIMEOUT } ||  err_or_ok(serial_read(DEVICE))
-        //     //         );
-        //     //     }, || {
-        //     //         serial_read(DEVICE).clear();
-        //     //         unsafe {
-        //     //             PROCESS_COMPLETE = false;
-        //     //         }
-        //     //     })
-        //     //     .compile();
     }
+}
+
+fn parse_config(serial_content: &Str) -> ShaderConfigList {
+    // Parse the http headers
+    let mut time_cmd = str!(b"time");
+    let mut rule_cmd = str!(b"rule");
+    let mut header = Str::new();
+    let mut content = Str::new();
+    let mut configs = Vector::new();
+
+    if parse_http_request(serial_content, &mut header, &mut content) {
+        debug_str(b"OMG FOUND FOUND FOUND OMG OMG OMG");
+        let mut lines = content.split(b'\n');
+        for line in lines.into_iter() {
+            let paths = line.split(b';');
+            match paths.get(0) {
+                None => {},
+                Some(command) => {
+
+                    if command.contains(&time_cmd) && paths.size() > 1 {
+                        let epoch = atoi(&paths.get(1).unwrap()) / 1000;
+                        set_world_time(epoch);
+                    } else if command.contains(&rule_cmd) && paths.size() > 3 {
+                        let config = ShaderConfig { 
+                            time_range_start: atoi(&paths.get(1).unwrap()), 
+                            time_range_end: atoi(&paths.get(2).unwrap()), 
+                            shader: paths.get(3).unwrap(), 
+                            probability: atoi(&paths.get(4).unwrap()),
+                        };
+
+                        configs.push(config);
+                    }
+                }
+            }
+
+        }
+    }
+
+    time_cmd.drop();
+    rule_cmd.drop();
+    header.drop();
+    content.drop();
+
+    return ShaderConfigList {
+        configs: configs,
+    }
+}
+
+fn parse_packet_from_serial(serial_content: &Str) -> Str {
+    // Parse the serial_content until you encounter one single packet and then consume it
+    let mut result = Str::new();
+    let mut begin_target = str!(b"+IPD,");
+    let mut colon = str!(b":");
+    match serial_content.index_of(&begin_target) {
+        None => {},
+        Some(start_idx) => {
+
+            // We know where the content begins. Now read until we hit the colon
+            let mut packet_size_buff = Str::new();
+            let mut packet_size = None;
+            let mut substr = serial_content.slice(start_idx, serial_content.len());
+            
+            for char in substr.into_iter() {
+                if char == b':' {
+                    packet_size = Some(atoi(&packet_size_buff) as usize);
+                } else if packet_size.is_some() {
+                    result.append(&[char]);
+                    if result.len() >= packet_size.unwrap() {
+                        break;
+                    }
+                } else {
+                    packet_size_buff.append(&[char]);
+                }
+            }
+
+
+            substr.drop();
+
+        }
+    }
+
+    return result;
 }
 
 fn parse_ip(str: &Str) -> Str {
@@ -276,6 +340,19 @@ fn rx_contains(gate: &mut Gate, cond: &Option<Str>, clear: bool) -> bool {
 
     match unsafe { &FAIL } {
         // I know you think this logic is wrong, but it's not
+        None => {
+            return false;
+        },
+        Some(target) => {
+            if serial_read(DEVICE).contains(&target) {
+                gate.reset();
+                serial_read(DEVICE).clear();
+                return false;
+            }
+        }
+    }
+
+    match unsafe { &BAD_REQUEST } {
         None => {
             return false;
         },

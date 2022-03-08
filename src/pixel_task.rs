@@ -1,11 +1,14 @@
-
-use teensycore::MS_TO_NANO;
-use teensycore::S_TO_NANO;
+use teensycore::*;
 use teensycore::clock::*;
+use teensycore::debug::debug_str;
 use teensycore::math::rand;
+use teensycore::serio::serial_write_str;
+use teensycore::system::str::Str;
+use teensycore::system::str::StringOps;
 use teensycore::system::vector::Array;
 use teensycore::system::vector::Vector;
 use crate::date_time::DateTime;
+use crate::get_shader_configs;
 use crate::shaders::*;
 use crate::effects::*;
 use crate::pixel_engine::color::*;
@@ -83,11 +86,18 @@ impl PixelTask {
         return None;
     }
 
-    fn find_shader(&self, name: &'static [u8]) -> Option<Shader> {
+    fn find_shader(&self, name: &Str) -> Option<Shader> {
         for shader in self.shaders.into_iter() {
-            if shader.name == name {
+            let mut shader_name = Str::new();
+            shader_name.append(shader.name);
+
+            if name.contains(&shader_name) {
+
+                shader_name.drop();
                 return Some(shader);
             }
+
+            shader_name.drop();
         }
 
         return None;
@@ -97,7 +107,10 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        return match self.find_shader(b"RetroFuturistic") {
+        let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
+        serial_write_str(teensycore::serio::SerioDevice::Debug, &appropriate_shader);
+
+        return match self.find_shader(&appropriate_shader) {
             None => return self.shaders.get(0).unwrap(),
             Some(shader) => {
                 return shader;
@@ -130,7 +143,7 @@ impl PixelTask {
         self.effect = Some(self.get_next_effect());
 
         // Select a shader
-        self.shader = self.find_shader(b"Medbay");
+        self.shader = self.find_shader(&str!(b"Medbay"));
     }
 
     pub fn transition_to(&mut self, next_shader: Shader) {

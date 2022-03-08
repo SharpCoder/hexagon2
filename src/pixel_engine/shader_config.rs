@@ -1,18 +1,7 @@
+use teensycore::debug::debug_str;
 use teensycore::math::rand;
 use teensycore::system::str::*;
 use teensycore::system::vector::*;
-
-fn shader_to_str(shader: [u8; 32]) -> Str {
-    let mut result = Str::new();
-    for char in shader {
-        if char == 0 {
-            break;
-        } else {
-            result.append(&[char]);
-        }
-    }
-    return result;
-}
 
 /// A ShaderConfig defines the configuration for a particular
 /// shader.
@@ -23,13 +12,14 @@ pub struct ShaderConfig {
     /// Time (in unix epoch seconds) at which this rule ends
     pub time_range_end: u64,
     /// The shader which this rule pertains to
-    pub shader: [u8; 32],
+    pub shader: Str,
     /// The probability of selection (Between 0 - 255)
-    pub probability: u8,
+    pub probability: u64,
 }
 
+#[derive(Copy, Clone)]
 pub struct ShaderConfigList {
-    configs: Vector<ShaderConfig>,
+    pub configs: Vector<ShaderConfig>,
 }
 
 impl ShaderConfigList {
@@ -37,6 +27,10 @@ impl ShaderConfigList {
         return ShaderConfigList {
             configs: Vector::new(),
         };
+    }
+
+    pub fn size(&self) -> usize {
+        return self.configs.size();
     }
 
     pub fn add_config(&mut self, config: ShaderConfig) {
@@ -48,30 +42,30 @@ impl ShaderConfigList {
         let mut candidates = Vector::new();
 
         for config in self.configs.into_iter() {
-            if config.time_range_start > date && config.time_range_end < date {
+            if config.time_range_start < date && config.time_range_end > date {
                 // Check for immediate winner
                 if config.probability == 255 {
-                    candidates.free();
-                    return shader_to_str(config.shader);
+                    // candidates.free();
+                    return config.shader;
                 } else {
-                    total_probabilities += config.probability as u64;
-                    candidates.push(config);
+                    total_probabilities += config.probability;
+                    candidates.push(config.clone());
                 }
             }
         }
-
+        
         // Identify target probability
         let target = rand() % total_probabilities;
         let mut accumulator = 0u64;
         for candidate in candidates.into_iter() {
             accumulator += candidate.probability as u64;
             if accumulator >= target {
-                candidates.free();
-                return shader_to_str(candidate.shader);
+                // candidates.free();
+                return candidate.shader;
             }
         }
 
-        candidates.free();
+        // candidates.free();
         return Str::new();
     }
 }

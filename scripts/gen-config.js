@@ -4,16 +4,20 @@
     so the hexagon wall knows if a specific day is special. And,
     if it is special, what theme to play that day.
 */
+const SHADER_TYPE = 'rule';
+const TIME_TYPE = 'time';
+
 const YEARS_FROM_2022 = 10;
 const filler_themes = [
-    "R2D2",
-    "Jupiter",
-    "Mars",
-    "Duna",
-    "Starfleet",
-    "Rainbow",
-    "Medbay",
-    "RetroFuturistic",
+    { shader: 'R2D2', priority: 6 },
+    { shader: 'RetroFuturistic', priority: 6 },
+    { shader: 'Starfleet', priority: 4 },
+    { shader: 'Mars', priority: 4 },
+    { shader: 'Duna', priority: 4 },
+    { shader: 'Jupiter', priority: 4 },
+    { shader: 'Rainbow', priority: 3 },
+    { shader: 'Medbay', priority: 1 },
+    { shader: 'Pride', priority: 1 },
 ];
 
 const important_events = [
@@ -31,6 +35,11 @@ const important_events = [
         note: '4th of July',
         shader: 'Independence',
         origin: new Date("07-04-2022"),
+    },
+    {
+        note: 'Pride',
+        shader: 'Pride',
+        origin: new Date("06-28-2022"),
     },
     {
         note: 'Christmas',
@@ -83,9 +92,9 @@ const one_off_events = [
 ];
 
 // Take a bunch of attributes and returns an encoded line item
-function encode(shader, start_date, end_date, priority) {
+function encode(type, shader, start_date, end_date, priority) {
     // All entries have a shader and an origin
-    return `${start_date.getTime() / 1000};${end_date.getTime() / 1000};${shader};${priority}`;
+    return `${type};${start_date.getTime() / 1000};${end_date.getTime() / 1000};${shader};${priority}`;
 }
 
 // Entrypoint
@@ -93,12 +102,15 @@ function encode(shader, start_date, end_date, priority) {
 
     let lines = [];
 
+    // Generate current time
+    lines.push(`${TIME_TYPE};${new Date().getTime()}`);
+
     // Generate the filler content
     let filler_start_date = new Date("01-01-2022");
     let filler_end_date = new Date("01-01-2222");
     for (const filler of filler_themes) {
         lines.push(
-            encode(filler, filler_start_date, filler_end_date, 20)
+            encode(SHADER_TYPE, filler.shader, filler_start_date, filler_end_date, filler.priority)
         );
     }
 
@@ -115,7 +127,7 @@ function encode(shader, start_date, end_date, priority) {
             end_date.setHours(23);
 
             lines.push(
-                encode(event.shader, start_date, end_date, 255)
+                encode(SHADER_TYPE, event.shader, start_date, end_date, 255)
             );
 
             // Check if this event has a range
@@ -128,7 +140,7 @@ function encode(shader, start_date, end_date, priority) {
                 range_end.setHours(23);
 
                 lines.push(
-                    encode(event.shader, range_start, range_end, 60)
+                    encode(SHADER_TYPE, event.shader, range_start, range_end, 40)
                 );
             }
         }
@@ -141,7 +153,7 @@ function encode(shader, start_date, end_date, priority) {
         end_date.setHours(23);
 
         lines.push(
-            encode(event.shader, start_date, end_date, 255)
+            encode(SHADER_TYPE, event.shader, start_date, end_date, 255)
         );
     }
 

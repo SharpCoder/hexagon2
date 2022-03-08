@@ -22,6 +22,7 @@ pub mod http;
 
 use core::arch::asm;
 use models::SystemCommand;
+use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::phys::pins::*;
 use teensycore::system::observable::Observable;
@@ -36,6 +37,7 @@ use {
 
 use teensycore::serio::*;
 use teensycore::system::str::*;
+use teensycore::system::vector::Vector;
 
 // Create a system observable for process event
 // handling.
@@ -44,6 +46,7 @@ static mut OBSERVER_KEY: Option<Str> = None;
 static mut WORLD_TIME_S: u64 = 0;
 static mut UTC_OFFSET: u64 = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: u64 = 0;
+static mut SHADER_CONFIGS: ShaderConfigList = ShaderConfigList { configs: Vector { head: None, size: 0 } };
 
 #[cfg(not(feature = "testing"))]
 teensycore::main!({
@@ -116,6 +119,18 @@ pub fn get_utc_offset() -> u64 {
     return unsafe {
         UTC_OFFSET
     };
+}
+
+pub fn set_shader_configs(config_list: ShaderConfigList) {
+    unsafe {
+        SHADER_CONFIGS = ShaderConfigList {
+            configs: config_list.configs.clone(),
+        }
+    };
+}
+
+pub fn get_shader_configs() -> &'static ShaderConfigList {
+    return unsafe { &SHADER_CONFIGS };
 }
 
 pub fn proc_handle(func: &'static dyn Fn(&SystemCommand)) {
