@@ -55,17 +55,20 @@ impl ShaderConfigList {
         }
 
         // Identify target probability
+        let mut shuffled = candidates.shuffle();
+        candidates.free();
+
         let target = rand() % total_probabilities;
         let mut accumulator = 0u64;
-        for candidate in candidates.into_iter() {
+        for candidate in shuffled.into_iter() {
             accumulator += candidate.probability as u64;
             if accumulator >= target {
-                candidates.free();
+                shuffled.free();
                 return candidate.shader;
             }
         }
 
-        candidates.free();
+        shuffled.free();
         return Str::new();
     }
 }
