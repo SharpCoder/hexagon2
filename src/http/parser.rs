@@ -122,13 +122,16 @@ pub fn parse_http_request(rx_buffer: &Str, header: &mut Str, content: &mut Str) 
 
     // Checksum validation
     if state as usize == ParserState::Done as usize {
+        debug_str(b"");
+        debug_u64(content.len() as u64, b"content-length");
         return true;
     } else {
+        debug_str(b"");
+        debug_u64(content.len() as u64, b"content-length");
         header.clear();
         content.clear();
         return false;
     }
-    return false;
 }
 
 /// This method takes a serial blob of data and returns
@@ -184,7 +187,10 @@ pub fn parse_response_payload(buf: &Str) -> Str {
         }
 
     }
+    debug_str(b"");
+    debug_u64(packet_length.unwrap_or(0) as u64, b"packet-length");
 
+    ipd_buf.free();
     temp.drop();
     ipd.drop();
     colon.drop();

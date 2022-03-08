@@ -111,7 +111,7 @@ impl WifiTask {
                 teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
                 // esp8266_reset(DEVICE);
                 pin_mode(RST_PIN, Mode::Input);
-                teensycore::wait_ns(300 * teensycore::MS_TO_NANO);
+                teensycore::wait_ns(100 * teensycore::MS_TO_NANO);
                 debug::debug_str(b"reset");
                 esp8266_version(DEVICE);
             })
@@ -137,13 +137,6 @@ impl WifiTask {
             .when(ok, || {
                 esp8266_multiple_connections(DEVICE, false);
             })
-            // .when(ok, || {
-            //     // DNS Lookup
-            //     let mut addr = str!(b"jde8bazo69.execute-api.us-west-2.amazonaws.com");
-            //     // esp8266_dns_lookup(DEVICE, &addr);
-            //     esp8266_raw(DEVICE, b"AT+CIPDOMAIN?");
-            //     addr.drop();
-            // })
             .when(ok, || {
                 // Parse the response
                 let content = serial_read(DEVICE);
@@ -166,8 +159,8 @@ impl WifiTask {
                 esp8266_write(DEVICE, &request.to_str(), None);
                 request.drop();
             })
-            .when(send_ok, || {})
-            .when_nano(500 * MS_TO_NANO,  || { })
+            .when(send_ok, || { })
+            .when_nano(2000 * MS_TO_NANO,  || { })
             .when(|gate| {
                 // Check for bad request
                 let buf = serial_read(DEVICE);
@@ -178,7 +171,7 @@ impl WifiTask {
                     Some(target) => {
                         if buf.contains(&target) {
                             gate.reset();
-                            serial_read(DEVICE).clear();
+                            buf.clear();
                             return false;
                         }
                     }
@@ -187,11 +180,12 @@ impl WifiTask {
                 // Parse response here
                 let shaders = parse_config(buf);
                 if shaders.size() > 0 {
-                    debug_str(b"Finished parsing shaders");
+                    buf.clear();
                     set_shader_configs(shaders);
-                    debug_str(b"Finished setting shaders");
                     return true;
                 } else {
+                    gate.reset();
+                    buf.clear();
                     return false;
                 }
             }, || {
@@ -216,10 +210,9 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
     let mut configs = Vector::new();
 
     if parse_http_request(serial_content, &mut header, &mut content) {
-        debug_str(b"OMG FOUND FOUND FOUND OMG OMG OMG");
         let mut lines = content.split(b'\n');
         for line in lines.into_iter() {
-            let paths = line.split(b';');
+            let mut paths = line.split(b';');
             match paths.get(0) {
                 None => {},
                 Some(command) => {
@@ -239,8 +232,10 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
                     }
                 }
             }
+            paths.free();
 
         }
+        lines.free();
     }
 
     time_cmd.drop();

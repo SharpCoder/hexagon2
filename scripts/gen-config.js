@@ -7,17 +7,17 @@
 const SHADER_TYPE = 'rule';
 const TIME_TYPE = 'time';
 
-const YEARS_FROM_2022 = 10;
+const YEARS_FROM_2022 = 10 + (new Date().getFullYear() - 2022);
 const filler_themes = [
-    { shader: 'R2D2', priority: 6 },
-    { shader: 'RetroFuturistic', priority: 6 },
-    { shader: 'Starfleet', priority: 4 },
-    { shader: 'Mars', priority: 4 },
-    { shader: 'Duna', priority: 4 },
-    { shader: 'Jupiter', priority: 4 },
-    { shader: 'Rainbow', priority: 3 },
-    { shader: 'Medbay', priority: 1 },
-    { shader: 'Pride', priority: 1 },
+    { shader: 'R2D2', priority: 20 },
+    { shader: 'RetroFuturistic', priority: 20 },
+    { shader: 'Starfleet', priority: 15 },
+    { shader: 'Mars', priority: 15 },
+    { shader: 'Duna', priority: 15 },
+    { shader: 'Jupiter', priority: 15 },
+    { shader: 'Rainbow', priority: 12 },
+    { shader: 'Medbay', priority: 10 },
+    { shader: 'Pride', priority: 10 },
 ];
 
 const important_events = [
@@ -60,9 +60,15 @@ const important_events = [
         shader: 'Valentines',
         origin: new Date("02-14-2022"),
     },
+    {
+        note: 'Star Wars Day',
+        shader: 'R2D2',
+        origin: new Date('05-04-2022'),
+    }
 ];
 
 const one_off_events = [
+    { shader: 'R2D2', origin: new Date('03-08-2022') },
     { shader: 'Lunar', origin: new Date("01-22-2023") },
     { shader: 'Lunar', origin: new Date("02-10-2024") },
     { shader: 'Lunar', origin: new Date("01-29-2025") },
@@ -94,12 +100,10 @@ const one_off_events = [
 // Take a bunch of attributes and returns an encoded line item
 function encode(type, shader, start_date, end_date, priority) {
     // All entries have a shader and an origin
-    return `${type};${start_date.getTime() / 1000};${end_date.getTime() / 1000};${shader};${priority}`;
+    return `${type};${start_date.getTime() / 1000};${end_date.getTime() / 1000};${shader};${priority};`;
 }
 
-// Entrypoint
-(function() {
-
+exports.generate = () => {
     let lines = [];
 
     // Generate current time
@@ -156,7 +160,6 @@ function encode(type, shader, start_date, end_date, priority) {
             encode(SHADER_TYPE, event.shader, start_date, end_date, 255)
         );
     }
-
-    console.log(lines.join('\n'));
-
-})();
+    
+    return lines.join('\n');
+};
