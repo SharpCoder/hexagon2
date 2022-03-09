@@ -1,4 +1,4 @@
-include <config.scad>;
+
 include <pcb-mount.scad>;
 
 $fn = 6;
