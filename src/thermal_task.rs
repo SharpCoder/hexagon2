@@ -34,13 +34,11 @@ impl ThermalTask {
                 seed_rand(sample as u64);
             }
         }
-
-
     }
 
     pub fn system_loop(&mut self) {
         let time = nanos();
-        if time > self.next_event {
+        if !self.loaded && time > self.next_event {
             if self.count < SAMPLES {
                 self.samples[self.count] = self.driver.read_temperature();
                 self.count += 1;
@@ -59,10 +57,8 @@ impl ThermalTask {
     
                 self.loaded = true;
                 self.count += 1;
-            } else {
-    
             }
-            self.next_event = time + MS_TO_NANO * 500;
+            self.next_event = time + MS_TO_NANO * 550;
         }
     }
 }

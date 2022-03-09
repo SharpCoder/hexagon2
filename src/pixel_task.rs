@@ -107,10 +107,17 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
-        return match self.find_shader(&appropriate_shader) {
-            None => return self.shaders.get(0).unwrap(),
-            Some(shader) => { shader }
+        // If we have WIFI access, use the shader configs downloaded from the internet
+        if crate::USE_WIFI {
+            let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
+            return match self.find_shader(&appropriate_shader) {
+                None => return self.shaders.get(0).unwrap(),
+                Some(shader) => { shader }
+            }
+        } else {
+            // Otherwise, return any random shader
+            let idx = rand() % self.shaders.size() as u64;
+            return self.shaders.get(idx as usize).unwrap();
         }
     }
 
@@ -231,7 +238,9 @@ impl PixelTask {
 
             match self.state {
                 PixelState::MainSequence => {
-                    if nanos() > self.day_target {
+                    // day_target is only valid if we can sync world_clock with the wifi
+                    // which doesn't happen if WIFI is disabled.
+                    if crate::USE_WIFI && nanos() > self.day_target {
                         // Check if we need to recalculate transition
                         let datetime = DateTime::now();
                         if self.day_processed != datetime.days && datetime.hour >= 6 {

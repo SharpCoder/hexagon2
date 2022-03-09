@@ -21,11 +21,9 @@ pub mod wifi_task;
 pub mod http;
 
 use core::arch::asm;
-use models::SystemCommand;
 use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::phys::pins::*;
-use teensycore::system::observable::Observable;
 use pixel_task::*;
 
 #[cfg(not(feature = "testing"))]
@@ -36,13 +34,13 @@ use {
 };
 
 use teensycore::serio::*;
-use teensycore::system::str::*;
 use teensycore::system::vector::Vector;
+
+// Feature Flags
+static USE_WIFI: bool = true;
 
 // Create a system observable for process event
 // handling.
-static mut OBSERVER: Option<Observable<SystemCommand>> = None;
-static mut OBSERVER_KEY: Option<Str> = None;
 static mut TRANSITION_DELAY_NANOS: u64 = 10 * teensycore::S_TO_NANO;
 static mut WORLD_TIME_S: u64 = 0;
 static mut UTC_OFFSET: u64 = 8;
@@ -57,12 +55,6 @@ teensycore::main!({
     // let _wifi_driver = WifiDriver::new(SerioDevice::Default, 5, 6);
     let thermal_driver = crate::drivers::max31820::Max31820Driver::new(10);
 
-    // Setup event loop
-    unsafe {
-        OBSERVER = Some(Observable::new());
-        OBSERVER_KEY = Some(str!(b"process_loop"));
-    }
-
     // Tasks
     let mut blink_task = BlinkTask::new();
     let mut wifi_task = WifiTask::new();
@@ -72,7 +64,10 @@ teensycore::main!({
     thermal_task.init();
     blink_task.init();
     pixel_task.init();
-    wifi_task.init();
+
+    if USE_WIFI {
+        wifi_task.init();
+    }
 
     serial_init(SerioDevice::Default);
 
@@ -80,11 +75,16 @@ teensycore::main!({
         pixel_task.system_loop();
         blink_task.system_loop();
         thermal_task.system_loop();
-        wifi_task.system_loop();
+
+        if USE_WIFI {
+            wifi_task.system_loop();
+        }
 
         // If the thermal task has completed, we can transition
         // the loading indicator forward
-        if thermal_task.loaded && wifi_task.ready {
+        if USE_WIFI && thermal_task.loaded && wifi_task.ready {
+            pixel_task.ready();
+        } else if !USE_WIFI && thermal_task.loaded {
             pixel_task.ready();
         }
 
@@ -143,16 +143,4 @@ pub fn set_shader_configs(config_list: ShaderConfigList) {
 
 pub fn get_shader_configs() -> &'static ShaderConfigList {
     return unsafe { &SHADER_CONFIGS };
-}
-
-pub fn proc_handle(func: &'static dyn Fn(&SystemCommand)) {
-    unsafe {
-        OBSERVER.as_mut().unwrap().on(OBSERVER_KEY.as_ref().unwrap(), func);
-    }
-}
-
-pub fn proc_emit(command: &SystemCommand) {
-    unsafe {
-        OBSERVER.as_mut().unwrap().emit(OBSERVER_KEY.as_ref().unwrap(), command);
-    }
 }
