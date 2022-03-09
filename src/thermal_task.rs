@@ -28,6 +28,13 @@ impl ThermalTask {
     }
 
     pub fn init(&self) {
+        match self.driver.read_temperature() {
+            None => {},
+            Some(sample) => {
+                seed_rand(sample as u64);
+            }
+        }
+
 
     }
 

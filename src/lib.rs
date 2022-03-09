@@ -43,6 +43,7 @@ use teensycore::system::vector::Vector;
 // handling.
 static mut OBSERVER: Option<Observable<SystemCommand>> = None;
 static mut OBSERVER_KEY: Option<Str> = None;
+static mut TRANSITION_DELAY_NANOS: u64 = 10 * teensycore::S_TO_NANO;
 static mut WORLD_TIME_S: u64 = 0;
 static mut UTC_OFFSET: u64 = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: u64 = 0;
@@ -68,9 +69,9 @@ teensycore::main!({
     let mut thermal_task = ThermalTask::new(thermal_driver);
     let mut pixel_task = PixelTask::new();
 
+    thermal_task.init();
     blink_task.init();
     pixel_task.init();
-    thermal_task.init();
     wifi_task.init();
 
     serial_init(SerioDevice::Default);
@@ -118,6 +119,18 @@ pub fn get_utc_offset() -> u64 {
     return unsafe {
         UTC_OFFSET
     };
+}
+
+pub fn get_tranasition_delay() -> u64 {
+    return unsafe {
+        TRANSITION_DELAY_NANOS
+    };
+}
+
+pub fn set_transition_delay(nanos: u64) {
+    unsafe {
+        TRANSITION_DELAY_NANOS = nanos;
+    }
 }
 
 pub fn set_shader_configs(config_list: ShaderConfigList) {

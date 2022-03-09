@@ -7,6 +7,7 @@ use teensycore::system::vector::Array;
 use teensycore::system::vector::Vector;
 use crate::date_time::DateTime;
 use crate::get_shader_configs;
+use crate::get_tranasition_delay;
 use crate::shaders::*;
 use crate::effects::*;
 use crate::pixel_engine::color::*;
@@ -124,8 +125,8 @@ impl PixelTask {
 
         // Initialize the contexts
         for node_id in 0 .. UNITS {
-            self.contexts[node_id].node_id = node_id;
-            self.contexts[node_id].total_nodes = UNITS;
+            self.contexts[node_id].node_id = node_id as u64;
+            self.contexts[node_id].total_nodes = UNITS as u64;
             self.contexts[node_id].initialized = false;
         }
 
@@ -145,6 +146,7 @@ impl PixelTask {
         // Randomize each hexagon unit
         for node_id in 0 .. UNITS {
             self.contexts[node_id].initialized = false;
+            self.contexts[node_id].node_id = node_id as u64;
         }
 
         // Randomize the next effect
@@ -157,7 +159,7 @@ impl PixelTask {
     }
 
     pub fn randomize(&mut self) {
-        self.randomize_target = nanos() + (S_TO_NANO * 10);// 60 * 60 * 6);
+        self.randomize_target = nanos() + get_tranasition_delay();
         self.transition_to(self.get_next_shader());
     }
 

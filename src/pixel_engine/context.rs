@@ -4,8 +4,8 @@
 #[derive(Copy, Clone)]
 pub struct Context { 
     pub initialized: bool,
-    pub node_id: usize,
-    pub total_nodes: usize,
+    pub node_id: u64,
+    pub total_nodes: u64,
     pub temperature: i32,
     pub registers: [i32; 10],
     pub offset: u64,

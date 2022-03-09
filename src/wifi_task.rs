@@ -5,6 +5,7 @@ use crate::pixel_engine::shader_config::ShaderConfig;
 use crate::pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::gate::*;
+use teensycore::math::seed_rand;
 use teensycore::system::str::*;
 use teensycore::system::vector::*;
 use teensycore::serio::*;
@@ -96,16 +97,13 @@ impl WifiTask {
             .once(|| {
                 unsafe { INITIALIZED = false; }
                 pin_out(EN_PIN, Power::Low);
-                teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
+                teensycore::wait_ns(5 * teensycore::MS_TO_NANO);
                 pin_out(EN_PIN, Power::High);
-                
                 pin_out(RST_PIN, Power::Low);
-                teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
+                teensycore::wait_ns(5 * teensycore::MS_TO_NANO);
                 pin_out(RST_PIN, Power::High);
-                teensycore::wait_ns(30 * teensycore::MS_TO_NANO);
-                // esp8266_reset(DEVICE);
+                teensycore::wait_ns(5 * teensycore::MS_TO_NANO);
                 pin_mode(RST_PIN, Mode::Input);
-                teensycore::wait_ns(100 * teensycore::MS_TO_NANO);
                 debug::debug_str(b"reset");
                 esp8266_version(DEVICE);
             })
@@ -151,7 +149,7 @@ impl WifiTask {
                 request.drop();
             })
             .when(send_ok, || { })
-            .when_nano(2000 * MS_TO_NANO,  || { })
+            .when_nano(1500 * MS_TO_NANO,  || { })
             .when(|gate| {
                 // Check for bad request
                 let buf = serial_read(DEVICE);
@@ -196,6 +194,8 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
     // Parse the http headers
     let mut time_cmd = str!(b"time");
     let mut rule_cmd = str!(b"rule");
+    let mut delay_cmd = str!(b"delay");
+
     let mut header = Str::new();
     let mut content = Str::new();
     let mut configs = Vector::new();
@@ -209,9 +209,16 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
                 Some(command) => {
 
                     if command.contains(&time_cmd) && paths.size() > 1 {
+                        // Parse world time
                         let epoch = atoi(&paths.get(1).unwrap()) / 1000;
                         set_world_time(epoch);
+                        seed_rand(epoch);
+                    } else if command.contains(&delay_cmd) && paths.size() > 1 {
+                        // Parse transition delay (global setting)
+                        let delay = atoi(&paths.get(1).unwrap());
+                        set_transition_delay(delay);
                     } else if command.contains(&rule_cmd) && paths.size() > 3 {
+                        // Parse the shader rule entries
                         let config = ShaderConfig { 
                             time_range_start: atoi(&paths.get(1).unwrap()), 
                             time_range_end: atoi(&paths.get(2).unwrap()), 
@@ -230,6 +237,7 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
     }
 
     time_cmd.drop();
+    delay_cmd.drop();
     rule_cmd.drop();
     header.drop();
     content.drop();

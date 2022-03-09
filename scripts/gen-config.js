@@ -6,18 +6,25 @@
 */
 const SHADER_TYPE = 'rule';
 const TIME_TYPE = 'time';
+const DELAY_TYPE = 'delay';
 
-const YEARS_FROM_2022 = 10 + (new Date().getFullYear() - 2022);
+const S_TO_NANO = 1000000000;
+const H_TO_S = 60 * 60;
+const DELAY_TTL = 1 * H_TO_S * S_TO_NANO;
+
+const YEARS_FROM_2022 = 3 + (new Date().getFullYear() - 2022);
 const filler_themes = [
-    { shader: 'R2D2', priority: 20 },
-    { shader: 'RetroFuturistic', priority: 20 },
-    { shader: 'Starfleet', priority: 15 },
-    { shader: 'Mars', priority: 15 },
-    { shader: 'Duna', priority: 15 },
-    { shader: 'Jupiter', priority: 15 },
-    { shader: 'Rainbow', priority: 12 },
-    { shader: 'Medbay', priority: 10 },
-    { shader: 'Pride', priority: 10 },
+    { shader: 'R2D2', priority: 6 },
+    { shader: 'RetroFuturistic', priority: 6 },
+    { shader: 'Pirate', priority: 5 },
+    { shader: 'Starfleet', priority: 4 },
+    { shader: 'DoctorWho', priority: 4 },
+    { shader: 'Mars', priority: 4 },
+    { shader: 'Duna', priority: 4 },
+    { shader: 'Jupiter', priority: 4 },
+    { shader: 'Rainbow', priority: 3 },
+    { shader: 'Shire', priority: 1 },
+    { shader: 'Pride', priority: 1 },
 ];
 
 const important_events = [
@@ -42,6 +49,21 @@ const important_events = [
         origin: new Date("06-28-2022"),
     },
     {
+        note: 'Pokemon Day',
+        shader: 'Pokemon',
+        origin: new Date("02-27-2022"),
+    },
+    {
+        note: 'Picard Day',
+        shader: 'Starfleet',
+        origin: new Date("06-16-2022"),
+    },
+    {
+        note: 'Doctor Who Day',
+        shader: 'DoctorWho',
+        origin: new Date("11-23-2022"),
+    },
+    {
         note: 'Christmas',
         shader: 'Xmas',
         origin: new Date("12-25-2022"),
@@ -64,11 +86,18 @@ const important_events = [
         note: 'Star Wars Day',
         shader: 'R2D2',
         origin: new Date('05-04-2022'),
+    },
+    {
+        note: 'Additional entry for Lunar New Year',
+        shader: 'Lunar',
+        origin: new Date("01-31-2022"),
+        range_start: new Date("01-15-2022"),
+        range_end: new Date("02-15-2022"),
     }
 ];
 
 const one_off_events = [
-    { shader: 'R2D2', origin: new Date('03-08-2022') },
+    { shader: 'R2D2', origin: new Date('03-07-2022') },
     { shader: 'Lunar', origin: new Date("01-22-2023") },
     { shader: 'Lunar', origin: new Date("02-10-2024") },
     { shader: 'Lunar', origin: new Date("01-29-2025") },
@@ -108,7 +137,8 @@ exports.generate = () => {
 
     // Generate current time
     lines.push(`${TIME_TYPE};${new Date().getTime()}`);
-
+    lines.push(`${DELAY_TYPE};${DELAY_TTL}`);
+    
     // Generate the filler content
     let filler_start_date = new Date("01-01-2022");
     let filler_end_date = new Date("01-01-2222");
@@ -129,6 +159,8 @@ exports.generate = () => {
             start_date.setFullYear(start_date.getFullYear() + year, start_date.getMonth(), start_date.getDate());
             end_date.setFullYear(end_date.getFullYear() + year, end_date.getMonth(), end_date.getDate());
             end_date.setHours(23);
+            end_date.setMinutes(59);
+            end_date.setSeconds(59);
 
             lines.push(
                 encode(SHADER_TYPE, event.shader, start_date, end_date, 255)
@@ -142,7 +174,9 @@ exports.generate = () => {
                 range_start.setFullYear(range_start.getFullYear() + year, range_start.getMonth(), range_start.getDate());
                 range_end.setFullYear(range_end.getFullYear() + year, range_end.getMonth(), range_end.getDate());
                 range_end.setHours(23);
-
+                range_end.setMinutes(59);
+                range_end.setSeconds(59);
+                
                 lines.push(
                     encode(SHADER_TYPE, event.shader, range_start, range_end, 40)
                 );
@@ -155,6 +189,8 @@ exports.generate = () => {
         let start_date = new Date(event.origin);
         let end_date = new Date(event.origin);
         end_date.setHours(23);
+        end_date.setMinutes(59);
+        end_date.setSeconds(59);
 
         lines.push(
             encode(SHADER_TYPE, event.shader, start_date, end_date, 255)

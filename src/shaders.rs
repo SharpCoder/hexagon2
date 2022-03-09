@@ -30,6 +30,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .with_color(rgb(255, 64, 0))
             .transition_to(rgb(255,0,0), TIME)
             .transition_to(rgb(0,0,0), TIME)
+            .transition_to(rgb(0, 0, 0), TIME)
             .transition_to(rgb(255, 64, 0), TIME)
             .build(),
 
@@ -162,6 +163,33 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .with_color(rgb(255, 98, 0))
             .transition_to(rgb(255, 0, 0), TIME)
             .transition_to(rgb(255, 98, 0), TIME)
+            .build(),
+
+        Shader::new(b"Pokemon")
+            .with_color(rgb(255, 255, 0))
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(255, 255, 0), TIME)
+            .build(),
+
+        Shader::new(b"Shire")
+            .with_color(rgb(0, 255, 0))
+            .transition_to(rgb(0, 255, 0), TIME)
+            .transition_to(rgb(255, 255, 255), TIME)
+            .transition_to(rgb(0, 255, 0), TIME)
+            .build(),
+
+        Shader::new(b"DoctorWho")
+            .with_color(rgb(0, 0, 255))
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(255, 255, 255), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
+            .build(),
+
+        Shader::new(b"Pirate")
+            .with_color(rgb(255, 0, 0))
+            .transition_to(rgb(255, 255, 255), TIME)
+            .transition_to(rgb(255, 0, 0), TIME)
             .build()
         
     );
