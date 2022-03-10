@@ -1,10 +1,11 @@
 include <config.scad>;
 
-thickness = 12;
+thickness = 20;
 h = 116;
 w = 5;
-tol = 1;
-lip = 4;
+tol = .5;
+lip = 5;
+screw_size = 6;
 
 difference() {
     linear_extrude(thickness)
@@ -23,11 +24,11 @@ difference() {
     union() {
         rotate([90, 90, 0])
         linear_extrude(100)
-        circle(d=4.5, $fn=100);
+        circle(d=screw_size + .5, $fn=100);
         
-        translate([-3, 0, 0])
+        translate([-screw_size/1.5, 0, 0])
         rotate([90, 90, 0])
         linear_extrude(100)
-        circle(d=6, $fn=100);
+        circle(d=screw_size + 2, $fn=100);
     }
 }

@@ -7,6 +7,7 @@ const TIME: u64 = 1500;
 pub fn initialize_shaders<'a>() -> Vector<Shader> {
     return vector!(
         Shader::new(b"Lunar")
+            .as_wifi_only()
             .with_color(rgb(199, 7, 2))
             .transition_to(rgb(255, 7, 2), TIME)
             .transition_to(rgb(255, 84, 2), TIME)
@@ -14,6 +15,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Independence")
+            .as_wifi_only()
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255,255,255), TIME)
             .transition_to(rgb(0, 0, 255), TIME)
@@ -27,6 +29,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Halloween")
+            .as_wifi_only() 
             .with_color(rgb(255, 64, 0))
             .transition_to(rgb(255,0,0), TIME)
             .transition_to(rgb(0,0,0), TIME)
@@ -34,13 +37,8 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255, 64, 0), TIME)
             .build(),
 
-        Shader::new(b"SpaceX")
-            .with_color(rgb(0, 0, 0))
-            .transition_to(rgb(255,255,255), TIME)
-            .transition_to(rgb(0,0,0), TIME)
-            .build(),
-
         Shader::new(b"Xmas")
+            .as_wifi_only()
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(0,255,0), TIME)
             .transition_to(rgb(255,0,0), TIME)
@@ -61,15 +59,8 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255,0,0), TIME)
             .build(),
 
-        Shader::new(b"Earth")
-            .with_color(rgb(0,255,0))
-            .transition_to(rgb(0, 0, 220), TIME)
-            .transition_to(rgb(10, 82, 6), TIME)
-            .transition_to(rgb(25,49,15), TIME)
-            .transition_to(rgb(0,255,0), TIME)
-            .build(),
-
         Shader::new(b"Diwali")
+            .as_wifi_only()
             .with_color(rgb(255,0,0))
             .transition_to(rgb(0, 161, 94), TIME)
             .transition_to(rgb(252, 210, 0), TIME)
@@ -91,6 +82,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Birthday")
+            .as_wifi_only()
             .with_color(rgb(255, 0, 70))
             .transition_to(rgb(124, 142, 208), TIME)
             .transition_to(rgb(255, 213, 0), TIME)
@@ -100,6 +92,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
 
 
         Shader::new(b"Pride")
+            .as_wifi_only()
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255, 60, 0), TIME)
             .transition_to(rgb(255, 200, 0), TIME)
@@ -119,11 +112,9 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
 
         Shader::new(b"R2D2")
             .with_color(rgb(0, 0, 255))
-            .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(255, 255, 255), TIME)
             .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(255, 0, 0), TIME)
-            .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(0, 0, 255), TIME)
             .build(),
 
@@ -134,7 +125,8 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(49, 0, 51), TIME)
             .build(),
 
-        Shader::new(b"Valentines")
+        Shader::new(b"Valentines")  
+            .as_wifi_only()
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255, 0, 195), TIME)
             .transition_to(rgb(255, 255,255), TIME)
@@ -160,6 +152,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Thanksgiving")
+            .as_wifi_only()
             .with_color(rgb(255, 98, 0))
             .transition_to(rgb(255, 0, 0), TIME)
             .transition_to(rgb(255, 98, 0), TIME)
@@ -172,6 +165,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Shire")
+            .as_wifi_only()
             .with_color(rgb(0, 255, 0))
             .transition_to(rgb(0, 255, 0), TIME)
             .transition_to(rgb(255, 255, 255), TIME)
@@ -179,6 +173,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"DoctorWho")
+            .as_wifi_only()
             .with_color(rgb(0, 0, 255))
             .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(255, 255, 255), TIME)
@@ -187,6 +182,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Pirate")
+            .as_wifi_only()
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255, 255, 255), TIME)
             .transition_to(rgb(255, 0, 0), TIME)

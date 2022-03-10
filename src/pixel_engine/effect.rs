@@ -15,6 +15,8 @@ pub struct Effect {
     initializer: Option<fn(context: &Context) -> Context>,
     root: Option<*mut EffectNode>,
     pub total_time: u64,
+    pub disabled: bool,
+    pub min_size: usize,
 }
 
 impl Effect {
@@ -24,7 +26,19 @@ impl Effect {
             initializer: None,
             root: None,
             total_time: 0,
+            min_size: 0,
+            disabled: false,
         };
+    }
+
+    pub fn with_min_size(&mut self, min_size: usize) -> &mut Self {
+        self.min_size = min_size;
+        return self;
+    }
+
+    pub fn as_disabled(&mut self) -> &mut Self {
+        self.disabled = true;
+        return self;
     }
 
     pub fn with_initializer(&mut self, func: fn(context: &Context) -> Context) -> &mut Self {

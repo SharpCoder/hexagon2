@@ -16,6 +16,7 @@ pub struct Shader {
     color: Color,
     root: Option<*mut ShaderStep>,
     pub total_time: u64,
+    pub wifi_only: bool,
 }
 
 impl Shader {
@@ -27,6 +28,7 @@ impl Shader {
             color: rgb(0, 0, 0),
             root: None,
             total_time: 0,
+            wifi_only: false,
         }.clone();
     }
 
@@ -49,6 +51,11 @@ impl Shader {
         }
 
         self.total_time += step.time;
+    }
+
+    pub fn as_wifi_only(&mut self) -> &mut Self {
+        self.wifi_only = true;
+        return self;
     }
 
     pub fn with_color(&mut self, color: Color) -> &mut Self {

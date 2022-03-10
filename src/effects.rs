@@ -1,11 +1,12 @@
 use crate::pixel_engine::effect::Effect;
 use teensycore::{system::vector::*, vector, math::rand};
 
-const TIME: u64 = 2500;
+const TIME: u64 = 4500;
 
 pub fn initialize_effects<'a>() -> Vector<Effect> {
     return vector!(
         Effect::new(b"Infection")
+            .as_disabled()
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 let origin = ctx.total_nodes / 2;
@@ -37,46 +38,49 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
         Effect::new(b"Randomized")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = rand() % TIME / 2;
+                next_ctx.offset = rand() % TIME;
                 return next_ctx;
             })
             .transition_to(100, TIME)
             .build(),
 
         Effect::new(b"DanceParty")
+            .with_min_size(10)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = rand() % 4000;
+                next_ctx.offset = rand() % TIME;
                 return next_ctx;
             })
-            .transition_to(100, 4000)
-            .transition_to(0, 2000)
-            .transition_to(100, 3000)
-            .transition_to(0, 1750)
-            .transition_to(100, 2500)
+            .transition_to(100, TIME)
+            .transition_to(0, TIME / 2)
+            .transition_to(100, TIME / 3)
+            .transition_to(0, TIME / 3)
+            .transition_to(100, TIME / 2)
             .build(),
 
         Effect::new(b"Surprise")
+            .with_min_size(6)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = rand() % 2000;
+                next_ctx.offset = rand() % TIME / 2;
                 return next_ctx;
             })
-            .transition_to(50, 2000)
-            .transition_to(75, 1000)
-            .transition_to(100, 800)
+            .transition_to(50, TIME / 2)
+            .transition_to(75, TIME / 3)
+            .transition_to(100, TIME / 4)
             .build(),
 
         Effect::new(b"Grouped")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = (rand() % 3) as u64 * 1000;
+                next_ctx.offset = (rand() % 3) as u64 * TIME / 6;
                 return next_ctx;
             })
-            .transition_to(100, 3000)
+            .transition_to(100, TIME)
             .build(),
 
         Effect::new(b"Grouped2")
+            .with_min_size(6)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 next_ctx.offset = (rand() % 4) as u64 * 500;

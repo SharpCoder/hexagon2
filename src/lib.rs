@@ -20,7 +20,6 @@ pub mod wifi_task;
 #[cfg(not(feature = "testing"))]
 pub mod http;
 
-use core::arch::asm;
 use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::phys::pins::*;
@@ -37,11 +36,12 @@ use teensycore::serio::*;
 use teensycore::system::vector::Vector;
 
 // Feature Flags
-static USE_WIFI: bool = true;
+const USE_WIFI: bool = false;
+const HEX_UNITS: usize = 4;
 
 // Create a system observable for process event
 // handling.
-static mut TRANSITION_DELAY_NANOS: u64 = 10 * teensycore::S_TO_NANO;
+static mut TRANSITION_DELAY_NANOS: u64 = 60 * 30 * teensycore::S_TO_NANO;
 static mut WORLD_TIME_S: u64 = 0;
 static mut UTC_OFFSET: u64 = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: u64 = 0;
@@ -52,7 +52,6 @@ teensycore::main!({
     use crate::*;
 
     // Drivers and stateful things
-    // let _wifi_driver = WifiDriver::new(SerioDevice::Default, 5, 6);
     let thermal_driver = crate::drivers::max31820::Max31820Driver::new(10);
 
     // Tasks
@@ -86,10 +85,6 @@ teensycore::main!({
             pixel_task.ready();
         } else if !USE_WIFI && thermal_task.loaded {
             pixel_task.ready();
-        }
-
-        unsafe {
-            asm!("nop");
         }
     }
 });

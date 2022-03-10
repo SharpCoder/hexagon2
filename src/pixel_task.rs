@@ -17,9 +17,8 @@ use crate::pixel_engine::effect::*;
 use crate::pixel_engine::context::*;
 use crate::drivers::ws2812::*;
 
-const UNITS: usize = 9;
 const LEDS_PER_UNIT: usize = 3;
-const LEDS: usize = UNITS * LEDS_PER_UNIT;
+const LEDS: usize = crate::HEX_UNITS * LEDS_PER_UNIT;
 const TRANSITION_TIME: u64 = 1000; // ms
 
 enum PixelState {
@@ -33,7 +32,7 @@ pub struct PixelTask {
     shader: Option<Shader>,
     next_shader: Option<Shader>,
     shaders: Vector<Shader>,
-    contexts: [Context; UNITS],
+    contexts: [Context; crate::HEX_UNITS],
     effect: Option<Effect>,
     effects: Vector<Effect>,
     driver: WS2812Driver<LEDS>,
@@ -45,7 +44,7 @@ pub struct PixelTask {
     // Randomize every couple hours
     randomize_target: u64,
     ready: bool,
-    color_buffer: [Color; UNITS],
+    color_buffer: [Color; crate::HEX_UNITS],
     transition_start: u64,
     transition_offset: u64,
 }
@@ -70,8 +69,8 @@ impl PixelTask {
             driver: WS2812Driver::<LEDS>::new(
                 18, // pin
             ),
-            color_buffer: [Color::blank(); UNITS],
-            contexts: [Context::empty(); UNITS],
+            color_buffer: [Color::blank(); crate::HEX_UNITS],
+            contexts: [Context::empty(); crate::HEX_UNITS],
         };   
     }
 
@@ -115,25 +114,35 @@ impl PixelTask {
                 Some(shader) => { shader }
             }
         } else {
-            // Otherwise, return any random shader
+            // Otherwise, there is no wifi. Return any random shader.
             let idx = rand() % self.shaders.size() as u64;
-            return self.shaders.get(idx as usize).unwrap();
+            let next_shader = self.shaders.get(idx as usize).unwrap();
+            if next_shader.wifi_only {
+                return self.get_next_shader();
+            } else {
+                return next_shader;
+            }
         }
     }
 
     // Returns a random effect
     fn get_next_effect(&self) -> Effect {
         let idx = rand() % self.effects.size() as u64;
-        return self.effects.get(idx as usize).unwrap();
+        let next_effect = self.effects.get(idx as usize).unwrap();
+        if next_effect.disabled || next_effect.min_size > crate::HEX_UNITS {
+            return self.get_next_effect();
+        } else {
+            return next_effect;
+        }
     }
 
     pub fn init(&mut self) {
         self.driver.init();
 
         // Initialize the contexts
-        for node_id in 0 .. UNITS {
+        for node_id in 0 .. crate::HEX_UNITS {
             self.contexts[node_id].node_id = node_id as u64;
-            self.contexts[node_id].total_nodes = UNITS as u64;
+            self.contexts[node_id].total_nodes = crate::HEX_UNITS as u64;
             self.contexts[node_id].initialized = false;
         }
 
@@ -151,7 +160,7 @@ impl PixelTask {
         self.next_shader = Some(next_shader);
         
         // Randomize each hexagon unit
-        for node_id in 0 .. UNITS {
+        for node_id in 0 .. crate::HEX_UNITS {
             self.contexts[node_id].initialized = false;
             self.contexts[node_id].node_id = node_id as u64;
         }
@@ -191,7 +200,7 @@ impl PixelTask {
                         // into the computed effect of the next color. And once
                         // we've iterated the correct amount of time, we will
                         // swap next_shader with shader.
-                        for node_id in 0 .. UNITS {
+                        for node_id in 0 .. crate::HEX_UNITS {
                             let mut ctx = self.contexts[node_id];
                             let next_shader = self.next_shader.as_mut().unwrap();
                             let transition_time_elapsed = (time - self.transition_start) / MS_TO_NANO;
@@ -217,7 +226,7 @@ impl PixelTask {
                 PixelState::Loading => {
 
                     // For each hexagon node
-                    for node_id in 0 .. UNITS {
+                    for node_id in 0 .. crate::HEX_UNITS {
                         let mut ctx = self.contexts[node_id];
                         let (effect_time, next_context) = effect.process(&mut ctx, elapsed_ms);
                         let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as u64;
