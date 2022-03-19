@@ -14,7 +14,3 @@ difference() {
     hexagon_core();
     power_cord_hole();
 }
-
-rotate(60)
-linear_extrude(10)
-square([40,74], center=true);

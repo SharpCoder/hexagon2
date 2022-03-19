@@ -2,7 +2,8 @@ include <config.scad>;
 
 BASE = 30;
 HEIGHT = 18;
-SURFACE_PADDING = 8;
+SURFACE_PADDING = 9;
+WIDTH = 68;
 
 module snapfit_xtor() {
     hole_width = SNAPFIT_DEPTH;
@@ -10,7 +11,7 @@ module snapfit_xtor() {
     dist_y = 14;
     
     rotate([0,90,0])
-    translate([-(34-12), 0, dist_y - hole_height])
+    translate([-(WIDTH+10)/4, 0, dist_y - hole_height])
     union() {
         linear_extrude(hole_height)
         square([hole_width, 200], center=true);
@@ -18,7 +19,7 @@ module snapfit_xtor() {
 }
 
 difference() {   
-    linear_extrude(70)
+    linear_extrude(WIDTH)
     polygon([
         [-BASE,0],
         [HEX_ARM+BASE, 0],

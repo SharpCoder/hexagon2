@@ -106,6 +106,9 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
+
+        // return self.find_shader(&str!(b"80SciFi")).unwrap();
+
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
             let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());

@@ -159,6 +159,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Pokemon")
+            .as_wifi_only()
             .with_color(rgb(255, 255, 0))
             .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(255, 255, 0), TIME)
@@ -186,6 +187,25 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255, 255, 255), TIME)
             .transition_to(rgb(255, 0, 0), TIME)
+            .build(),
+
+        Shader::new(b"BattlestarGalactica")
+            .as_wifi_only()
+            .with_color(rgb(255, 255, 255))
+            .transition_to(rgb(255, 0, 0), TIME)
+            .transition_to(rgb(200, 200, 200), TIME)
+            .transition_to(rgb(255, 0, 0), TIME)
+            .transition_to(rgb(255, 255, 255), TIME)
+            .build(),
+
+        Shader::new(b"80SciFi")
+            .with_color(rgb(20,255,25))
+            .transition_to(rgb(42,0,234), TIME)
+            .transition_to(rgb(144,0,238), TIME)
+            .transition_to(rgb(144,238,0), TIME)
+            .transition_to(rgb(200,20,20), TIME)
+            .transition_to(rgb(144,138,238), TIME)
+            .transition_to(rgb(20,255,25), TIME)
             .build()
         
     );
