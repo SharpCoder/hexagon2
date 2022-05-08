@@ -87,10 +87,6 @@ teensycore::main!({
         } else if !USE_WIFI && thermal_task.loaded {
             pixel_task.ready();
         }
-
-        if teensycore::clock::has_overflowed() {
-            break;
-        }
     }
 });
 

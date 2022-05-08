@@ -1,6 +1,6 @@
 include <config.scad>;
 $fn = 6;
-tol = 0;
+tol = .2;
 
 SHIELD_THICKNESS = 3;
 SHIELD_DIFFUSER_PADDING = .5;

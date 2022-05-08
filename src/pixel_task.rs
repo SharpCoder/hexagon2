@@ -256,7 +256,7 @@ impl PixelTask {
                             self.day_processed = datetime.days;
                             self.randomize();
                         }
-                        self.day_target = nanos() + (S_TO_NANO * 60 * 30);
+                        self.day_target = nanos() + S_TO_NANO;// (S_TO_NANO * 60 * 30);
                     } else if nanos() > self.randomize_target {
                         self.randomize();
                     }
