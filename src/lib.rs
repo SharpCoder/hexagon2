@@ -22,6 +22,7 @@ pub mod http;
 
 use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
+use teensycore::clock::uNano;
 use teensycore::phys::pins::*;
 use pixel_task::*;
 
@@ -41,10 +42,10 @@ const HEX_UNITS: usize = 4;
 
 // Create a system observable for process event
 // handling.
-static mut TRANSITION_DELAY_NANOS: u64 = 60 * 30 * teensycore::S_TO_NANO;
-static mut WORLD_TIME_S: u64 = 0;
-static mut UTC_OFFSET: u64 = 8;
-static mut UPTIME_WORLDTIME_OFFSET_S: u64 = 0;
+static mut TRANSITION_DELAY_NANOS: uNano = 60 * 30 * teensycore::S_TO_NANO;
+static mut WORLD_TIME_S: uNano = 0;
+static mut UTC_OFFSET: uNano = 8;
+static mut UPTIME_WORLDTIME_OFFSET_S: uNano = 0;
 static mut SHADER_CONFIGS: ShaderConfigList = ShaderConfigList { configs: Vector { head: None, size: 0 } };
 
 #[cfg(not(feature = "testing"))]
@@ -81,16 +82,20 @@ teensycore::main!({
 
         // If the thermal task has completed, we can transition
         // the loading indicator forward
-        if USE_WIFI && thermal_task.loaded && wifi_task.ready {
+        if USE_WIFI && wifi_task.ready {
             pixel_task.ready();
         } else if !USE_WIFI && thermal_task.loaded {
             pixel_task.ready();
+        }
+
+        if teensycore::clock::has_overflowed() {
+            break;
         }
     }
 });
 
 /// Sets the current unix epoch in seconds
-pub fn set_world_time(time_s: u64) {
+pub fn set_world_time(time_s: uNano) {
     unsafe {
         UPTIME_WORLDTIME_OFFSET_S = nanos() / S_TO_NANO;
         WORLD_TIME_S = time_s;
@@ -98,31 +103,31 @@ pub fn set_world_time(time_s: u64) {
 }
 
 /// Returns the current unix epoch relative to seconds
-pub fn get_world_time() -> u64 {
+pub fn get_world_time() -> uNano {
     return unsafe {
         WORLD_TIME_S + (nanos() / S_TO_NANO) - UPTIME_WORLDTIME_OFFSET_S
     };
 }
 
-pub fn set_utc_offset(offset: u64) {
+pub fn set_utc_offset(offset: uNano) {
     unsafe {
         UTC_OFFSET = offset;
     }
 }
 
-pub fn get_utc_offset() -> u64 {
+pub fn get_utc_offset() -> uNano {
     return unsafe {
         UTC_OFFSET
     };
 }
 
-pub fn get_tranasition_delay() -> u64 {
+pub fn get_tranasition_delay() -> uNano {
     return unsafe {
         TRANSITION_DELAY_NANOS
     };
 }
 
-pub fn set_transition_delay(nanos: u64) {
+pub fn set_transition_delay(nanos: uNano) {
     unsafe {
         TRANSITION_DELAY_NANOS = nanos;
     }

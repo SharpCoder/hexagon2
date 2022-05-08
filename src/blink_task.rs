@@ -8,8 +8,9 @@ blink requests without tying up system resources.
 use crate::*;
 use teensycore::debug::*;
 use teensycore::gate::*;
+use teensycore::clock::*;
 
-static mut NEXT_BLINK_EVENT: u64 = 0x0;
+static mut NEXT_BLINK_EVENT: uNano = 0x0;
 
 pub struct BlinkTask { }
 impl BlinkTask {
@@ -26,10 +27,10 @@ impl Task for BlinkTask {
         gate_open!()
             .when(|_| unsafe { BLINK_CONFIG.remaining_count } > 0, || {
                 unsafe {
-                    NEXT_BLINK_EVENT = teensycore::clock::nanos() + BLINK_CONFIG.speed as u64;
+                    NEXT_BLINK_EVENT = nanos() + BLINK_CONFIG.speed as uNano;
                 }
             })
-            .when(|_| teensycore::clock::nanos() > unsafe { NEXT_BLINK_EVENT }, || {
+            .when(|_| nanos() > unsafe { NEXT_BLINK_EVENT }, || {
                 unsafe {
                     if BLINK_CONFIG.remaining_count % 2 == 0 {
                         blink_led_on();

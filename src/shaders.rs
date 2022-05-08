@@ -1,8 +1,9 @@
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::shader::*;
 use teensycore::{system::vector::*, vector};
+use teensycore::clock::uNano;
 
-const TIME: u64 = 1500;
+const TIME: uNano = 1500;
 
 pub fn initialize_shaders<'a>() -> Vector<Shader> {
     return vector!(

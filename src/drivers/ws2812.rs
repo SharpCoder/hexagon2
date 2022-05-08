@@ -1,12 +1,12 @@
 use teensycore::phys::irq::{disable_interrupts, enable_interrupts};
 use teensycore::phys::pins::*;
-use teensycore::{wait_ns, wait_exact_ns, MICRO_TO_NANO};
+use teensycore::{wait_ns, wait_exact_ns, MICRO_TO_NANO, clock::uNano};
 
 // 800MHz
-const T0_H: u64 = 110; // ns
-const T0_L: u64 = 600;
-const T1_H: u64 = 600; // ns
-const T1_L: u64 = 600;
+const T0_H: uNano = 110; // ns
+const T0_L: uNano = 600;
+const T1_H: uNano = 600; // ns
+const T1_L: uNano = 600;
 
 
 #[derive(Clone, Copy)]

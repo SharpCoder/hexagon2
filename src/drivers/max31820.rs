@@ -3,7 +3,7 @@ use teensycore::clock::*;
 use teensycore::debug::*;
 use teensycore::phys::pins::*;
 
-const fn micros(time: u64) -> u64 {
+const fn micros(time: uNano) -> uNano {
     return MICRO_TO_NANO * time;
 }
 

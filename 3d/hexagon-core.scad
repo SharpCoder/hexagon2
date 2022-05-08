@@ -58,8 +58,16 @@ module hexagon_core() {
             mirror([1,0,0])
             snapfit_xtor();
             
-            wire_channel();
+            //wire_channel();
+    
         }
+        
+        // Uncomment this for hexbrain
+        
+        wire_channel();
+        rotate(120)
+        wire_channel();
+        
     }
 
 

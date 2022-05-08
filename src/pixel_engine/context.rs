@@ -1,14 +1,16 @@
+use teensycore::clock::uNano;
+
 /// Context represents attributes for a single hexagon node.
 /// Each unit in the overall design will have its own corresponding
 /// context instance.
 #[derive(Copy, Clone)]
 pub struct Context { 
     pub initialized: bool,
-    pub node_id: u64,
-    pub total_nodes: u64,
+    pub node_id: uNano, // These are time units because they will be integrated with time in math
+    pub total_nodes: uNano,
     pub temperature: i32,
     pub registers: [i32; 10],
-    pub offset: u64,
+    pub offset: uNano,
 }
 
 impl Context {

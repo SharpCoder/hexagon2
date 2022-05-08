@@ -198,7 +198,7 @@ pub fn esp8266_list_wifi(device: SerioDevice) {
     esp8266_raw(device, b"AT+CWLAP");
 }
 
-pub fn esp8266_block_until(device: SerioDevice, command: &[u8], timeout: u64) {
+pub fn esp8266_block_until(device: SerioDevice, command: &[u8], timeout: uNano) {
     let threshold = nanos() + timeout;
     let cmd = str!(command);
 

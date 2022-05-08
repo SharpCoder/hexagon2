@@ -2,15 +2,16 @@
 use teensycore::math::rand;
 use teensycore::system::str::*;
 use teensycore::system::vector::*;
+use teensycore::clock::uNano;
 
 /// A ShaderConfig defines the configuration for a particular
 /// shader.
 #[derive(Copy, Clone)]
 pub struct ShaderConfig {
     /// Time (in unix epoch seconds) at which this rule is active
-    pub time_range_start: u64,
+    pub time_range_start: uNano,
     /// Time (in unix epoch seconds) at which this rule ends
-    pub time_range_end: u64,
+    pub time_range_end: uNano,
     /// The shader which this rule pertains to
     pub shader: Str,
     /// The probability of selection (Between 0 - 255)
@@ -37,7 +38,7 @@ impl ShaderConfigList {
         self.configs.push(config);
     }
 
-    pub fn get_shader(&self, date: u64) -> Str {
+    pub fn get_shader(&self, date: uNano) -> Str {
         let mut total_probabilities = 0;
         let mut candidates = Vector::new();
 
@@ -59,9 +60,9 @@ impl ShaderConfigList {
         candidates.free();
 
         let target = rand() % total_probabilities;
-        let mut accumulator = 0u64;
+        let mut accumulator = 0;
         for candidate in shuffled.into_iter() {
-            accumulator += candidate.probability as u64;
+            accumulator += candidate.probability;
             if accumulator >= target {
                 shuffled.free();
                 return candidate.shader;

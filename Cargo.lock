@@ -18,8 +18,6 @@ dependencies = [
 [[package]]
 name = "teensycore"
 version = "0.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "918157a066b694ba232fd174ef9fe0d47baca84e11960811e37fb34f59d41483"
 dependencies = [
  "cc",
 ]

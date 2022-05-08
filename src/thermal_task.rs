@@ -10,7 +10,7 @@ use crate::drivers::max31820::Max31820Driver;
 const SAMPLES: usize = 4;
 pub struct ThermalTask {
     driver: Max31820Driver,
-    next_event: u64,
+    next_event: uNano,
     count: usize,
     samples: [Option<u16>; SAMPLES],
     pub loaded: bool,
@@ -60,7 +60,7 @@ impl ThermalTask {
                 // Reach into the dregs of what we have available and utilize
                 // the bits of entropy associated with timing delays aggregated
                 // up to this point. (NOTE: This actually makes a significant difference)
-                prng_seed *= nanos();
+                prng_seed *= nanos() as u64;
 
                 debug_u64(prng_seed, b"prng seed");
                 seed_rand(prng_seed);

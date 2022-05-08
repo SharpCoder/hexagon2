@@ -1,7 +1,12 @@
 use crate::pixel_engine::effect::Effect;
+use teensycore::clock::uNano;
 use teensycore::{system::vector::*, vector, math::rand};
 
-const TIME: u64 = 4500;
+const TIME: uNano = 4500;
+
+fn nano_rand() -> uNano {
+    return rand() as uNano;
+}
 
 pub fn initialize_effects<'a>() -> Vector<Effect> {
     return vector!(
@@ -17,8 +22,8 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
                 } else {
                     node_id = ctx.node_id + origin;
                 }
-                let step = TIME / ctx.total_nodes;
-                next_ctx.offset = (node_id * step) as u64;
+                let step = TIME / ctx.total_nodes as uNano;
+                next_ctx.offset = (node_id * step) as uNano;
                 return next_ctx;
             })
             .transition_to(100, TIME)
@@ -29,7 +34,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 let step = TIME / ctx.total_nodes;
-                next_ctx.offset = (ctx.node_id * step) as u64;
+                next_ctx.offset = (ctx.node_id * step) as uNano;
                 return next_ctx;
             })
             .transition_to(100, TIME)
@@ -38,7 +43,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
         Effect::new(b"Randomized")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = rand() % TIME;
+                next_ctx.offset = nano_rand() % TIME;
                 return next_ctx;
             })
             .transition_to(100, TIME)
@@ -48,7 +53,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .with_min_size(10)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = rand() % TIME;
+                next_ctx.offset = nano_rand() % TIME;
                 return next_ctx;
             })
             .transition_to(100, TIME)
@@ -62,7 +67,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .with_min_size(6)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = rand() % TIME / 2;
+                next_ctx.offset = nano_rand() % TIME / 2;
                 return next_ctx;
             })
             .transition_to(50, TIME / 2)
@@ -73,7 +78,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
         Effect::new(b"Grouped")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = (rand() % 3) as u64 * TIME / 6;
+                next_ctx.offset = (nano_rand() % 3) * TIME / 6;
                 return next_ctx;
             })
             .transition_to(100, TIME)
@@ -83,7 +88,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .with_min_size(6)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
-                next_ctx.offset = (rand() % 4) as u64 * 500;
+                next_ctx.offset = (nano_rand() % 4) as uNano * 500;
                 return next_ctx;
             })
             .transition_to(100, 3000)
@@ -94,9 +99,9 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
                 let mut next_ctx = ctx.clone();
                 let id = ctx.node_id + 1;
                 let step = TIME as f32 / ctx.total_nodes as f32;
-                let max = (step * id as f32) as u64;
+                let max = (step * id as f32) as uNano;
 
-                next_ctx.offset = rand() % max;
+                next_ctx.offset = (nano_rand() % max) as uNano;
                 return next_ctx;
             })
             .transition_to(100, TIME)

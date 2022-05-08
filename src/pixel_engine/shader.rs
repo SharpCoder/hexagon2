@@ -1,10 +1,11 @@
 use teensycore::mem::*;
+use teensycore::clock::uNano;
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::math::*;
 
 #[derive(Copy, Clone)]
 struct ShaderStep {
-    time: u64,
+    time: uNano,
     color: Color,
     next: Option<*mut ShaderStep>,
 }
@@ -15,7 +16,7 @@ pub struct Shader {
     sealed: bool,
     color: Color,
     root: Option<*mut ShaderStep>,
-    pub total_time: u64,
+    pub total_time: uNano,
     pub wifi_only: bool,
 }
 
@@ -63,7 +64,7 @@ impl Shader {
         return self;
     }
 
-    pub fn transition_to(&mut self, color: Color, time: u64) -> &mut Self {
+    pub fn transition_to(&mut self, color: Color, time: uNano) -> &mut Self {
         if self.sealed {
             return self;
         }
@@ -91,7 +92,7 @@ impl Shader {
         return self.clone();
     }
 
-    pub fn get_color(&mut self, time: u64) -> Color {
+    pub fn get_color(&mut self, time: uNano) -> Color {
         let normalized_time = time % self.total_time;
         // Now the interpolation begins
         // Find the node we care about

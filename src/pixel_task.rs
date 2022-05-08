@@ -19,7 +19,7 @@ use crate::drivers::ws2812::*;
 
 const LEDS_PER_UNIT: usize = 3;
 const LEDS: usize = crate::HEX_UNITS * LEDS_PER_UNIT;
-const TRANSITION_TIME: u64 = 1000; // ms
+const TRANSITION_TIME: uNano = 1000; // ms
 
 enum PixelState {
     Loading,
@@ -36,17 +36,17 @@ pub struct PixelTask {
     effect: Option<Effect>,
     effects: Vector<Effect>,
     driver: WS2812Driver<LEDS>,
-    target: u64,
-    day_target: u64,
+    target: uNano,
+    day_target: uNano,
 
     /// The day on which we last randomized the sequence
-    day_processed: u64,
+    day_processed: uNano,
     // Randomize every couple hours
-    randomize_target: u64,
+    randomize_target: uNano,
     ready: bool,
     color_buffer: [Color; crate::HEX_UNITS],
-    transition_start: u64,
-    transition_offset: u64,
+    transition_start: uNano,
+    transition_offset: uNano,
 }
 
 impl PixelTask {
@@ -106,9 +106,6 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-
-        // return self.find_shader(&str!(b"80SciFi")).unwrap();
-
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
             let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
@@ -144,8 +141,8 @@ impl PixelTask {
 
         // Initialize the contexts
         for node_id in 0 .. crate::HEX_UNITS {
-            self.contexts[node_id].node_id = node_id as u64;
-            self.contexts[node_id].total_nodes = crate::HEX_UNITS as u64;
+            self.contexts[node_id].node_id = node_id as uNano;
+            self.contexts[node_id].total_nodes = crate::HEX_UNITS as uNano;
             self.contexts[node_id].initialized = false;
         }
 
@@ -165,7 +162,7 @@ impl PixelTask {
         // Randomize each hexagon unit
         for node_id in 0 .. crate::HEX_UNITS {
             self.contexts[node_id].initialized = false;
-            self.contexts[node_id].node_id = node_id as u64;
+            self.contexts[node_id].node_id = node_id as uNano;
         }
 
         // Randomize the next effect
@@ -208,7 +205,7 @@ impl PixelTask {
                             let next_shader = self.next_shader.as_mut().unwrap();
                             let transition_time_elapsed = (time - self.transition_start) / MS_TO_NANO;
                             let (effect_time, next_context) = effect.process(&mut ctx, transition_time_elapsed);
-                            let time_t = ((effect_time as f64 / 100.0) * next_shader.total_time as f64) as u64;
+                            let time_t = ((effect_time as f64 / 100.0) * next_shader.total_time as f64) as uNano;
                             let next_color = next_shader.get_color(time_t);
                             self.contexts[node_id] = next_context;
                             
@@ -232,7 +229,7 @@ impl PixelTask {
                     for node_id in 0 .. crate::HEX_UNITS {
                         let mut ctx = self.contexts[node_id];
                         let (effect_time, next_context) = effect.process(&mut ctx, elapsed_ms);
-                        let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as u64;
+                        let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as uNano;
                         self.color_buffer[node_id] = shader.get_color(time_t);
                         let color = self.color_buffer[node_id].as_hex();
 

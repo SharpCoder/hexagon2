@@ -4,6 +4,7 @@ use crate::http::parser::*;
 use crate::pixel_engine::shader_config::ShaderConfig;
 use crate::pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
+use teensycore::clock::uNano;
 use teensycore::gate::*;
 use teensycore::math::seed_rand;
 use teensycore::system::str::*;
@@ -18,7 +19,7 @@ const RST_PIN: usize = 2;
 const EN_PIN: usize = 3;
 
 static mut INITIALIZED: bool = false;
-static mut INITIALIZE_TIMEOUT: u64 = 0;
+static mut INITIALIZE_TIMEOUT: uNano = 0;
 
 static mut OK: Option<Str> = None;
 static mut READY: Option<Str> = None;
@@ -117,7 +118,7 @@ impl WifiTask {
                 esp8266_auto_connect(DEVICE, false);
             })
             .when(ok, || {
-                let mut ssid = str!(b"NCC-1701D");
+                let mut ssid = str!(b"B&M");
                 let mut pwd = str!(b"password_here");
 
                 esp8266_connect_to_wifi(DEVICE, &ssid, &pwd);
@@ -210,20 +211,20 @@ fn parse_config(serial_content: &Str) -> ShaderConfigList {
 
                     if command.contains(&time_cmd) && paths.size() > 1 {
                         // Parse world time
-                        let epoch = atoi(&paths.get(1).unwrap()) / 1000;
+                        let epoch = (atoi(&paths.get(1).unwrap()) / 1000) as uNano;
                         set_world_time(epoch);
-                        seed_rand(epoch);
+                        seed_rand(epoch as u64);
                     } else if command.contains(&delay_cmd) && paths.size() > 1 {
                         // Parse transition delay (global setting)
-                        let delay = atoi(&paths.get(1).unwrap());
+                        let delay = atoi(&paths.get(1).unwrap()) as uNano;
                         set_transition_delay(delay);
                     } else if command.contains(&rule_cmd) && paths.size() > 3 {
                         // Parse the shader rule entries
                         let config = ShaderConfig { 
-                            time_range_start: atoi(&paths.get(1).unwrap()), 
-                            time_range_end: atoi(&paths.get(2).unwrap()), 
+                            time_range_start: atoi(&paths.get(1).unwrap()) as uNano, 
+                            time_range_end: atoi(&paths.get(2).unwrap()) as uNano, 
                             shader: paths.get(3).unwrap(), 
-                            probability: atoi(&paths.get(4).unwrap()),
+                            probability: atoi(&paths.get(4).unwrap()) as u64,
                         };
 
                         configs.push(config);

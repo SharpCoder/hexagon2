@@ -1,4 +1,5 @@
 use crate::{get_world_time, get_utc_offset};
+use teensycore::clock::uNano;
 
 /// Contrary to what you might think,
 /// This is an extremely limited interpreation of
@@ -8,9 +9,9 @@ use crate::{get_world_time, get_utc_offset};
 /// Hour - Hour of the day (in PDT)
 pub struct DateTime {
     // Days since epoch
-    pub days: u64,
+    pub days: uNano,
     // Hour of day
-    pub hour: u64,
+    pub hour: uNano,
 }
 
 impl DateTime {

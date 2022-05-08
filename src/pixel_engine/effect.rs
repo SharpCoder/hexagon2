@@ -1,9 +1,10 @@
 use teensycore::mem::*;
+use teensycore::clock::uNano;
 use crate::pixel_engine::math::*;
 use crate::pixel_engine::context::*;
 #[derive(Copy, Clone)]
 pub struct EffectNode {
-    pub duration: u64,
+    pub duration: uNano,
     pub target: u32,
     hold: bool,
     next: Option<*mut EffectNode>,
@@ -14,7 +15,7 @@ pub struct Effect {
     pub name: &'static [u8],
     initializer: Option<fn(context: &Context) -> Context>,
     root: Option<*mut EffectNode>,
-    pub total_time: u64,
+    pub total_time: uNano,
     pub disabled: bool,
     pub min_size: usize,
 }
@@ -64,7 +65,7 @@ impl Effect {
         }
     }
 
-    pub fn transition_to(&mut self, target: u32, duration: u64) -> &mut Self {
+    pub fn transition_to(&mut self, target: u32, duration: uNano) -> &mut Self {
         self.add_node(EffectNode {
             duration: duration,
             target: target,
@@ -76,7 +77,7 @@ impl Effect {
         return self;
     }
 
-    pub fn transition_to_and_hold(&mut self, target: u32, duration: u64) -> &mut Self {
+    pub fn transition_to_and_hold(&mut self, target: u32, duration: uNano) -> &mut Self {
         self.add_node(EffectNode {
             duration: duration,
             target: target,
@@ -93,7 +94,7 @@ impl Effect {
         return self.clone();
     }
 
-    pub fn process(&mut self, ctx: &mut Context, current_time: u64) -> (u64, Context) {
+    pub fn process(&mut self, ctx: &mut Context, current_time: uNano) -> (uNano, Context) {
         let mut next_context = ctx.clone();
 
         if !ctx.initialized {
@@ -143,7 +144,7 @@ impl Effect {
             let target_time = unsafe { (*ptr).target };
             let next_time = interpolate(start_time, target_time, normalized_time - elapsed, duration);
         
-            return (next_time as u64, next_context);
+            return (next_time as uNano, next_context);
         }
     }
 }
