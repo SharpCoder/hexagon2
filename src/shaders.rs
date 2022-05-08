@@ -8,7 +8,6 @@ const TIME: uNano = 1500;
 pub fn initialize_shaders<'a>() -> Vector<Shader> {
     return vector!(
         Shader::new(b"Lunar")
-            .as_wifi_only()
             .with_color(rgb(199, 7, 2))
             .transition_to(rgb(255, 7, 2), TIME)
             .transition_to(rgb(255, 84, 2), TIME)
@@ -51,15 +50,6 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255,0,0), TIME)
             .build(),
 
-        Shader::new(b"Duna")
-            .with_color(rgb(255, 0, 0))
-            .transition_to(rgb(232,64,0), TIME)
-            .transition_to(rgb(255,255,255), TIME)
-            .transition_to(rgb(232,64,0), TIME)
-            .transition_to(rgb(255,0,0), TIME)
-            .transition_to(rgb(255,0,0), TIME)
-            .build(),
-
         Shader::new(b"Diwali")
             .as_wifi_only()
             .with_color(rgb(255,0,0))
@@ -93,7 +83,6 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
 
 
         Shader::new(b"Pride")
-            .as_wifi_only()
             .with_color(rgb(255, 0, 0))
             .transition_to(rgb(255, 60, 0), TIME)
             .transition_to(rgb(255, 200, 0), TIME)
@@ -101,13 +90,6 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(0, 0, 255), TIME)
             .transition_to(rgb(60, 0, 255), TIME)
             .transition_to(rgb(255, 0, 0), TIME)
-            .build(),
-        
-        Shader::new(b"Starfleet")
-            .with_color(rgb(0, 0, 255))
-            .transition_to(rgb(255, 0, 0), TIME)
-            .transition_to(rgb(255, 255, 0), TIME)
-            .transition_to(rgb(0, 0, 255), TIME)
             .build(),
 
 
@@ -120,6 +102,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"Jupiter")
+            .as_disabled()
             .with_color(rgb(49, 0, 51))
             .transition_to(rgb(225,35,0), TIME)
             .transition_to(rgb(255,0,0), TIME)
@@ -200,6 +183,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
         Shader::new(b"80SciFi")
+            .as_disabled()
             .with_color(rgb(20,255,25))
             .transition_to(rgb(42,0,234), TIME)
             .transition_to(rgb(144,0,238), TIME)

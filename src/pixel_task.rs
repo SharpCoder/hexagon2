@@ -106,18 +106,25 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
+        // return self.find_shader(&str!(b"Rainbow")).unwrap();
+        
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
             let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
-            return match self.find_shader(&appropriate_shader) {
+            match self.find_shader(&appropriate_shader) {
                 None => return self.shaders.get(0).unwrap(),
-                Some(shader) => { shader }
+                Some(shader) => { 
+                    if shader.disabled {
+                         return self.get_next_shader();
+                    }
+                    return shader; 
+                }
             }
         } else {
             // Otherwise, there is no wifi. Return any random shader.
             let idx = rand() % self.shaders.size() as u64;
             let next_shader = self.shaders.get(idx as usize).unwrap();
-            if next_shader.wifi_only {
+            if next_shader.wifi_only || next_shader.disabled {
                 return self.get_next_shader();
             } else {
                 return next_shader;
@@ -127,6 +134,8 @@ impl PixelTask {
 
     // Returns a random effect
     fn get_next_effect(&self) -> Effect {
+        // return self.find_effect(b"Distributed").unwrap();
+
         let idx = rand() % self.effects.size() as u64;
         let next_effect = self.effects.get(idx as usize).unwrap();
         if next_effect.disabled || next_effect.min_size > crate::HEX_UNITS {

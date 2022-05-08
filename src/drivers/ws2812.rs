@@ -94,34 +94,36 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
     }
 
     pub fn flush(&self) {
+        disable_interrupts();
         let mut node_index = 0;
         let mut bit_index: i32;
         
-        while node_index < SIZE {
-            let node = self.nodes[node_index];
-            let color: u32 = 
-                ((node.green as u32) << 16) |
-                ((node.red as u32) << 8) |
-                (node.blue as u32); 
+        for _ in 0 ..= 1 {
+            while node_index < SIZE {
+                let node = self.nodes[node_index];
+                let color: u32 = 
+                    ((node.green as u32) << 16) |
+                    ((node.red as u32) << 8) |
+                    (node.blue as u32); 
 
-            disable_interrupts();
-            // Now we need to process each bit
-            bit_index = 23;
-            while bit_index >= 0 {
-                let bit = color & (0x1 << bit_index);
-                if bit > 0 {
-                    self.on_bit();
-                } else {
-                    self.off_bit();
+                // Now we need to process each bit
+                bit_index = 23;
+                while bit_index >= 0 {
+                    let bit = color & (0x1 << bit_index);
+                    if bit > 0 {
+                        self.on_bit();
+                    } else {
+                        self.off_bit();
+                    }
+                    bit_index -= 1;
                 }
-                bit_index -= 1;
-            }
 
-            enable_interrupts();
-            node_index += 1;
+                node_index += 1;
+            }
         }
 
         self.rest();
+        enable_interrupts();
         
     }
 }

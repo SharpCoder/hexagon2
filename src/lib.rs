@@ -40,9 +40,12 @@ use teensycore::system::vector::Vector;
 const USE_WIFI: bool = false;
 const HEX_UNITS: usize = 4;
 
-// Create a system observable for process event
-// handling.
-static mut TRANSITION_DELAY_NANOS: uNano = 60 * 30 * teensycore::S_TO_NANO;
+// Time Constants
+static MIN_IN_HOUR: uNano = 60;
+static SECONDS_IN_MIN: uNano = 60;
+
+// Random Stuff
+static mut TRANSITION_DELAY_NANOS: uNano = 2 /* Hours */ * MIN_IN_HOUR * SECONDS_IN_MIN * teensycore::S_TO_NANO;
 static mut WORLD_TIME_S: uNano = 0;
 static mut UTC_OFFSET: uNano = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: uNano = 0;

@@ -18,6 +18,7 @@ pub struct Shader {
     root: Option<*mut ShaderStep>,
     pub total_time: uNano,
     pub wifi_only: bool,
+    pub disabled: bool,
 }
 
 impl Shader {
@@ -26,6 +27,7 @@ impl Shader {
         return Shader{
             name: name,
             sealed: false,
+            disabled: false,
             color: rgb(0, 0, 0),
             root: None,
             total_time: 0,
@@ -56,6 +58,11 @@ impl Shader {
 
     pub fn as_wifi_only(&mut self) -> &mut Self {
         self.wifi_only = true;
+        return self;
+    }
+
+    pub fn as_disabled(&mut self) -> &mut Self {
+        self.disabled = true;
         return self;
     }
 

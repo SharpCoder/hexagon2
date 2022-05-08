@@ -11,7 +11,6 @@ fn nano_rand() -> uNano {
 pub fn initialize_effects<'a>() -> Vector<Effect> {
     return vector!(
         Effect::new(b"Infection")
-            .as_disabled()
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 let origin = ctx.total_nodes / 2;
@@ -22,6 +21,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
                 } else {
                     node_id = ctx.node_id + origin;
                 }
+
                 let step = TIME / ctx.total_nodes as uNano;
                 next_ctx.offset = (node_id * step) as uNano;
                 return next_ctx;
@@ -50,7 +50,7 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .build(),
 
         Effect::new(b"DanceParty")
-            .with_min_size(10)
+            .as_disabled()
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 next_ctx.offset = nano_rand() % TIME;
@@ -64,7 +64,6 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .build(),
 
         Effect::new(b"Surprise")
-            .with_min_size(6)
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 next_ctx.offset = nano_rand() % TIME / 2;
@@ -75,31 +74,13 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .transition_to(100, TIME / 4)
             .build(),
 
-        Effect::new(b"Grouped")
-            .with_initializer(|ctx| {
-                let mut next_ctx = ctx.clone();
-                next_ctx.offset = (nano_rand() % 3) * TIME / 6;
-                return next_ctx;
-            })
-            .transition_to(100, TIME)
-            .build(),
-
-        Effect::new(b"Grouped2")
-            .with_min_size(6)
-            .with_initializer(|ctx| {
-                let mut next_ctx = ctx.clone();
-                next_ctx.offset = (nano_rand() % 4) as uNano * 500;
-                return next_ctx;
-            })
-            .transition_to(100, 3000)
-            .build(),
 
         Effect::new(b"Wave")
             .with_initializer(|ctx| {
                 let mut next_ctx = ctx.clone();
                 let id = ctx.node_id + 1;
-                let step = TIME as f32 / ctx.total_nodes as f32;
-                let max = (step * id as f32) as uNano;
+                let step = TIME / ctx.total_nodes;
+                let max = (step * id) as uNano;
 
                 next_ctx.offset = (nano_rand() % max) as uNano;
                 return next_ctx;
