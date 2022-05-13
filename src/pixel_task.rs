@@ -19,7 +19,7 @@ use crate::drivers::ws2812::*;
 
 const LEDS_PER_UNIT: usize = 3;
 const LEDS: usize = crate::HEX_UNITS * LEDS_PER_UNIT;
-const TRANSITION_TIME: uNano = 1000; // ms
+const TRANSITION_TIME: uNano = 500; // ms
 
 enum PixelState {
     Loading,
@@ -41,12 +41,15 @@ pub struct PixelTask {
 
     /// The day on which we last randomized the sequence
     day_processed: uNano,
+    cycles: u64,
+    
     // Randomize every couple hours
     randomize_target: uNano,
     ready: bool,
     color_buffer: [Color; crate::HEX_UNITS],
     transition_start: uNano,
     transition_offset: uNano,
+    cycle_offset: uNano,
 }
 
 impl PixelTask {
@@ -60,6 +63,8 @@ impl PixelTask {
             day_processed: 0,
             transition_start: 0,
             transition_offset: 0,
+            cycle_offset: 0,
+            cycles: 0,
             ready: false,
             shader: None,
             effect: None,
@@ -103,11 +108,16 @@ impl PixelTask {
 
     }
 
+    fn cycle_next_shader(&mut self) {
+        let idx = (self.cycles / 3) as usize % self.shaders.size();
+        let shader = self.shaders.get(idx).unwrap();
+        self.transition_to(shader);
+    }
+
+
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        // return self.find_shader(&str!(b"Rainbow")).unwrap();
-        
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
             let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
@@ -133,13 +143,18 @@ impl PixelTask {
     }
 
     // Returns a random effect
-    fn get_next_effect(&self) -> Effect {
-        // return self.find_effect(b"Distributed").unwrap();
+    fn get_next_effect(&self, shader: &Shader) -> Effect {
+        // if shader.total_segments < 3 {
+        //     return self.find_effect(b"Randomized").unwrap();
+        // } else {
+            // return self.find_effect(b"Grouped").unwrap();
+        // }
 
+        // Select an appropriate effect to match the shader
         let idx = rand() % self.effects.size() as u64;
         let next_effect = self.effects.get(idx as usize).unwrap();
-        if next_effect.disabled || next_effect.min_size > crate::HEX_UNITS {
-            return self.get_next_effect();
+        if next_effect.disabled ||  next_effect.max_color_segments.unwrap_or(usize::MAX) < shader.total_segments {
+            return self.get_next_effect(shader);
         } else {
             return next_effect;
         }
@@ -158,11 +173,11 @@ impl PixelTask {
         // Set the next day processing target
         self.day_target = nanos() + (S_TO_NANO * 60 * 30);
 
-        // Select an effect
-        self.effect = Some(self.get_next_effect());
-
         // Select a shader
         self.shader = self.find_shader(&str!(b"Medbay"));
+        
+        // Select an effect
+        self.effect = Some(self.get_next_effect(&self.shader.unwrap()));
     }
 
     pub fn transition_to(&mut self, next_shader: Shader) {
@@ -175,7 +190,7 @@ impl PixelTask {
         }
 
         // Randomize the next effect
-        self.effect = Some(self.get_next_effect());
+        self.effect = Some(self.get_next_effect(&next_shader));
 
         // Set the transition start time
         self.transition_start = nanos();
@@ -189,8 +204,27 @@ impl PixelTask {
     }
 
     pub fn system_loop(&mut self) {
+        // for node_id in 0 .. crate::HEX_UNITS {
+
+        //     // Render the color for each unit in this node
+        //     for pixel_id in 0 .. LEDS_PER_UNIT {
+        //         self.driver.set_color(node_id * LEDS_PER_UNIT + pixel_id, 0x0000FF);
+        //     }
+        // }
+
+        // if self.cycles < 3 {
+        //     self.cycles += 1;
+        // }
+        // self.driver.flush();
+
+        // blink_accumulate();
+        
+        // return;
+
         let time = nanos() - self.transition_offset;
+        let cycle_time = (time - self.cycle_offset) / teensycore::MS_TO_NANO;
         let elapsed_ms = time / teensycore::MS_TO_NANO;
+        let mut should_cycle = false;
 
         if time > self.target {
             let shader = self.shader.as_mut().unwrap();
@@ -234,13 +268,25 @@ impl PixelTask {
                 PixelState::MainSequence |
                 PixelState::Loading => {
 
+                    if cycle_time > effect.total_time {
+                        self.cycles += 1;
+                        self.cycle_offset = nanos() - self.transition_offset;
+
+                        // If cycle mode, then advance to the next color theme
+                        if crate::CYCLE_MODE && self.cycles % 3 == 0 {
+                            should_cycle = true;
+                        }
+                    }
+
                     // For each hexagon node
                     for node_id in 0 .. crate::HEX_UNITS {
                         let mut ctx = self.contexts[node_id];
                         let (effect_time, next_context) = effect.process(&mut ctx, elapsed_ms);
                         let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as uNano;
                         self.color_buffer[node_id] = shader.get_color(time_t);
-                        let color = self.color_buffer[node_id].as_hex();
+                        let color = self.color_buffer[node_id]
+                            .adjust()
+                            .as_hex();
 
                         // Commit any updates to context that we should be registering
                         self.contexts[node_id] = next_context;
@@ -275,6 +321,10 @@ impl PixelTask {
 
 
             self.driver.flush();
+        }
+
+        if should_cycle {
+            self.cycle_next_shader();
         }
     }
 

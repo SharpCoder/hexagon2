@@ -16,6 +16,7 @@ pub struct Shader {
     sealed: bool,
     color: Color,
     root: Option<*mut ShaderStep>,
+    pub total_segments: usize,
     pub total_time: uNano,
     pub wifi_only: bool,
     pub disabled: bool,
@@ -30,6 +31,7 @@ impl Shader {
             disabled: false,
             color: rgb(0, 0, 0),
             root: None,
+            total_segments: 0,
             total_time: 0,
             wifi_only: false,
         }.clone();
@@ -53,7 +55,13 @@ impl Shader {
             unsafe { (*tail_ptr).next = Some(ptr) };
         }
 
+        self.total_segments += 1;
         self.total_time += step.time;
+    }
+
+    pub fn set_segment_count(&mut self, segment_count: usize) -> &mut Self {
+        self.total_segments = segment_count;
+        return self;
     }
 
     pub fn as_wifi_only(&mut self) -> &mut Self {

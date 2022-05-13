@@ -13,11 +13,12 @@ pub struct EffectNode {
 #[derive(Clone, Copy)]
 pub struct Effect {
     pub name: &'static [u8],
-    initializer: Option<fn(context: &Context) -> Context>,
+    initializer: Option<fn(effect: &mut Effect, context: &Context) -> Context>,
     root: Option<*mut EffectNode>,
     pub total_time: uNano,
     pub disabled: bool,
-    pub min_size: usize,
+    pub max_color_segments: Option<usize>,
+    pub regs: [i32; 6],
 }
 
 impl Effect {
@@ -27,13 +28,14 @@ impl Effect {
             initializer: None,
             root: None,
             total_time: 0,
-            min_size: 0,
+            max_color_segments: None,
             disabled: false,
+            regs: [0; 6],
         };
     }
 
-    pub fn with_min_size(&mut self, min_size: usize) -> &mut Self {
-        self.min_size = min_size;
+    pub fn with_max_color_segments(&mut self, max_color_segments: usize) -> &mut Self {
+        self.max_color_segments = Some(max_color_segments);
         return self;
     }
 
@@ -42,7 +44,7 @@ impl Effect {
         return self;
     }
 
-    pub fn with_initializer(&mut self, func: fn(context: &Context) -> Context) -> &mut Self {
+    pub fn with_initializer(&mut self, func: fn(effect: &mut Effect, context: &Context) -> Context) -> &mut Self {
         self.initializer = Some(func);
         return self;
     }
@@ -99,12 +101,13 @@ impl Effect {
 
         if !ctx.initialized {
             if self.initializer.is_some() {
-                next_context = self.initializer.unwrap()(&ctx);
+                next_context = self.initializer.unwrap()(self, &ctx);
             }
             next_context.initialized = true;
         }
         
-        let normalized_time = (next_context.offset + current_time) % self.total_time;
+        let normalized_time  = (next_context.offset + current_time) % self.total_time;
+
         if self.root.is_none() {
             return (0, next_context);
         } else {

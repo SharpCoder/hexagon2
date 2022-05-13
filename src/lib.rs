@@ -38,14 +38,15 @@ use teensycore::system::vector::Vector;
 
 // Feature Flags
 const USE_WIFI: bool = false;
-const HEX_UNITS: usize = 4;
+const HEX_UNITS: usize = 30;
+const CYCLE_MODE: bool = true;
 
 // Time Constants
 static MIN_IN_HOUR: uNano = 60;
 static SECONDS_IN_MIN: uNano = 60;
 
 // Random Stuff
-static mut TRANSITION_DELAY_NANOS: uNano = 2 /* Hours */ * MIN_IN_HOUR * SECONDS_IN_MIN * teensycore::S_TO_NANO;
+static mut TRANSITION_DELAY_NANOS: uNano = 1 /* Hours */ * MIN_IN_HOUR * SECONDS_IN_MIN * teensycore::S_TO_NANO;
 static mut WORLD_TIME_S: uNano = 0;
 static mut UTC_OFFSET: uNano = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: uNano = 0;

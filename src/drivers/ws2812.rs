@@ -8,6 +8,10 @@ const T0_L: uNano = 600;
 const T1_H: uNano = 600; // ns
 const T1_L: uNano = 600;
 
+// const T0_H: uNano = 400; // ns
+// const T0_L: uNano = 850;
+// const T1_H: uNano = 800; // ns
+// const T1_L: uNano = 450;
 
 #[derive(Clone, Copy)]
 struct Node {
@@ -52,7 +56,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
             pull_keep_en: false,             // PKE
             open_drain: false,               // ODE
             speed: PinSpeed::Max200MHz,                // SPEED
-            drive_strength: DriveStrength::MaxDiv3,  // DSE
+            drive_strength: DriveStrength::MaxDiv7,  // DSE
             fast_slew_rate: true,           // SRE
         });
 
@@ -70,6 +74,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         self.nodes[index].blue = ((rgb & 0x0000FF) >> 0) as u8;
     }
 
+    #[inline]   
     fn on_bit(&self) {
         pin_out(self.pin, Power::High);
         wait_exact_ns(T1_H);
@@ -77,6 +82,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
         wait_exact_ns(T1_L);
     }
     
+    #[inline]
     fn off_bit(&self) {        
         pin_out(self.pin, Power::High);
         wait_exact_ns(T0_H);
@@ -86,7 +92,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
 
     fn rest(&self) {
         pin_out(self.pin, Power::Low);
-        wait_ns(3500 * MICRO_TO_NANO);
+        wait_ns(500 * MICRO_TO_NANO);
     }
 
     pub fn iterate(&mut self) {
@@ -105,6 +111,7 @@ impl<const SIZE: usize> WS2812Driver<SIZE> {
                     ((node.green as u32) << 16) |
                     ((node.red as u32) << 8) |
                     (node.blue as u32); 
+
 
                 // Now we need to process each bit
                 bit_index = 23;
