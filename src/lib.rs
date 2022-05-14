@@ -2,6 +2,10 @@
 #![crate_type = "staticlib"]
 #![no_std]
 
+
+#[cfg(feature = "testing")]
+extern crate std;
+
 pub mod drivers;
 pub mod models;
 pub mod shaders;
@@ -23,6 +27,7 @@ pub mod http;
 use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::clock::uNano;
+use teensycore::clock::nanos;
 use teensycore::phys::pins::*;
 use pixel_task::*;
 
@@ -38,8 +43,8 @@ use teensycore::system::vector::Vector;
 
 // Feature Flags
 const USE_WIFI: bool = false;
-const HEX_UNITS: usize = 30;
-const CYCLE_MODE: bool = true;
+const HEX_UNITS: usize = 4;
+const CYCLE_MODE: bool = false;
 
 // Time Constants
 static MIN_IN_HOUR: uNano = 60;

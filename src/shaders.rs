@@ -62,13 +62,13 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255, 0, 0), TIME)
             .build(),
 
-            Shader::new(b"Shire")
-            .as_wifi_only()
-            .with_color(rgb(0, 255, 0))
-            .transition_to(rgb(0, 255, 0), TIME)
-            .transition_to(rgb(255, 255, 255), TIME / 2)
-            .transition_to(rgb(0, 255, 0), TIME)
-            .build(),
+        // Shader::new(b"Shire")
+        //     .as_wifi_only()
+        //     .with_color(rgb(0, 255, 0))
+        //     .transition_to(rgb(255, 255, 255), TIME)
+        //     .transition_to(rgb(0, 255, 0), TIME)
+        //     .build(),
+
         // Shader::new(b"Halloween")
         //     .as_wifi_only() 
         //     .with_color(rgb(255, 64, 0))
@@ -103,10 +103,9 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
         
         Shader::new(b"Dinosaur")
             .with_color(rgb(0, 0, 255))
-            .transition_to(rgb(0, 255, 0), TIME / 3)
-            .transition_to(rgb(0, 0, 255), TIME / 3)
-            .transition_to(rgb(100, 0, 255), TIME / 3)
-            .transition_to(rgb(0, 0, 255), TIME / 3)
+            .transition_to(rgb(0, 255, 0), TIME)
+            .transition_to(rgb(64, 0, 148), TIME)
+            .transition_to(rgb(0, 0, 255), TIME)
             .set_segment_count(2) // Override segment count because colors are dupicated
             .build(),
         

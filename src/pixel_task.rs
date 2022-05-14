@@ -118,6 +118,8 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
+        return self.find_shader(&str!(b"Honeycomb")).unwrap();
+
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
             let appropriate_shader = get_shader_configs().get_shader(crate::get_world_time());
@@ -284,9 +286,7 @@ impl PixelTask {
                         let (effect_time, next_context) = effect.process(&mut ctx, elapsed_ms);
                         let time_t = (( effect_time as f64 / 100.0) * shader.total_time as f64) as uNano;
                         self.color_buffer[node_id] = shader.get_color(time_t);
-                        let color = self.color_buffer[node_id]
-                            .adjust()
-                            .as_hex();
+                        let color = self.color_buffer[node_id].as_hex();
 
                         // Commit any updates to context that we should be registering
                         self.contexts[node_id] = next_context;
