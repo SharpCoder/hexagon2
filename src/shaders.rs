@@ -29,6 +29,15 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
 
+        Shader::new(b"Ghibli")
+            .with_color(rgb(0, 255, 0))
+            .transition_to(rgb(255, 255, 0), TIME) 
+            .transition_to(rgb(0, 255, 0), TIME) 
+            .transition_to(rgb(0, 0, 255), TIME) 
+            .transition_to(rgb(0, 255, 0), TIME) 
+            .build(),
+
+
         Shader::new(b"80SciFi")
             .as_disabled()
             .with_color(rgb(0, 145, 255)) // Tron Light Blue
