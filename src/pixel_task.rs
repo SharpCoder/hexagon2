@@ -118,7 +118,7 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        // return self.find_shader(&str!(b"R2D2")).unwrap();
+        // return self.find_shader(&str!(b"Ghibli")).unwrap();
 
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
