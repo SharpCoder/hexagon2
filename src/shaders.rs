@@ -29,16 +29,6 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .build(),
 
 
-
-        
-        Shader::new(b"Honeycomb")
-            .with_color(rgb(255, 180, 0)) // Orange
-            .transition_to(rgb(255, 0, 0), TIME) // Red
-            .transition_to(rgb(255, 180, 0), TIME) // Orange
-            .build(),
-
-
-
         Shader::new(b"80SciFi")
             .as_disabled()
             .with_color(rgb(0, 145, 255)) // Tron Light Blue
@@ -62,13 +52,23 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(255, 0, 0), TIME)
             .build(),
 
-        // Shader::new(b"Shire")
-        //     .as_wifi_only()
-        //     .with_color(rgb(0, 255, 0))
-        //     .transition_to(rgb(255, 255, 255), TIME)
-        //     .transition_to(rgb(0, 255, 0), TIME)
-        //     .build(),
 
+        Shader::new(b"Shire")
+            .as_wifi_only()
+            .with_color(rgb(0, 255, 0))
+            .transition_to(rgb(77, 255, 106), TIME)
+            .transition_to(rgb(0, 255, 0), TIME)
+            .build(),
+
+
+        Shader::new(b"Honeycomb")
+            .with_color(rgb(255, 180, 0)) // Orange
+            .transition_to(rgb(255, 0, 0), TIME) // Red
+            .transition_to(rgb(255, 255, 0), TIME)
+            .transition_to(rgb(255, 180, 0), TIME) // Orange
+            .build(),
+
+            
         // Shader::new(b"Halloween")
         //     .as_wifi_only() 
         //     .with_color(rgb(255, 64, 0))
@@ -155,7 +155,8 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
 
         Shader::new(b"R2D2")
             .with_color(rgb(0, 0, 255)) // Blue
-            .transition_to(rgb(255, 0, 0), TIME) // Red
+            .transition_to(rgb(255, 0, 0), TIME/2) // Red
+            // .transition_to(r gb(89, 100, 255), TIME) // Blue-white
             .transition_to(rgb(0, 0, 255), TIME) // Blue
             .build(),
 
@@ -178,7 +179,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
         // Shader::new(b"Pokemon")
         //     .as_wifi_only()
         //     .with_color(rgb(255, 255, 0))
-        //     .transition_to(rgb(0, 0, 255), TIME)
+        //     .transition_to(rgb(0, 176, 252), TIME)
         //     .transition_to(rgb(255, 255, 0), TIME)
         //     .build()
 

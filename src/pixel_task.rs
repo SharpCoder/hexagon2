@@ -118,7 +118,7 @@ impl PixelTask {
     // Evaluate which shader to select based on
     // world information.
     fn get_next_shader(&self) -> Shader {
-        return self.find_shader(&str!(b"Honeycomb")).unwrap();
+        // return self.find_shader(&str!(b"R2D2")).unwrap();
 
         // If we have WIFI access, use the shader configs downloaded from the internet
         if crate::USE_WIFI {
@@ -149,13 +149,13 @@ impl PixelTask {
         // if shader.total_segments < 3 {
         //     return self.find_effect(b"Randomized").unwrap();
         // } else {
-            // return self.find_effect(b"Grouped").unwrap();
+            // return self.find_effect(b"Explosion").unwrap();
         // }
 
         // Select an appropriate effect to match the shader
         let idx = rand() % self.effects.size() as u64;
         let next_effect = self.effects.get(idx as usize).unwrap();
-        if next_effect.disabled ||  next_effect.max_color_segments.unwrap_or(usize::MAX) < shader.total_segments {
+        if next_effect.disabled ||  next_effect.max_color_segments.unwrap_or(usize::MAX) < shader.total_segments || next_effect.min_hex_units.unwrap_or(0) > crate::HEX_UNITS {
             return self.get_next_effect(shader);
         } else {
             return next_effect;
@@ -179,7 +179,7 @@ impl PixelTask {
         self.shader = self.find_shader(&str!(b"Medbay"));
         
         // Select an effect
-        self.effect = Some(self.get_next_effect(&self.shader.unwrap()));
+        self.effect = Some(self.find_effect(b"Randomized").unwrap());
     }
 
     pub fn transition_to(&mut self, next_shader: Shader) {

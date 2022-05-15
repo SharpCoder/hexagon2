@@ -1,5 +1,6 @@
 use teensycore::mem::*;
 use teensycore::clock::uNano;
+use teensycore::math::{max, min};
 use crate::pixel_engine::color::*;
 use crate::pixel_engine::math::*;
 
@@ -134,8 +135,8 @@ impl Shader {
             let g = interpolate(color.g as u32, next_color.g as u32, normalized_time - elapsed, duration);
             let b = interpolate(color.b as u32, next_color.b as u32, normalized_time - elapsed, duration);
 
-            let (h, s, v) = rgb_to_hsv(r as u8, g as u8, b as u8);
-            return hsv(h, teensycore::math::max(s, 0.6), v);
+            let (h, s, _v) = rgb_to_hsv(r as u8, g as u8, b as u8);
+            return hsv(h, min(max(s, 0.7), 1.0), 1.0);
 
             // return rgb(r as u8, g as u8, b as u8);
             // return hsv(next_h as f32, 1.0, 1.0);

@@ -18,6 +18,7 @@ pub struct Effect {
     pub total_time: uNano,
     pub disabled: bool,
     pub max_color_segments: Option<usize>,
+    pub min_hex_units: Option<usize>,
     pub regs: [i32; 6],
 }
 
@@ -30,8 +31,14 @@ impl Effect {
             total_time: 0,
             max_color_segments: None,
             disabled: false,
+            min_hex_units: None,
             regs: [0; 6],
         };
+    }
+
+    pub fn with_min_hex_units(&mut self, min_hex_units: usize) -> &mut Self {
+        self.min_hex_units = Some(min_hex_units);
+        return self;
     }
 
     pub fn with_max_color_segments(&mut self, max_color_segments: usize) -> &mut Self {

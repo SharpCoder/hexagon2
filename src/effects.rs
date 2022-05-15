@@ -21,6 +21,21 @@ pub fn initialize_effects<'a>() -> Vector<Effect> {
             .transition_to(100, TIME)
             .build(),
 
+        Effect::new(b"Explosion")
+            .with_min_hex_units(10)
+            .with_initializer(|_, ctx| {
+                let mut next_ctx = ctx.clone();
+                let midpoint = ctx.total_nodes / 2;
+                let id = match ctx.node_id > midpoint {
+                    true => (ctx.total_nodes - ctx.node_id) + midpoint,
+                    false => midpoint + ctx.node_id,
+                };
+                next_ctx.offset = id * (TIME / midpoint / 4);
+                return next_ctx;
+            })
+            .transition_to(100, TIME / 2)
+            .transition_to(100, TIME / 2)
+            .build(),
 
         Effect::new(b"Randomized")
             .with_max_color_segments(3)

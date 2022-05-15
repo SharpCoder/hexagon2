@@ -7,7 +7,11 @@ use crate::drivers::max31820::Max31820Driver;
 
 /// This task is responsible for sampling the ambiant temperature
 /// and keeping the system informed of changes.
-const SAMPLES: usize = 4;
+const SAMPLES: usize = match crate::CYCLE_MODE {
+    true => 1,
+    false => 8,
+};
+
 pub struct ThermalTask {
     driver: Max31820Driver,
     next_event: uNano,
