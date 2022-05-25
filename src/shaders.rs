@@ -3,7 +3,7 @@ use crate::pixel_engine::shader::*;
 use teensycore::{system::vector::*, vector};
 use teensycore::clock::uNano;
 
-const TIME: uNano = 1000;
+const TIME: uNano = 1000 * crate::WORLD_MUTIPLIER;
 
 pub fn initialize_shaders<'a>() -> Vector<Shader> {
     return vector!(
@@ -123,6 +123,7 @@ pub fn initialize_shaders<'a>() -> Vector<Shader> {
             .transition_to(rgb(0,0,255), TIME)
             .transition_to(rgb(0,255,0), TIME)
             .transition_to(rgb(255,0,0), TIME)
+            .set_segment_count(10) // This looks bad in randomized mode, so make sure it never goes there. 
             .build(),
 
         // Shader::new(b"Birthday")

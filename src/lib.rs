@@ -28,6 +28,7 @@ use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::clock::uNano;
 use teensycore::clock::nanos;
+use teensycore::debug::blink_accumulate;
 use teensycore::phys::pins::*;
 use pixel_task::*;
 
@@ -43,15 +44,18 @@ use teensycore::system::vector::Vector;
 
 // Feature Flags
 const USE_WIFI: bool = false;
-const HEX_UNITS: usize = 4;
+const HEX_UNITS: usize = 37;
 const CYCLE_MODE: bool = false;
+const WORLD_MUTIPLIER: uNano = 1;
 
 // Time Constants
+#[allow(dead_code)]
 static MIN_IN_HOUR: uNano = 60;
+#[allow(dead_code)]
 static SECONDS_IN_MIN: uNano = 60;
 
 // Random Stuff
-static mut TRANSITION_DELAY_NANOS: uNano = 1 /* Hours */ * MIN_IN_HOUR * SECONDS_IN_MIN * teensycore::S_TO_NANO;
+static mut TRANSITION_DELAY_NANOS: uNano = 30 /* Minutes */ * MIN_IN_HOUR * teensycore::S_TO_NANO;
 static mut WORLD_TIME_S: uNano = 0;
 static mut UTC_OFFSET: uNano = 8;
 static mut UPTIME_WORLDTIME_OFFSET_S: uNano = 0;

@@ -72,7 +72,7 @@ impl ThermalTask {
                 self.loaded = true;
                 self.count += 1;
             }
-            self.next_event = time + MS_TO_NANO * 7 * 85;
+            self.next_event = time + MS_TO_NANO * 7 * 85 * crate::WORLD_MUTIPLIER;
         }
     }
 }

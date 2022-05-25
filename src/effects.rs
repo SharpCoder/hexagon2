@@ -2,7 +2,7 @@ use crate::pixel_engine::effect::Effect;
 use teensycore::clock::uNano;
 use teensycore::{system::vector::*, vector, math::rand};
 
-const TIME: uNano = 4200;
+const TIME: uNano = 4200 * crate::WORLD_MUTIPLIER;
 
 fn nano_rand() -> uNano {
     return rand() as uNano;

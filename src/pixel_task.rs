@@ -1,5 +1,6 @@
 use teensycore::*;
 use teensycore::clock::*;
+use teensycore::debug::blink_accumulate;
 use teensycore::math::rand;
 use teensycore::system::str::Str;
 use teensycore::system::str::StringOps;
@@ -19,7 +20,7 @@ use crate::drivers::ws2812::*;
 
 const LEDS_PER_UNIT: usize = 3;
 const LEDS: usize = crate::HEX_UNITS * LEDS_PER_UNIT;
-const TRANSITION_TIME: uNano = 500; // ms
+const TRANSITION_TIME: uNano = 1000 * crate::WORLD_MUTIPLIER; // ms
 
 enum PixelState {
     Loading,
@@ -205,6 +206,24 @@ impl PixelTask {
         self.transition_to(self.get_next_shader());
     }
 
+    /* 
+        This method will reset variables if the world uptime counter
+        overflows.
+     */
+    pub fn overflow_watch(&mut self) {
+        let now = nanos();
+        if 
+            self.transition_offset > 0 && 
+            self.transition_start > 0 && 
+            self.randomize_target > 0 &&
+            (
+                now < self.transition_offset || 
+                now < self.transition_start 
+            ) {
+                self.randomize();
+            }
+    }
+
     pub fn system_loop(&mut self) {
         // for node_id in 0 .. crate::HEX_UNITS {
 
@@ -326,6 +345,9 @@ impl PixelTask {
         if should_cycle {
             self.cycle_next_shader();
         }
+
+        // Monitor for an overflow event.
+        self.overflow_watch();
     }
 
     pub fn ready(&mut self) {
