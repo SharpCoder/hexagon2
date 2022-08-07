@@ -28,7 +28,6 @@ use pixel_engine::shader_config::ShaderConfigList;
 use teensycore::*;
 use teensycore::clock::uNano;
 use teensycore::clock::nanos;
-use teensycore::debug::blink_accumulate;
 use teensycore::phys::pins::*;
 use pixel_task::*;
 

@@ -1,6 +1,5 @@
 use teensycore::*;
 use teensycore::clock::*;
-use teensycore::debug::blink_accumulate;
 use teensycore::math::rand;
 use teensycore::system::str::Str;
 use teensycore::system::str::StringOps;
@@ -225,23 +224,6 @@ impl PixelTask {
     }
 
     pub fn system_loop(&mut self) {
-        // for node_id in 0 .. crate::HEX_UNITS {
-
-        //     // Render the color for each unit in this node
-        //     for pixel_id in 0 .. LEDS_PER_UNIT {
-        //         self.driver.set_color(node_id * LEDS_PER_UNIT + pixel_id, 0x0000FF);
-        //     }
-        // }
-
-        // if self.cycles < 3 {
-        //     self.cycles += 1;
-        // }
-        // self.driver.flush();
-
-        // blink_accumulate();
-        
-        // return;
-
         let time = nanos() - self.transition_offset;
         let cycle_time = (time - self.cycle_offset) / teensycore::MS_TO_NANO;
         let elapsed_ms = time / teensycore::MS_TO_NANO;
